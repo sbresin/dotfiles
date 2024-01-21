@@ -1,0 +1,153 @@
+;; Only one defsrc is allowed.
+;;
+;; defsrc defines the keys that will be intercepted by kanata. The order of the
+;; keys matches with deflayer declarations and all deflayer declarations must
+;; have the same number of keys as defsrc. Any keys not listed in defsrc will
+;; be passed straight to the operating system.
+(defsrc
+  grv  1    2    3    4    5    6    7    8    9    0    -    =    bspc
+  tab  q    w    e    r    t    y    u    i    o    p    [    ]    \
+  caps a    s    d    f    g    h    j    k    l    ;    '    ret
+  lsft z    x    c    v    b    n    m    ,    .    /    rsft
+  lctl lmet lalt           spc            ralt rmet rctl
+)
+
+;; global settings
+(defvar
+  tap-timeout   300
+  hold-timeout  300
+  tt $tap-timeout
+  ht $hold-timeout
+)
+
+(defoverrides
+  ;; shift + backspace -> del
+  (lsft bspc) (del)
+  (rsft bspc) (del)
+
+  ;; switch square and curly brackets
+  (lbrc) (lsft lbrc)
+  (lsft lbrc) (lbrc)
+  (rbrc) (lsft rbrc)
+  (lsft rbrc) (rbrc)
+)
+
+;; The first layer defined is the layer that will be active by default when kanata starts up. 
+;; main layer with home row mods and thumb keys
+(deflayer qwerty
+  @grl 1      2      3      4      5    6    7      8      9      0      -    =    bspc
+  tab  q      w      e      r      t    y    u      i      o      p      [    ]    \
+  @cap @mlmet @mlalt @mlctl @mlsft g    h    @mrsft @mrctl @mralt @mrmet '    ret
+  lsft z      x      c      v      b    n    m      ,      .      /      rsft
+  lctl lmet   @num                 @nav             @ralth rmet   rctl
+)
+
+(defvar
+  lhk (q w e r t g z x c v b)
+  rhk (y u i o p [ ] h ' n m , . /)
+)
+
+;; layer without mods, can be used if other people want to use the machine
+(deflayer vanilla
+  @grl 1    2    3    4    5    6    7    8    9    0    -    =    bspc
+  tab  q    w    e    r    t    y    u    i    o    p    [    ]    \
+  caps a    s    d    f    g    h    j    k    l    ;    '    ret
+  lsft z    x    c    v    b    n    m    ,    .    /    rsft
+  lctl lmet lalt           spc            ralt rmet rctl
+)
+
+;; use as template when creating new layers
+(deflayer template
+  _    _    _    _    _    _    _    _    _    _    _    _    _    _
+  _    _    _    _    _    _    _    _    _    _    _    _    _    _
+  _    _    _    _    _    _    _    _    _    _    _    _    _
+  _    _    _    _    _    _    _    _    _    _    _    _    
+  _    _    _              _              _    _    _
+)
+
+(defalias
+  ;; curly braces
+  lcbrc S-lbrc
+  rcbrc S-rbrc
+
+  ;; parentheses
+  lpar (fork S-9 S-, (lsft r))
+  rpar S-0
+)
+
+(deflayer navigation
+  _    _    _    _    _    _    _    _     _     _     _    _    _    _
+  _    _    _    _    _    _    XX   lbrc  rbrc  @lpar @rpar  XX  XX    _
+  _    lmet lalt lctl lsft _    lft  down  up    rght  XX    _    _
+  _    _    _    _    _    _    home pgdn  pgup  end   _    _    
+  _    _    _              _               _     _     _
+)
+
+(deflayer numbers
+  _    _    _    _    _    _    _    _    _    _    _    _    _    _
+  _    _    _    _    _    _    grv  7    8    9    eql  _    _    _
+  _    lmet lalt lctl lsft _    apo  4    5    6    min  _    _
+  _    _    _    _    _    _    0    1    2    3    bksl _    
+  _    _    _              _              _    _    _
+)
+
+;; defalias is used to declare a shortcut for a more complicated action to keep
+;; the deflayer declarations clean and aligned. The alignment in deflayers is not
+;; necessary, but is strongly recommended for ease of understanding visually.
+;;
+;; Aliases are referred to by `@<alias_name>`.
+(defalias
+  ;; tap: backtick (grave), hold: toggle layer-switching layer while held
+  grl (tap-hold 200 200 grv (layer-toggle layers))
+
+  ;; layer-switch changes the base layer.
+  van (layer-switch vanilla)
+  qwr (layer-switch qwerty)
+
+  ;; tap for esc, hold for caps
+  cap (tap-hold $tt $ht esc caps)
+
+  ;; ralt to enter / sym layer
+  ;; sym (tap-hold $tt $ht ret (layer-while-held numbers))
+
+  ;; lalt to backspace / num layer
+  num (tap-hold $tt $ht bspc (layer-while-held numbers))
+  
+  ;; space to spc / nav layer
+  nav (tap-hold $tt $ht spc (layer-while-held navigation))
+  
+  ;; ralt to ret / ralt
+  ralth (tap-hold $tt $ht ret ralt)
+
+  ;; left home row mods
+  mlsft (tap-hold $tt $ht f lsft)
+  mlctl (tap-hold $tt $ht d lctl)
+  mlalt (tap-hold $tt $ht s lalt)
+  mlmet (tap-hold $tt $ht a lmet)
+
+  ;; right home row mods
+  mrsft (tap-hold-release-keys $tt $ht j rsft $rhk)
+  mrctl (tap-hold-release-keys $tt $ht k rctl $rhk)
+  mralt (tap-hold-release-keys $tt $ht l ralt $rhk)
+  mrmet (tap-hold-release-keys $tt $ht ; rmet $rhk)
+)
+
+
+;; The `lrld` action stands for "live reload". This will re-parse everything
+;; except for linux-dev, meaning you cannot live reload and switch keyboard
+;; devices.
+;;
+;; The keys 1 and 2 switch the base layer to qwerty and dvorak respectively.
+;;
+;; Apart from the layer switching and live reload, all other keys are the
+;; underscore _ which means "transparent". Transparent means the base layer
+;; behaviour is used when pressing that key.
+(deflayer layers
+  _    @qwr @van lrld _    _    _    _    _    _    _    _    _    _
+  _    _    _    _    _    _    _    _    _    _    _    _    _    _
+  _    _    _    _    _    _    _    _    _    _    _    _    _
+  _    _    _    _    _    _    _    _    _    _    _    _
+  _    _    _              _              _    _    _
+)
+
+
