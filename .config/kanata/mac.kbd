@@ -1,0 +1,42 @@
+;; mac keyboard layout
+(defsrc
+  grv  1    2    3    4    5    6    7    8    9    0    -    =    bspc
+  tab  q    w    e    r    t    y    u    i    o    p    [    ]    \
+  caps a    s    d    f    g    h    j    k    l    ;    '    ret
+  lsft z    x    c    v    b    n    m    ,    .    /    rsft
+  lctl lalt lmet           spc            rmet ralt rctl
+)
+
+(include ./base.kbd)
+
+;; mac specific configuration
+
+(defoverrides
+  ;; shift + backspace -> del
+  ;; (lsft bspc) (del)
+  ;; (rsft bspc) (del)
+
+  ;; switch square and curly brackets
+  ;; (lbrc) (lsft lbrc)
+  ;; (lsft lbrc) (lbrc)
+  ;; (rbrc) (lsft rbrc)
+  ;; (lsft rbrc) (rbrc)
+)
+
+
+;; TODO do this in OS keylayout level (ukelele)
+(defalias
+  ;; german umlauts TODO keep ralt pressed somehow. fakekeys?
+  uml_a (multi (release-key ralt) (macro RA-u a))
+  uml_u (multi (release-key ralt) (macro RA-u u))
+  uml_o (multi (release-key ralt) (macro RA-u o))
+)
+
+;; put german umlauts in ther PC colemak positions TODO doesn't work when layout is actually colemak...
+(deflayer international
+  _    _      _    _    _    _    _    _    _    _      _       _    _    _
+  _    @uml_a _    _    _    _    _    _    _    @uml_u @uml_o  _    _    _
+  _    _      _    _    _    _    _    _    _    _      _       _    _
+  _    _      _    _    _    _    _    _    _    _      _       _
+  _    _      _              _              _    _      _
+)

@@ -15,8 +15,18 @@ config.window_frame = {
 
 -- appearance settings
 config.color_scheme = "Catppuccin Mocha"
-config.window_background_opacity = 0.97
+config.window_background_opacity = 0.95
 config.font_size = 16.0
+
+-- additional quickselect patterns
+config.quick_select_patterns = {
+	-- match email addresses and sfdc usernames
+	"(?i)[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z0-9]+",
+	-- match sfdc ids
+	"(?i)[A-Z0-9]{5}[0-9][A-Z0-9]{9,12}(?=[\\s\\r\\n])",
+	-- match flags from commands --help
+	"-\\w{1}|--\\w+=?",
+}
 
 -- compute padding -> center horizontally and bottom align vertically
 local function recompute_padding(window)

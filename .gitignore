@@ -1,4 +1,6 @@
 .DS_Store
+.vim-force.com/
+tmp/
 
 .config/lazygit/state.yml
-
+TODO.md

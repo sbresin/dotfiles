@@ -4,7 +4,7 @@
 [core]
   editor = nvim
   pager = delta
-	excludesfile = /Users/sebastianbresin/.gitignore
+	excludesfile = $HOME/.gitignore
 [credential "https://github.com"]
 	helper = !/usr/local/bin/gh auth git-credential
 [pull]
@@ -19,3 +19,5 @@
   dark = true
   syntax-theme = Catppuccin-mocha
 
+[safe]
+	directory = /var/folders/pn/nsgfsfs92px1p4hkxzxswslr0000gp/T/tmp-62215-n0XK1t1SBn92

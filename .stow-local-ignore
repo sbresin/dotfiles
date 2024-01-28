@@ -4,3 +4,7 @@
 ^/README.*
 
 \.DS_Store
+
+# these need to be copied, symlinking does not work
+Library/Keyboard Layouts/*
+
