@@ -3,7 +3,7 @@ local wezterm = require("wezterm")
 local config = wezterm.config_builder()
 
 -- GPU settings
--- config.front_end = "WebGpu"
+config.front_end = "OpenGL"
 config.webgpu_power_preference = "LowPower"
 
 -- window settings

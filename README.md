@@ -2,6 +2,7 @@
 
 - `stow` (symlink dotfiles)
 - `fzf` (fuzzy finding)
+- `eza` (better ls)
 - `fd` (better find)
 - `ripgrep` (better grep)
 - `bat` (better cat)
