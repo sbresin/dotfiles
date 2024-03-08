@@ -26,6 +26,9 @@ set --export SF_DISABLE_TELEMETRY true # stop calling home
 set --export SF_ORG_METADATA_REST_DEPLOY true # speed up deployments
 set --export SF_IMPROVED_CODE_COVERAGE true # better coverage report
 
+# zoxide setup
+zoxide init fish | source
+
 # >>> conda initialize >>>
 # !! Contents within this block are managed by 'conda init' !!
 # if test -f /usr/local/Caskroom/miniforge/base/bin/conda
