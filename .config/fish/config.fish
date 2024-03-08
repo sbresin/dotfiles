@@ -29,6 +29,9 @@ set --export SF_IMPROVED_CODE_COVERAGE true # better coverage report
 # zoxide setup
 zoxide init fish | source
 
+# starship setup
+starship init fish | source
+
 # >>> conda initialize >>>
 # !! Contents within this block are managed by 'conda init' !!
 # if test -f /usr/local/Caskroom/miniforge/base/bin/conda
