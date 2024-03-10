@@ -82,10 +82,11 @@ local function recompute_padding(window)
 	local left_padding = (window_dims.pixel_width - new_tab_width + minimal_horizontal_padding) / 2
 
 	-- calculate top padding
-	local tab_bar_height = 58 -- TODO: upstream ticket, how to get this value?
+	local tab_bar_height = cell_height -- 58 -- TODO: upstream ticket, how to get this value?
 	local max_rows = math.floor((window_dims.pixel_height - tab_bar_height) / cell_height)
 	local new_tab_height = max_rows * cell_height
-	local top_padding = window_dims.pixel_height - tab_bar_height - new_tab_height - left_padding
+	local top_padding = (window_dims.pixel_height - tab_bar_height - new_tab_height) / 2 -- left_padding
+	-- wezterm.log_info(string.format("row count: %d", tab_dims.rows))
 	-- wezterm.log_info(string.format("tab pixel height: %d", tab_dims.pixel_height))
 	-- wezterm.log_info(string.format("new tab height px: %d", new_tab_height))
 	-- wezterm.log_info(string.format("window height px: %d", window_dims.pixel_height))
