@@ -23,6 +23,10 @@ config.color_scheme = "Catppuccin Mocha"
 config.window_background_opacity = 0.95
 -- config.font_size = 12.0
 
+-- tabbar settings
+config.use_fancy_tab_bar = false
+config.tab_bar_at_bottom = true
+
 -- additional quickselect patterns
 config.quick_select_patterns = {
 	-- match email addresses and sfdc usernames
