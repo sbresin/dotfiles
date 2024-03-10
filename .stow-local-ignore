@@ -7,4 +7,5 @@
 
 # these need to be copied, symlinking does not work
 Library/Keyboard Layouts/*
+Library/
 
