@@ -30,7 +30,14 @@ set --export SF_IMPROVED_CODE_COVERAGE true # better coverage report
 zoxide init fish | source
 
 # starship setup
+function starship_transient_prompt_func
+    starship module character
+end
+function starship_transient_rprompt_func
+    starship module time
+end
 starship init fish | source
+enable_transience
 
 # >>> conda initialize >>>
 # !! Contents within this block are managed by 'conda init' !!
