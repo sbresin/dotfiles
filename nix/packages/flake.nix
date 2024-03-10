@@ -20,7 +20,10 @@
     in
     flake-utils.lib.eachDefaultSystem out // {
       overlays.default = final: prev: {
-        final = final // import ./scope.nix {};
+        # packages =  import ./scope.nix {};
+        # final = final // packages;
+        #
+        oclif = callPackage ./oclif {};
       };
     };
 }

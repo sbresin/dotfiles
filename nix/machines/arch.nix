@@ -15,6 +15,10 @@
   # release notes.
   home.stateVersion = "23.11"; # Please read the comment before changing.
 
+  # make GUI apps show up in GNOME, etc.
+  targets.genericLinux.enable = true;
+  xdg.mime.enable = true;
+
   # The home.packages option allows you to install Nix packages into your
   # environment.
   home.packages = [
@@ -24,6 +28,12 @@
     pkgs.starship
     pkgs.unar
     pkgs.delta
+    pkgs.ripgrep
+    
+    pkgs.tidal-hifi
+    pkgs.telegram-desktop
+
+    pkgs.nixgl.nixGLIntel
     # # It is sometimes useful to fine-tune packages, for example, by applying
     # # overrides. You can do that directly here, just don't forget the
     # # parentheses. Maybe you want to install Nerd Fonts with a limited number of
