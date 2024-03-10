@@ -37,6 +37,33 @@ config.quick_select_patterns = {
 	"-\\w{1}|--\\w+=?",
 }
 
+-- keybindings
+local act = wezterm.action
+
+config.keys = {
+	{ key = "UpArrow", mods = "SHIFT", action = act.ScrollToPrompt(-1) },
+	{ key = "DownArrow", mods = "SHIFT", action = act.ScrollToPrompt(1) },
+}
+
+local copy_mode = nil
+if wezterm.gui then
+	copy_mode = wezterm.gui.default_key_tables().copy_mode
+	table.insert(copy_mode, {
+		key = "z",
+		mods = "NONE",
+		action = act.CopyMode("MoveBackwardSemanticZone"),
+	})
+	table.insert(copy_mode, {
+		key = "v",
+		mods = "ALT",
+		action = act.CopyMode({ SetSelectionMode = "SemanticZone" }),
+	})
+end
+
+config.key_tables = {
+	copy_mode = copy_mode,
+}
+
 -- compute padding -> center horizontally and bottom align vertically
 local function recompute_padding(window)
 	local window_dims = window:get_dimensions()
