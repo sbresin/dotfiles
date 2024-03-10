@@ -15,13 +15,13 @@ config.enable_kitty_keyboard = false
 config.window_decorations = "INTEGRATED_BUTTONS|RESIZE"
 config.adjust_window_size_when_changing_font_size = false
 config.window_frame = {
-	font_size = 14.0,
+	font_size = 10.0,
 }
 
 -- appearance settings
 config.color_scheme = "Catppuccin Mocha"
 config.window_background_opacity = 0.95
-config.font_size = 16.0
+-- config.font_size = 12.0
 
 -- additional quickselect patterns
 config.quick_select_patterns = {
