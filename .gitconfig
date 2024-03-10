@@ -1,16 +1,20 @@
 [user]
-	name = Sebastian Bresin
-	email = sebastian.bresin@gmail.com
+  name = Sebastian Bresin
+  email = sebastian.bresin@gmail.com
 [core]
   editor = nvim
   pager = delta
-	excludesfile = $HOME/.gitignore
+  excludesfile = $HOME/.gitignore
 [credential "https://github.com"]
-	helper = !/usr/local/bin/gh auth git-credential
+  helper =
+  helper = !/usr/bin/gh auth git-credential
+[credential "https://gist.github.com"]
+  helper =
+  helper = !/usr/bin/gh auth git-credential
 [pull]
-	rebase = false
+  rebase = false
 [push]
-	autoSetupRemote = true
+  autoSetupRemote = true
 [init]
   defaultBranch = main
 
@@ -19,5 +23,3 @@
   dark = true
   syntax-theme = Catppuccin-mocha
 
-[safe]
-	directory = /var/folders/pn/nsgfsfs92px1p4hkxzxswslr0000gp/T/tmp-62215-n0XK1t1SBn92
