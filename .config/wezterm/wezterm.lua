@@ -19,9 +19,8 @@ config.window_frame = {
 }
 
 -- appearance settings
-config.color_scheme = "Catppuccin Mocha"
-config.window_background_opacity = 0.95
--- config.font_size = 12.0
+config.color_scheme = "Rosé Pine (Gogh)"
+config.window_background_opacity = 0.93
 
 -- tabbar settings
 config.use_fancy_tab_bar = false
