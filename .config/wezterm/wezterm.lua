@@ -2,6 +2,11 @@ local wezterm = require("wezterm")
 
 local config = wezterm.config_builder()
 
+-- helper functions
+local is_darwin = function()
+	return wezterm.target_triple:find("darwin") ~= nil
+end
+
 -- GPU settings
 config.front_end = "OpenGL"
 config.webgpu_power_preference = "LowPower"
@@ -12,15 +17,19 @@ config.term = "wezterm"
 config.enable_kitty_keyboard = false
 
 -- window settings
-config.window_decorations = "INTEGRATED_BUTTONS|RESIZE"
+config.window_decorations = "RESIZE"
 config.adjust_window_size_when_changing_font_size = false
-config.window_frame = {
-	font_size = 10.0,
-}
+-- config.window_frame = {
+-- 	font_size = 10.0,
+-- }
 
 -- appearance settings
 config.color_scheme = "Rosé Pine (Gogh)"
 config.window_background_opacity = 0.93
+-- default font size on darwin is just too small
+if is_darwin() then
+	config.font_size = 15.0
+end
 
 -- tabbar settings
 config.use_fancy_tab_bar = false
