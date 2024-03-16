@@ -42,7 +42,9 @@ config.quick_select_patterns = {
 	-- match sfdc ids
 	"(?i)[A-Z0-9]{5}[0-9][A-Z0-9]{9,12}(?=[\\s\\r\\n])",
 	-- match flags from commands --help
-	"-\\w{1}|--\\w+=?",
+	"\\s-\\w{1}|\\s--\\w+=?",
+	-- match quoted strings
+	'".+?"',
 }
 
 -- keybindings
