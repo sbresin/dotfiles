@@ -5,10 +5,12 @@
 -- Apex file types
 vim.filetype.add({
 	extension = {
-		cls = "apex",
-		apex = "apex",
-		trigger = "apex",
+		cls = "apexcode",
+		apex = "apexcode",
+		trigger = "apexcode",
 		soql = "soql",
 		sosl = "sosl",
 	},
 })
+
+vim.treesitter.language.register("apex", { "apexcode" })
