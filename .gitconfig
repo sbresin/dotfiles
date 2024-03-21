@@ -21,5 +21,5 @@
 [delta]
   line-numbers = true
   dark = true
-  syntax-theme = Catppuccin-mocha
+  syntax-theme = rose-pine
 
