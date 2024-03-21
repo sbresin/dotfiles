@@ -44,7 +44,7 @@ config.quick_select_patterns = {
 	-- match flags from commands --help
 	"\\s-\\w{1}|\\s--\\w+=?",
 	-- match quoted strings
-	'".+?"',
+	'"(.+?)"',
 }
 
 -- keybindings
