@@ -15,7 +15,7 @@ set --export XDG_CONFIG_HOME "$HOME/.config"
 alias lg="lazygit -ucf ~/.config/lazygit/config.yml"
 
 # delta default to side-by-side
-set --export DELTA_FEATURES "+side-by-side"
+# set --export DELTA_FEATURES "+side-by-side"
 
 # bun
 set --export BUN_INSTALL "$HOME/.bun"
