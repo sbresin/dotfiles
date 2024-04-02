@@ -27,6 +27,7 @@ config.adjust_window_size_when_changing_font_size = false
 config.color_scheme = "Rosé Pine (Gogh)"
 config.window_background_opacity = 0.93
 -- default font size on darwin is just too small
+config.font_size = 11.0
 if is_darwin() then
 	config.font_size = 15.0
 end
