@@ -1,10 +1,45 @@
-local prettier = {
-	formatCommand = '~/.local/share/nvim/mason/bin/prettierd "${INPUT}"',
+local prettierd = {
+	formatCommand = '~/.local/share/nvim/mason/bin/prettierd --apex-standalone-parser=built-in --stdin-filepath "${INPUT}"',
 	formatStdin = true,
 	-- env = {
 	--   string.format('PRETTIERD_DEFAULT_CONFIG=%s', vim.fn.expand('~/.config/nvim/utils/linter-config/.prettierrc.json')),
 	-- },
 }
+
+local pmd = {
+	lintCommand = 'pmd check --no-progress --dir "${INPUT}" --cache ~/.pmd-cache.bin --rulesets ./pmd-apex-ruleset.xml --format json'
+		.. ' | jq --raw-output \'.files[] | .filename + ":" + (.violations[] | (.beginline | tostring) + ":" + (.begincolumn | tostring) + ":" + (.endline | tostring) + ":" + (.endcolumn | tostring) + ":" + (.priority | tostring) + ": " + .description + " (" + .ruleset + ": " + .rule + ")")\'',
+	lintFormats = { "%f:%l:%c:%e:%k:%t: %m" },
+	lintStdin = false,
+	lintIgnoreExitCode = true,
+	lintOnSave = true,
+	lintAfterOpen = true,
+	lintSource = "pmd",
+	rootMarkers = { "sfdx-project.json" },
+	lintCategoryMap = {
+		["1"] = "E",
+		["2"] = "W",
+		["3"] = "I",
+		["4"] = "I",
+		["5"] = "I",
+	},
+}
+
+local sedTrailingSpace = {
+	formatCommand = "sed -e 's/[ \t]*$//g'",
+	formatStdin = true,
+}
+
+-- TODO: docker language server
+-- TODO: compose language server
+-- TODO: checkout dprint
+-- TODO: digestif
+-- TODO: eslint, html, css, json
+-- TODO: xml
+-- TODO: yaml
+-- TODO: ltex
+-- TODO: bash
+-- TODO: vue
 
 return {
 	{
@@ -18,7 +53,10 @@ return {
 					apex_enable_completion_statistics = false, -- Disable telemetry
 				},
 				efm = {
-					init_options = { documentFormatting = true, documentRangeFormatting = true },
+					init_options = {
+						documentFormatting = true,
+						documentRangeFormatting = true,
+					},
 					filetypes = { "lua", "apexcode" },
 					settings = {
 						rootMarkers = { ".git/" },
@@ -30,17 +68,9 @@ return {
 								},
 							},
 							apexcode = {
-								prettier,
-								-- {
-								-- 	--  ${--tab-width=tabWidth} ${--use-tabs=!insertSpaces}
-								-- 	-- ~/.local/share/nvim/mason/bin/prettier
-								-- 	formatCommand = "node_modules/.bin/prettier --stdin --stdin-filepath '${INPUT}' ${--range-start=charStart} ${--range-end=charEnd}",
-								-- 	formatStdin = true,
-								-- 	-- formatCanRange = true,
-								-- 	rootMarkers = {
-								-- 		"sfdx-project.json",
-								-- 	},
-								-- },
+								prettierd,
+								-- sedTrailingSpace,
+								pmd,
 							},
 						},
 					},
