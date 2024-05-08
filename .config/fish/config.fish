@@ -39,6 +39,9 @@ end
 starship init fish | source
 enable_transience
 
+# google cloud sdk
+# source "$(brew --prefix)/share/google-cloud-sdk/path.fish.inc"
+
 # >>> conda initialize >>>
 # !! Contents within this block are managed by 'conda init' !!
 # if test -f /usr/local/Caskroom/miniforge/base/bin/conda
