@@ -1,3 +1,5 @@
+local util = require("lspconfig.util")
+
 local prettierd = {
 	formatCommand = '~/.local/share/nvim/mason/bin/prettierd --apex-standalone-parser=built-in --stdin-filepath "${INPUT}"',
 	formatStdin = true,
@@ -7,12 +9,12 @@ local prettierd = {
 }
 
 local pmd = {
-	lintCommand = 'pmd check --no-progress --dir "${INPUT}" --cache ~/.pmd-cache.bin --rulesets ./pmd-apex-ruleset.xml --format json'
+	lintCommand = 'pmd check --no-progress --stdin-filepath "${INPUT}" --cache ~/.pmd-cache.bin --rulesets ./pmd-apex-ruleset.xml --format json'
 		.. ' | jq --raw-output \'.files[] | .filename + ":" + (.violations[] | (.beginline | tostring) + ":" + (.begincolumn | tostring) + ":" + (.endline | tostring) + ":" + (.endcolumn | tostring) + ":" + (.priority | tostring) + ": " + .description + " (" + .ruleset + ": " + .rule + ")")\'',
 	lintFormats = { "%f:%l:%c:%e:%k:%t: %m" },
-	lintStdin = false,
+	lintStdin = true,
 	lintIgnoreExitCode = true,
-	lintOnSave = true,
+	-- lintOnSave = true,
 	lintAfterOpen = true,
 	lintSource = "pmd",
 	rootMarkers = { "sfdx-project.json" },
@@ -60,6 +62,7 @@ return {
 					filetypes = { "lua", "apexcode" },
 					settings = {
 						rootMarkers = { ".git/" },
+						lintDebounce = "3s",
 						languages = {
 							lua = {
 								{
@@ -74,6 +77,17 @@ return {
 							},
 						},
 					},
+				},
+				jdtls = {
+					mason = false,
+					root_dir = function(fname)
+						for _, patterns in ipairs({ { "gradlew", ".git", "mvnw" } }) do
+							local root = util.root_pattern(unpack(patterns))(fname)
+							if root then
+								return root
+							end
+						end
+					end,
 				},
 			},
 		},
