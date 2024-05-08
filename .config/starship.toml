@@ -1,2 +1,4 @@
 # right prompt
 right_format = """$time"""
+
+command_timeout = 750
