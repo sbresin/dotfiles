@@ -54,12 +54,13 @@ return {
 					apex_enable_semantic_errors = true, -- Whether to allow Apex Language Server to surface semantic errors
 					apex_enable_completion_statistics = false, -- Disable telemetry
 				},
+				eslint = {},
 				efm = {
 					init_options = {
 						documentFormatting = true,
 						documentRangeFormatting = true,
 					},
-					filetypes = { "lua", "apexcode" },
+					filetypes = { "lua", "apexcode", "typescript", "json", "javascript" },
 					settings = {
 						rootMarkers = { ".git/" },
 						lintDebounce = "3s",
@@ -74,6 +75,15 @@ return {
 								prettierd,
 								-- sedTrailingSpace,
 								pmd,
+							},
+							typescript = {
+								prettierd,
+							},
+							json = {
+								prettierd,
+							},
+							javascript = {
+								prettierd,
 							},
 						},
 					},
