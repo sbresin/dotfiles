@@ -45,7 +45,7 @@ config.quick_select_patterns = {
 	-- match sf auth urls
 	-- "force:\\/\\/\\w+::.+@[\\w\\d-_.]+",
 	-- match flags from commands --help
-	"\\s-\\w{1}|\\s--\\w+=?",
+	"\\s-\\w{1}|\\s--[\\w-]+=?",
 	-- match quoted strings
 	'"(.+?)"',
 }
