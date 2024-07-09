@@ -10,6 +10,10 @@ fish_config theme choose "Rosé Pine"
 # linux config path on macOS
 set --export XDG_CONFIG_HOME "$HOME/.config"
 
+if test -x "$(command -v gsed)"
+    alias sed="gsed"
+end
+
 # lazygit alias to use linux config path on macOS
 # alias lazygit="lazygit -ucf ~/.config/lazygit/config.yml"
 alias lg="lazygit -ucf ~/.config/lazygit/config.yml"
