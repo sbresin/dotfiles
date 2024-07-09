@@ -21,5 +21,6 @@
 [delta]
   line-numbers = true
   dark = true
+  tabs = 2
   syntax-theme = rose-pine
 
