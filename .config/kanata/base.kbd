@@ -30,28 +30,28 @@
   ret_ralt (tap-hold $tt $ht ret @intl)
 
   ;; escape chord
-  chg (chord escape g)
-  chh (chord escape h)
+  chf (chord escape f)
+  chj (chord escape j)
 
   ;; left home row mods
-  mlsft (tap-hold $tt $ht f lsft)
+  mlsft (tap-hold $tt $ht @chf lsft)
   mlctl (tap-hold $tt $ht d lctl)
   mlalt (tap-hold $tt $ht s lalt)
   mlmet (tap-hold $tt $ht a lmet)
-  mlhyp (tap-hold $tt $ht @chg (multi lmet lalt lctl lsft))
+  mlhyp (tap-hold $tt $ht g (multi lmet lalt lctl lsft))
 
   ;; right home row mods
-  mrsft (tap-hold $tt $ht j rsft)
+  mrsft (tap-hold $tt $ht @chj rsft)
   mrctl (tap-hold $tt $ht k rctl)
   mralt (tap-hold $tt $ht l @intl)
   mrmet (tap-hold $tt $ht ; rmet)
-  mrhyp (tap-hold $tt $ht @chh (multi rmet lalt rctl rsft))
+  mrhyp (tap-hold $tt $ht h (multi rmet lalt rctl rsft))
 )
 
 (defchords escape 100
-  (g   ) g
-  (   h) h
-  (g  h) esc
+  (f   ) f
+  (   j) j
+  (f  j) esc
 )
 
 ;; The first layer defined is the layer that will be active by default when kanata starts up.
