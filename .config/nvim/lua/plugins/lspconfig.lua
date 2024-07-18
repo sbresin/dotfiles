@@ -27,6 +27,18 @@ local pmd = {
 	},
 }
 
+local actionlint = {
+	prefix = "actionlint",
+	lintCommand = "bash -c \"[[ '${INPUT}' =~ \\\\.github/workflows/ ]]\" && ~/.local/share/nvim/mason/bin/actionlint -oneline -no-color -",
+	lintStdin = true,
+	lintAfterOpen = true,
+	lintSource = "actionlint",
+	lintFormats = {
+		"%f:%l:%c: %m",
+	},
+	rootMarkers = { ".git/", ".github/" },
+}
+
 local sedTrailingSpace = {
 	formatCommand = "sed -e 's/[ \t]*$//g'",
 	formatStdin = true,
@@ -60,7 +72,7 @@ return {
 						documentFormatting = true,
 						documentRangeFormatting = true,
 					},
-					filetypes = { "lua", "apexcode", "typescript", "json", "javascript" },
+					filetypes = { "lua", "apexcode", "typescript", "json", "javascript", "html", "yaml" },
 					settings = {
 						rootMarkers = { ".git/" },
 						lintDebounce = "3s",
@@ -84,6 +96,12 @@ return {
 							},
 							javascript = {
 								prettierd,
+							},
+							html = {
+								prettierd,
+							},
+							yaml = {
+								actionlint,
 							},
 						},
 					},
