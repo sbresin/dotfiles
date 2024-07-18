@@ -52,4 +52,4 @@ SETUVAR fish_pager_color_selected_background:\x2d\x2dbackground\x3d26233a
 SETUVAR fish_pager_color_selected_completion:e0def4
 SETUVAR fish_pager_color_selected_description:e0def4
 SETUVAR fish_pager_color_selected_prefix:9ccfd8
-SETUVAR fish_user_paths:/Users/sebastianbresin/workspace/pmd/pmd\x2ddist/target/pmd\x2dbin\x2d7\x2e1\x2e0\x2dSNAPSHOT/bin\x1e/Users/sebastianbresin/\x2ecargo/bin
+SETUVAR fish_user_paths:/Users/sebastianbresin/workspace/pmd/pmd\x2ddist/target/pmd\x2dbin\x2d7\x2e4\x2e0\x2dSNAPSHOT/bin\x1e/Users/sebastianbresin/workspace/pmd/pmd\x2ddist/target/pmd\x2dbin\x2d7\x2e1\x2e0\x2dSNAPSHOT/bin\x1e/Users/sebastianbresin/\x2ecargo/bin
