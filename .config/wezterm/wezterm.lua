@@ -24,7 +24,9 @@ config.adjust_window_size_when_changing_font_size = false
 -- }
 
 -- appearance settings
-config.color_scheme = "Rosé Pine (Gogh)"
+local theme = require('lua/rose-pine').main
+config.colors = theme.colors()
+config.window_frame = theme.window_frame();
 config.window_background_opacity = 0.93
 -- default font size on darwin is just too small
 config.font_size = 11.0
