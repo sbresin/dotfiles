@@ -51,7 +51,7 @@ local sedTrailingSpace = {
 -- TODO: eslint, html, css, json
 -- TODO: xml
 -- TODO: yaml
--- TODO: ltex
+-- TODO: latex
 -- TODO: bash
 -- TODO: vue
 
@@ -66,13 +66,24 @@ return {
 					apex_enable_semantic_errors = true, -- Whether to allow Apex Language Server to surface semantic errors
 					apex_enable_completion_statistics = false, -- Disable telemetry
 				},
-				eslint = {},
+				eslint = {
+					settings = {
+						codeActionOnSave = {
+							enable = false,
+						},
+					},
+				},
+				jsonls = {
+					init_options = {
+						provideFormatter = false,
+					},
+				},
 				efm = {
 					init_options = {
 						documentFormatting = true,
 						documentRangeFormatting = true,
 					},
-					filetypes = { "lua", "apexcode", "typescript", "json", "javascript", "html", "yaml" },
+					filetypes = { "lua", "apexcode", "typescript", "json", "jsonc", "javascript", "html", "yaml" },
 					settings = {
 						rootMarkers = { ".git/" },
 						lintDebounce = "3s",
@@ -92,6 +103,9 @@ return {
 								prettierd,
 							},
 							json = {
+								prettierd,
+							},
+							jsonc = {
 								prettierd,
 							},
 							javascript = {
@@ -117,6 +131,20 @@ return {
 						end
 					end,
 				},
+			},
+			setup = {
+				efm = function()
+					-- register efm formatting and override eslint formatting (no FixAll on save)
+					local formatter = LazyVim.lsp.formatter({
+						name = "efm: lsp",
+						primary = true,
+						priority = 900,
+						filter = "efm",
+					})
+
+					-- register the formatter with LazyVim
+					LazyVim.format.register(formatter)
+				end,
 			},
 		},
 	},
