@@ -49,7 +49,7 @@ shell: **fish**
 ## dotfiles usage
 
 - clone repo
-- `stow --verbose --target=$HOME .`
+- `stow --verbose --dotfiles --restow --target=$HOME .`
 
 ## nvim plugins
 
