@@ -1,3 +1,13 @@
+# sebes dotfiles
+
+## todo
+
+- pipewire + bluetooth
+- xwayland refactor + hidpi patch
+- hyprland base setup
+- home manager strategy
+- stylix ?
+
 ## Base Software
 
 - `stow` (symlink dotfiles)
