@@ -8,7 +8,7 @@ local is_darwin = function()
 end
 
 -- GPU settings
-config.front_end = "OpenGL"
+config.front_end = "WebGpu"
 config.webgpu_power_preference = "LowPower"
 config.enable_wayland = false
 
@@ -19,15 +19,12 @@ config.enable_kitty_keyboard = false
 -- window settings
 config.window_decorations = "RESIZE"
 config.adjust_window_size_when_changing_font_size = false
--- config.window_frame = {
--- 	font_size = 10.0,
--- }
 
 -- appearance settings
 local theme = require('lua/rose-pine').main
 config.colors = theme.colors()
 config.window_frame = theme.window_frame();
-config.window_background_opacity = 0.93
+config.window_background_opacity = 0.95
 -- default font size on darwin is just too small
 config.font_size = 11.0
 if is_darwin() then
