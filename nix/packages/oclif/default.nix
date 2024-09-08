@@ -1,13 +1,13 @@
-{ stdenv
-, lib
-, fetchFromGitHub
-, fetchYarnDeps
-, makeWrapper
-, prefetch-yarn-deps
-, nodejs_20
-, yarn
+{
+  stdenv,
+  lib,
+  fetchFromGitHub,
+  fetchYarnDeps,
+  makeWrapper,
+  fixup-yarn-lock,
+  nodejs_20,
+  yarn,
 }:
-
 stdenv.mkDerivation rec {
   pname = "oclif";
   version = "4.4.21";
@@ -19,8 +19,8 @@ stdenv.mkDerivation rec {
     hash = "sha256-xaRbsU4+iIrTSs79XGfgH0xZtfIgBFEITIrcDbHY9MY=";
   };
 
-  nativeBuildInputs = [ makeWrapper yarn prefetch-yarn-deps ];
-  buildInputs = [ nodejs_20 ];
+  nativeBuildInputs = [makeWrapper yarn fixup-yarn-lock];
+  buildInputs = [nodejs_20];
 
   yarnOfflineCache = fetchYarnDeps {
     yarnLock = "${src}/yarn.lock";
@@ -36,7 +36,7 @@ stdenv.mkDerivation rec {
 
     yarn config --offline set yarn-offline-mirror $yarnOfflineCache
     fixup-yarn-lock yarn.lock
-  
+
     yarn install --offline \
       --frozen-lockfile \
       --ignore-engines --ignore-scripts

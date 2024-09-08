@@ -1,78 +1,58 @@
-{ stdenv
-, lib
-, fetchFromGitHub
-, fetchYarnDeps
-, makeWrapper
-, prefetch-yarn-deps
-, nodejs_20
-, yarn
-}:
+{
+  lib,
+  pkgs,
+  stdenvNoCC,
+  writeShellScript,
+  ...
+}: let
+  # the original launch scripts redirects to the updated node executable, but we only want the updated JS
+  launchScript = writeShellScript "sf" ''
+    set -e
+    echoerr() { echo "$@" 1>&2; }
 
-stdenv.mkDerivation rec {
-  pname = "oclif";
-  version = "4.4.21";
+    DIR="@out@/bin"
 
-  src = fetchFromGitHub {
-    owner = "oclif";
-    repo = "oclif";
-    rev = "refs/tags/${version}";
-    hash = "sha256-xaRbsU4+iIrTSs79XGfgH0xZtfIgBFEITIrcDbHY9MY=";
-  };
+    CLI_HOME=$(cd && pwd)
+    XDG_DATA_HOME=''${XDG_DATA_HOME:="$CLI_HOME/.local/share"}
+    CLIENT_HOME=''${SF_OCLIF_CLIENT_HOME:=$XDG_DATA_HOME/sf/client}
+    RUN_DIR="$CLIENT_HOME/current/bin"
+    SF_REDIRECTED=0
+    if [[ -x "$RUN_DIR" ]]; then
+      DIR=$RUN_DIR
+      SF_REDIRECTED=1
+    fi
 
-  nativeBuildInputs = [ makeWrapper yarn prefetch-yarn-deps ];
-  buildInputs = [ nodejs_20 ];
+    NODE="${pkgs.nodejs_20}/bin/node"
 
-  yarnOfflineCache = fetchYarnDeps {
-    yarnLock = "${src}/yarn.lock";
-    hash = "sha256-BuMiN4T+SIF6hr5OPeEO6UwKUcIWetSZ2m84KkLXHkE=";
-  };
+    if [ "$DEBUG" == "*" ]; then
+      echoerr "$NODE" "$DIR/run" "$@"
+    fi
 
-  configurePhase = ''
-    export HOME=$(mktemp -d)/yarn_home
+    SF_BINPATH="$DIR" SF_REDIRECTED="$SF_REDIRECTED" "$NODE" "$DIR/run" "$@"
   '';
+in
+  stdenvNoCC.mkDerivation {
+    pname = "sf-cli";
+    version = "2.57.7";
 
-  buildPhase = ''
-    runHook preBuild
+    src = pkgs.fetchurl {
+      url = "https://developer.salesforce.com/media/salesforce-cli/sf/versions/2.57.7/291554e/sf-v2.57.7-291554e-linux-x64.tar.gz";
+      hash = "sha256-N80ZXnM+aJDP61iEulH6ojYIZpTHgt+W44PJ3cJGbuo=";
+    };
 
-    yarn config --offline set yarn-offline-mirror $yarnOfflineCache
-    fixup-yarn-lock yarn.lock
-  
-    yarn install --offline \
-      --frozen-lockfile \
-      --ignore-engines --ignore-scripts
-    patchShebangs node_modules/
-    yarn --offline build
-
-    runHook postBuild
-  '';
-
-  installPhase = ''
-    runHook preInstall
-
-    mkdir -p $out/bin $out/share/oclif
-    mv bin lib node_modules package.json $out/share/oclif/
-
-    node_modules=$out/share/oclif/node_modules
-    bin=$out/share/oclif/bin
-
-    makeWrapper ${nodejs_20}/bin/node $out/bin/oclif \
-      --add-flags $bin/run.js \
-      --set NODE_ENV production \
-      --set NODE_PATH $node_modules \
-
-    runHook postInstall
-  '';
-
-  meta = with lib; {
-    description = "CLI for generating, building, and releasing oclif CLIs";
-    homepage = "https://oclif.io";
-    longDescription = ''
-      oclif is an open source framework for building a command line interface (CLI) in Node.js and Typescript.
-      Create CLIs with a few flags or advanced CLIs that have subcommands.
-      oclif makes it easy for you to build CLIs for your company, service, or your own development needs.
+    installPhase = ''
+      mkdir $out
+      cp -R ./* "$out/"
+      rm "$out/bin/node"
+      install -D ${launchScript} "$out/bin/sf"
+      substituteInPlace "$out/bin/sf" --subst-var out
+      ln -fs "$out/bin/sf" "$out/bin/sfdx"
     '';
-    license = licenses.mit;
-    # maintainers = with maintainers; [ sbresin ];
-    mainProgram = "oclif";
-  };
-}
+
+    meta = {
+      description = "Salesforce CLI is a command-line interface that simplifies development and build automation when working with your Salesforce org.";
+      homepage = "https://developer.salesforce.com/docs/atlas.en-us.sfdx_setup.meta/sfdx_setup/sfdx_setup_intro.htm";
+      license = lib.licenses.bsd3;
+      # maintainers = with lib.maintainers; [ "sbresin" ];
+    };
+  }
