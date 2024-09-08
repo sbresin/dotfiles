@@ -1,38 +1,78 @@
 {
-  description = "nix config for sebe";
+  description = "sebe nix config";
 
   inputs = {
-    nixpkgs.url = "nixpkgs/nixpkgs-unstable";
-    home-manager = {
-      url = "github:nix-community/home-manager";
+    nixpkgs.url = "github:nixos/nixpkgs?ref=nixos-unstable";
+    # nixpkgs.url = "github:nixos/nixpkgs/f5c96d88c1d87fa801c831abde2113a1217af993";
+
+    # use Lix fork (faster and community driven)
+    lix-module = {
+      url = "https://git.lix.systems/lix-project/nixos-module/archive/2.91.0.tar.gz";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    nixgl = {
-      url = "github:guibou/nixGL";
+
+    # no boilerplate flake structure
+    snowfall-lib = {
+      url = "github:snowfallorg/lib";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
+    # manages bind mounts to persistent storage
+    impermanence.url = "github:nix-community/impermanence";
+
+    # secureboot for nixOS
+    lanzaboote = {
+      url = "github:nix-community/lanzaboote/v0.4.1";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
+    # declarative flatpak installs
+    nix-flatpak.url = "github:gmodena/nix-flatpak/?ref=v0.4.1";
+
+    # razer hardware settings
+    razer-laptop-control = {
+      url = "github:Razer-Linux/razer-laptop-control-no-dkms";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
+    # get nightly wezterm
+    wezterm = {
+      url = "github:wez/wezterm/main?dir=nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
   };
 
-  outputs = { nixpkgs, home-manager, nixgl, ... } @ inputs:
-    let
-      mkHomeConfig = machineModule: system: home-manager.lib.homeManagerConfiguration {
-      # pkgs = nixpkgs.legacyPackages.${system};
-      pkgs = import nixpkgs {
-        inherit system;
-        overlays = [ nixgl.overlay ];
-      };
-      modules = [
-          # ./sharedConfig
-          ./nix/no-news.nix
-          machineModule
-        ];
+  outputs = inputs:
+    inputs.snowfall-lib.mkFlake {
+      inherit inputs;
+      src = ./.;
 
-        extraSpecialArgs = {
-          inherit inputs system;
+      snowfall = {
+        root = ./nix;
+        namespace = "sebe";
+
+        meta = {
+          name = "sebe-flake";
+          title = "Sebes Flake";
         };
       };
-    in {
-      homeConfigurations."sebe@arch-laptop" = mkHomeConfig ./nix/machines/arch.nix "x86_64-linux";
-      homeConfigurations."sebe@macbook-work" = mkHomeConfig ./nix/machines/work.nix "x86_64-darwin";
+
+      overlays = with inputs; [
+        lix-module.overlays.lixFromNixpkgs
+      ];
+
+      systems.modules.nixos = with inputs; [
+        impermanence.nixosModules.impermanence
+        lanzaboote.nixosModules.lanzaboote
+      ];
+
+      systems.hosts.blade15.modules = with inputs; [
+        nix-flatpak.nixosModules.nix-flatpak
+        razer-laptop-control.nixosModules.default
+      ];
+
+      outputs-builder = channels: {
+        formatter = channels.nixpkgs.alejandra;
+      };
     };
 }
