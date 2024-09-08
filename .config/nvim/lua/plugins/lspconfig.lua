@@ -39,6 +39,11 @@ local actionlint = {
 	rootMarkers = { ".git/", ".github/" },
 }
 
+local alejandra = {
+  formatCommand = "alejandra - ",
+  formatStdin = true,
+}
+
 local sedTrailingSpace = {
 	formatCommand = "sed -e 's/[ \t]*$//g'",
 	formatStdin = true,
@@ -83,7 +88,7 @@ return {
 						documentFormatting = true,
 						documentRangeFormatting = true,
 					},
-					filetypes = { "lua", "apexcode", "typescript", "json", "jsonc", "javascript", "html", "yaml" },
+					filetypes = { "lua", "apexcode", "typescript", "json", "jsonc", "javascript", "html", "yaml", "nix" },
 					settings = {
 						rootMarkers = { ".git/" },
 						lintDebounce = "3s",
@@ -117,6 +122,9 @@ return {
 							yaml = {
 								actionlint,
 							},
+              nix = {
+                alejandra,
+              }
 						},
 					},
 				},
