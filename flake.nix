@@ -71,6 +71,14 @@
         razer-laptop-control.nixosModules.default
       ];
 
+      channels-config = {
+        allowUnfreePredicate = pkg:
+          builtins.elem (inputs.nixpkgs.lib.getName pkg) [
+            "nvidia-x11"
+            "nvidia-settings"
+          ];
+      };
+
       outputs-builder = channels: {
         formatter = channels.nixpkgs.alejandra;
       };

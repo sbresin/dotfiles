@@ -25,12 +25,6 @@
 
   nix.package = pkgs.lix;
 
-  nixpkgs.config.allowUnfreePredicate = pkg:
-    builtins.elem (lib.getName pkg) [
-      "nvidia-x11"
-      "nvidia-settings"
-    ];
-
   # Use the systemd-boot EFI boot loader.
   boot.loader.efi = {
     efiSysMountPoint = "/efi";
