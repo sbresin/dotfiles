@@ -17,6 +17,18 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    # use home-manager
+    home-manager = {
+      url = "github:nix-community/home-manager";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
+    # # In order to configure macOS systems.
+    # darwin = {
+    #   url = "github:lnl7/nix-darwin";
+    #   inputs.nixpkgs.follows = "nixpkgs";
+    # };
+
     # manages bind mounts to persistent storage
     impermanence.url = "github:nix-community/impermanence";
 
