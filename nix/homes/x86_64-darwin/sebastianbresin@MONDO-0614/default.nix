@@ -34,7 +34,7 @@
   programs.fish = {
     enable = true;
     shellInitLast = ''
-      source ~/.config/fish/config-custom.fish
+      # source ~/.config/fish/config-custom.fish
 
       # zoxide setup
       ${pkgs.zoxide}/bin/zoxide init fish | source
