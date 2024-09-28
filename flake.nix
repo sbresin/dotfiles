@@ -13,7 +13,7 @@
 
     # no boilerplate flake structure
     snowfall-lib = {
-      url = "github:snowfallorg/lib";
+      url = "github:snowfallorg/lib/v3.0.3";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
@@ -41,6 +41,12 @@
     # declarative flatpak installs
     nix-flatpak.url = "github:gmodena/nix-flatpak/?ref=v0.4.1";
 
+    # anyrun launcher
+    anyrun = {
+      url = "github:anyrun-org/anyrun";
+      # inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     # razer hardware settings
     razer-laptop-control = {
       url = "github:Razer-Linux/razer-laptop-control-no-dkms";
@@ -48,10 +54,7 @@
     };
 
     # get nightly wezterm
-    wezterm = {
-      url = "github:wez/wezterm/main?dir=nix";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
+    wezterm.url = "github:wez/wezterm/main?dir=nix";
   };
 
   outputs = inputs:
@@ -74,6 +77,7 @@
       ];
 
       systems.modules.nixos = with inputs; [
+        home-manager.nixosModules.home-manager
         impermanence.nixosModules.impermanence
         lanzaboote.nixosModules.lanzaboote
       ];
@@ -81,6 +85,10 @@
       systems.hosts.blade15.modules = with inputs; [
         nix-flatpak.nixosModules.nix-flatpak
         razer-laptop-control.nixosModules.default
+      ];
+
+      homes.modules = with inputs; [
+        anyrun.homeManagerModules.default
       ];
 
       channels-config = {

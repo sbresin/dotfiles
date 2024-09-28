@@ -12,7 +12,7 @@
   theme = "text=#E0DEF4;container=#1f1d2e;border=#6e6a86;title=#9ccfd8;prompt=#ebbcba;input=#eb6f92;time=#ebbcba";
 in {
   services.greetd = {
-    enable = true;
+    enable = false;
     settings = {
       default_session = {
         command = "${cage} -dms -- ${alacritty} ${alacritty_options} --command ${tuigreet} --remember --remember-session --time --window-padding 2 --theme '${theme}'";

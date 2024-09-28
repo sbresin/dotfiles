@@ -6,7 +6,7 @@
   # copy config files to nix store
   kanata-config = pkgs.stdenvNoCC.mkDerivation {
     name = "kanata-config";
-    src = lib.snowfall.fs.get-file ".config/kanata";
+    src = lib.snowfall.fs.get-file "dot-config/kanata";
     postInstall = ''
       mkdir $out
       cp -v *.kbd $out
