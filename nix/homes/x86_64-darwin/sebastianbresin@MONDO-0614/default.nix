@@ -65,6 +65,11 @@
     '';
   };
 
+  programs.direnv = {
+    enable = true;
+    enableZshIntegration = true;
+  };
+
   home.packages = with pkgs; [
     # nix tools
     alejandra
@@ -126,6 +131,7 @@
     esbuild
     go
     gopls
+    protobuf
     # macOS tools
     terminal-notifier
     skhd

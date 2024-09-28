@@ -27,6 +27,18 @@ local pmd = {
 	},
 }
 
+local mypy = {
+    lintCommand = 'poetry run mypy --show-column-numbers',
+	lintStdin = true,
+	lintAfterOpen = true,
+    lintFormats = {
+      '%f:%l:%c: %trror: %m',
+      '%f:%l:%c: %tarning: %m',
+      '%f:%l:%c: %tote: %m'
+	}
+}
+
+
 local actionlint = {
 	prefix = "actionlint",
 	lintCommand = "bash -c \"[[ '${INPUT}' =~ \\\\.github/workflows/ ]]\" && ~/.local/share/nvim/mason/bin/actionlint -oneline -no-color -",
@@ -88,7 +100,7 @@ return {
 						documentFormatting = true,
 						documentRangeFormatting = true,
 					},
-					filetypes = { "lua", "apexcode", "typescript", "json", "jsonc", "javascript", "html", "yaml", "nix" },
+					filetypes = { "lua", "apexcode", "typescript", "json", "jsonc", "javascript", "html", "yaml", "nix" }, -- , "python"
 					settings = {
 						rootMarkers = { ".git/" },
 						lintDebounce = "3s",
@@ -103,6 +115,9 @@ return {
 								prettierd,
 								-- sedTrailingSpace,
 								pmd,
+							},
+							python = {
+								mypy,
 							},
 							typescript = {
 								prettierd,
