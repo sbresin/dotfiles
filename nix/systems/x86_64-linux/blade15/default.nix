@@ -21,6 +21,7 @@
     ./private-dns.nix
     ./kanata.nix
     ./flatpak.nix
+    ./desktop-env.nix
   ];
 
   nix.package = pkgs.lix;
@@ -75,7 +76,7 @@
   # SSD needs TRIM
   services.fstrim.enable = true;
 
-  networking.hostName = lib.mkForce "sebe_laptop";
+  # networking.hostName = lib.mkForce "sebe_laptop";
   networking.networkmanager = {
     enable = true;
     wifi.powersave = true;
@@ -149,10 +150,9 @@
 
   users.mutableUsers = false;
   users.users.root.initialHashedPassword = "$6$7Sq/gCE9D0uBEAlt$QJJS0FCjeIk0dFyQi7MnZIm7nKZ4wYbubjNmCvFA5JqJa8Mzmgv2gCGY7UXDXSoEJPwBTL9cQNBkwrz2LzquJ.";
-  # Define a user account. Don't forget to set a password with ‘passwd’.
   users.users.sebe = {
     isNormalUser = true;
-    extraGroups = ["wheel" "input" "uinput" "networkmanager" "openrazer"]; # Enable ‘sudo’ for the user.
+    extraGroups = ["wheel" "input" "uinput" "networkmanager" "openrazer"];
     initialHashedPassword = "$6$.7TC31zU0p1OfOH2$b7.CZMpPB.X6YFZMR5akKaEhDTlUPnUJc.gXmv1GqnVV528RuQKvqCp0sRTUk/ZXo.eofNBD9QUup6s9adyXI/";
   };
 
@@ -167,6 +167,8 @@
     sbctl
     sbsigntool
     git
+    # desktop setup
+    inputs.anyrun.packages.${system}.anyrun
     # runtimes
     nodejs
     python3
