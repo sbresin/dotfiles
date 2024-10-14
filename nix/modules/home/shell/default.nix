@@ -1,4 +1,4 @@
-{...}: {
+{pkgs, ...}: {
   programs.fish = {
     enable = true;
   };
@@ -21,8 +21,16 @@
 
   programs.oh-my-posh = {
     enable = true;
-
+    settings = builtins.fromJSON (builtins.unsafeDiscardStringContext (builtins.readFile ./rosepine.omp.json));
     enableFishIntegration = true;
     enableZshIntegration = true;
   };
+
+  home.packages = with pkgs; [
+    # nix tools
+    alejandra
+    nh
+    devbox
+    nil
+  ];
 }

@@ -54,10 +54,7 @@
     };
 
     # get nightly wezterm
-    wezterm = {
-      url = "github:wez/wezterm/main?dir=nix";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
+    wezterm.url = "github:wez/wezterm/main?dir=nix";
   };
 
   outputs = inputs:

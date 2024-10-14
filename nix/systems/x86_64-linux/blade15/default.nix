@@ -108,7 +108,7 @@
   # };
 
   # Enable the X11 windowing system.
-  # services.xserver.enable = true;
+  services.xserver.enable = true;
   programs.xwayland.enable = true;
 
   # default to Wayland for chromium/electron apps
@@ -119,13 +119,13 @@
   services.xserver.videoDrivers = ["nvidia"];
 
   # Enable the GNOME Desktop Environment.
-  services.xserver.displayManager.gdm.enable = false;
+  services.xserver.displayManager.gdm.enable = true;
   services.xserver.desktopManager.gnome = {
     enable = true;
     extraGSettingsOverridePackages = [pkgs.mutter];
     extraGSettingsOverrides = ''
       [org.gnome.mutter]
-      experimental-features=['scale-monitor-framebuffer', 'xwayland-native-scaling']
+      experimental-features=['scale-monitor-framebuffer', 'xwayland-native-scaling', 'variable-refresh-rate']
     '';
   };
 
@@ -155,6 +155,14 @@
     extraGroups = ["wheel" "input" "uinput" "networkmanager" "openrazer"];
     initialHashedPassword = "$6$.7TC31zU0p1OfOH2$b7.CZMpPB.X6YFZMR5akKaEhDTlUPnUJc.gXmv1GqnVV528RuQKvqCp0sRTUk/ZXo.eofNBD9QUup6s9adyXI/";
   };
+
+  services.udev = {
+    enable = true;
+    packages = with pkgs; [game-devices-udev-rules];
+  };
+
+  # Appimage auto
+  programs.appimage.binfmt = true;
 
   programs.nh.enable = true;
 
@@ -219,13 +227,15 @@
     # Emulators
     dolphin-emu
     lime3ds
-    cemu
     mgba
+    mame.tools
     # this flakes packages
     pkgs.${namespace}.razer-cli
     pkgs.${namespace}.apple-emoji-linux
     pkgs.${namespace}.sf-cli
     pkgs.${namespace}.oclif
+    pkgs.${namespace}.rusty-psn
+    # pkgs.${namespace}.ryujinx
   ];
 
   fonts.packages = with pkgs; [
@@ -261,10 +271,10 @@
   };
 
   hardware.openrazer.enable = true;
-  services.razer-laptop-control = {
-    enable = true;
-    package = pkgs.${namespace}.razer-laptop-control;
-  };
+  # services.razer-laptop-control = {
+  #   enable = true;
+  #   package = pkgs.${namespace}.razer-laptop-control;
+  # };
 
   services.speechd.enable = true;
 
