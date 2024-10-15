@@ -26,6 +26,12 @@
     enableZshIntegration = true;
   };
 
+  programs.mise = {
+    enable = true;
+    enableFishIntegration = true;
+    enableZshIntegration = true;
+  };
+
   home.packages = with pkgs; [
     # nix tools
     alejandra
