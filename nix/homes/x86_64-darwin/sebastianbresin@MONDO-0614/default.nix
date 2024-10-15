@@ -130,6 +130,9 @@
     go
     gopls
     protobuf
+    # servers + tools
+    valkey
+    postgresql
     # macOS tools
     terminal-notifier
     skhd
