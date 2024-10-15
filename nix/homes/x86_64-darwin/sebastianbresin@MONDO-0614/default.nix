@@ -78,8 +78,6 @@
     # basics
     git
     neovim
-    bash
-    fish
     docker
     starship
     colima
