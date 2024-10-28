@@ -36,9 +36,6 @@
     shellInitLast = ''
       # source ~/.config/fish/config-custom.fish
 
-      # zoxide setup
-      ${pkgs.zoxide}/bin/zoxide init fish | source
-
       # starship setup
       function starship_transient_prompt_func
           ${pkgs.starship}/bin/starship module character
@@ -49,25 +46,6 @@
       ${pkgs.starship}/bin/starship init fish | source
       enable_transience
     '';
-  };
-
-  programs.zsh = {
-    enable = true;
-    initExtra = ''
-      source ~/.profile
-
-      # if running interactively start fish if not already running
-      if [[ $(${pkgs.procps}/bin/ps -p $PPID -o "comm=") != "fish" && -z ''${ZSH_EXECUTION_STRING} ]]
-      then
-        [[ -o login ]] && LOGIN_OPTION='--login' || LOGIN_OPTION=""
-        exec fish $LOGIN_OPTION
-      fi
-    '';
-  };
-
-  programs.direnv = {
-    enable = true;
-    enableZshIntegration = true;
   };
 
   home.packages = with pkgs; [
