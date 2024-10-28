@@ -57,70 +57,70 @@
   home.packages = with pkgs; [
     # nix tools
     alejandra
-    nh
     devbox
+    nh
     # basics
+    colima
+    docker
     git
     neovim
-    docker
     starship
-    colima
     # cli tools
-    gnugrep
-    scc
-    shellcheck
-    delta
     bat
+    delta
     eza
     fd
+    findutils
     fzf
     glow
-    lazygit
+    gnugrep
+    gnused
+    imagemagick
     jq
-    yq
+    lazygit
+    less
+    miller
+    pre-commit
+    ripgrep
     sad
+    scc
+    shellcheck
+    sloc
     stow
     unar
-    ripgrep
-    gnused
+    yq
     zoxide
-    sloc
-    findutils
-    miller
-    less
-    imagemagick
-    pre-commit
     # lnav
-    oxipng
-    rsync
     bottom
     lazydocker
+    oxipng
+    rsync
     # platform tools
-    gh
-    pkgs.${namespace}.sf-cli
-    heroku
-    google-cloud-sdk
     act
     fastly
+    gh
+    google-cloud-sdk
+    heroku
+    pkgs.${namespace}.sf-cli
     # stacks + tools
-    rustup
     cargo-nextest
-    jdt-language-server
-    python3
-    poetry
-    nodejs_latest
     esbuild
     go
     gopls
+    jdt-language-server
+    nodejs_latest
+    poetry
     protobuf
+    python3
+    rustup
     terraform
     # servers + tools
-    valkey
     postgresql
     rabbitmq-server
+    valkey
     # macOS tools
-    terminal-notifier
     skhd
+    terminal-notifier
   ];
 
   home.stateVersion = "24.05";
