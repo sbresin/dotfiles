@@ -116,9 +116,5 @@
     skhd
   ];
 
-  news.display = "silent";
-  news.json = pkgs.lib.mkForce {};
-  news.entries = pkgs.lib.mkForce [];
-
   home.stateVersion = "24.05";
 }
