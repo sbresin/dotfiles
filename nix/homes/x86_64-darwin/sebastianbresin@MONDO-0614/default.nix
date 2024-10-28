@@ -113,6 +113,7 @@
     go
     gopls
     protobuf
+    terraform
     # servers + tools
     valkey
     postgresql
