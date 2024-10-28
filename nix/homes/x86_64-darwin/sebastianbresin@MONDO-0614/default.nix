@@ -66,7 +66,6 @@
     starship
     colima
     # cli tools
-    # mise
     gnugrep
     scc
     shellcheck
@@ -117,6 +116,7 @@
     # servers + tools
     valkey
     postgresql
+    rabbitmq-server
     # macOS tools
     terminal-notifier
     skhd
