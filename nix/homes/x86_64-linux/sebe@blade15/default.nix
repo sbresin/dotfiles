@@ -71,13 +71,6 @@
   };
   programs.gh-dash.enable = true;
 
-  home.sessionVariables = {
-    EDITOR = "nvim";
-    SF_DISABLE_TELEMETRY = "true";
-    SF_ORG_METADATA_REST_DEPLOY = "true";
-    SF_IMPROVED_CODE_COVERAGE = "true";
-  };
-
   programs.anyrun = {
     enable = true;
     config = {
