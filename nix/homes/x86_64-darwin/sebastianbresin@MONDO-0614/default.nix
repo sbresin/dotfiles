@@ -108,7 +108,7 @@
     go
     gopls
     jdt-language-server
-    nodejs_latest
+    nodejs
     poetry
     protobuf
     python3
