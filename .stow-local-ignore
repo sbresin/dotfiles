@@ -1,15 +1,7 @@
-\.git
-\.gitignore
-\.editorconfig
-
 ^/README.*
 
 \.DS_Store
 
-^/nix
-flake.nix
-flake.lock
-
 # these need to be copied, symlinking does not work
-^/Library
+Library/
 

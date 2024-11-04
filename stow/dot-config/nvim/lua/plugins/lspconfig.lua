@@ -1,7 +1,7 @@
 local util = require("lspconfig.util")
 
 local prettierd = {
-	formatCommand = '~/.local/share/nvim/mason/bin/prettierd --apex-standalone-parser=built-in --stdin-filepath "${INPUT}"',
+	formatCommand = '~/.local/share/nvim/mason/bin/prettierd --stdin-filepath "${INPUT}"',
 	formatStdin = true,
 	-- env = {
 	--   string.format('PRETTIERD_DEFAULT_CONFIG=%s', vim.fn.expand('~/.config/nvim/utils/linter-config/.prettierrc.json')),
