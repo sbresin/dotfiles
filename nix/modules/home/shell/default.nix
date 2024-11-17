@@ -26,6 +26,33 @@
     enableZshIntegration = true;
   };
 
+  programs.mise = {
+    enable = true;
+    enableFishIntegration = true;
+    enableZshIntegration = true;
+  };
+
+  programs.zoxide = {
+    enable = true;
+    enableFishIntegration = true;
+    enableZshIntegration = true;
+  };
+
+  programs.direnv = {
+    enable = true;
+    enableZshIntegration = true;
+  };
+
+  home.sessionVariables = {
+    EDITOR = "nvim";
+    # disbale heroku cli telemetry
+    DISABLE_TELEMETRY = "true";
+    # disable salesforce cli telemetry, faster rest deploys, better coverage calculation
+    SF_DISABLE_TELEMETRY = "true";
+    SF_ORG_METADATA_REST_DEPLOY = "true";
+    SF_IMPROVED_CODE_COVERAGE = "true";
+  };
+
   home.packages = with pkgs; [
     # nix tools
     alejandra

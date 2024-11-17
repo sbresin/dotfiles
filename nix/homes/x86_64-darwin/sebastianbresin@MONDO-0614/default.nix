@@ -20,6 +20,12 @@
   # use standalone home-manager
   programs.home-manager.enable = true;
 
+  # upstream pypi django needs help finding these
+  home.sessionVariables = {
+    GDAL_LIBRARY_PATH = "${pkgs.gdal}/lib/libgdal.dylib";
+    GEOS_LIBRARY_PATH = "${pkgs.geos}/lib/libgeos_c.dylib";
+  };
+
   nix = {
     # https://github.com/NixOS/nixpkgs/issues/337036
     package = pkgs.lix.overrideAttrs {
@@ -36,9 +42,6 @@
     shellInitLast = ''
       # source ~/.config/fish/config-custom.fish
 
-      # zoxide setup
-      ${pkgs.zoxide}/bin/zoxide init fish | source
-
       # starship setup
       function starship_transient_prompt_func
           ${pkgs.starship}/bin/starship module character
@@ -51,95 +54,74 @@
     '';
   };
 
-  programs.zsh = {
-    enable = true;
-    initExtra = ''
-      source ~/.profile
-
-      # if running interactively start fish if not already running
-      if [[ $(${pkgs.procps}/bin/ps -p $PPID -o "comm=") != "fish" && -z ''${ZSH_EXECUTION_STRING} ]]
-      then
-        [[ -o login ]] && LOGIN_OPTION='--login' || LOGIN_OPTION=""
-        exec fish $LOGIN_OPTION
-      fi
-    '';
-  };
-
-  programs.direnv = {
-    enable = true;
-    enableZshIntegration = true;
-  };
-
   home.packages = with pkgs; [
     # nix tools
     alejandra
-    nh
     devbox
+    nh
     # basics
+    colima
+    docker
     git
     neovim
-    bash
-    fish
-    docker
     starship
-    colima
     # cli tools
-    # mise
-    gnugrep
-    scc
-    shellcheck
-    delta
     bat
+    delta
     eza
     fd
+    findutils
     fzf
     glow
-    lazygit
+    gnugrep
+    gnused
+    imagemagick
     jq
-    yq
+    lazygit
+    less
+    miller
+    pre-commit
+    ripgrep
     sad
+    scc
+    shellcheck
+    sloc
     stow
     unar
-    ripgrep
-    gnused
+    yq
     zoxide
-    sloc
-    findutils
-    miller
-    less
-    imagemagick
-    pre-commit
     # lnav
-    oxipng
-    rsync
     bottom
     lazydocker
+    oxipng
+    rsync
     # platform tools
-    gh
-    pkgs.${namespace}.sf-cli
-    heroku
-    google-cloud-sdk
     act
     fastly
+    gh
+    google-cloud-sdk
+    heroku
+    pkgs.${namespace}.sf-cli
     # stacks + tools
-    rustup
     cargo-nextest
-    jdt-language-server
-    python3
-    poetry
-    nodejs_latest
     esbuild
     go
     gopls
+    jdt-language-server
+    nodejs
+    poetry
     protobuf
+    python3
+    rustup
+    terraform
+    # servers + tools
+    postgresql
+    rabbitmq-server
+    valkey
     # macOS tools
-    terminal-notifier
     skhd
+    terminal-notifier
   ];
-
-  news.display = "silent";
-  news.json = pkgs.lib.mkForce {};
-  news.entries = pkgs.lib.mkForce [];
 
   home.stateVersion = "24.05";
 }

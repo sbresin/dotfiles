@@ -1,0 +1,25 @@
+keybindings:
+  prs:
+    - key: a
+      command: >
+        gh pr review --repo {{.RepoName}} --approve {{.PrNumber}}
+theme:
+  ui:
+    table:
+      showSeparator: true
+  colors:
+    text:
+      primary: "#e0def4"
+      secondary: "#908caa"
+      inverted: "#191724"
+      faint: "#6e6a86"
+      warning: "#eb6f92"
+      success: "#9ccfd8"
+    background:
+      selected: "#1f1d2e"
+    border:
+      primary: "#524f67"
+      secondary: "#403d52"
+      faint: "#21202e" # optional, see more info below
+pager:
+  diff: delta

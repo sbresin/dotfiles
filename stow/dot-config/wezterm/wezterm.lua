@@ -47,6 +47,8 @@ config.quick_select_patterns = {
 	"\\s-\\w{1}|\\s--[\\w-]+=?",
 	-- match quoted strings
 	'"(.+?)"',
+	-- match content in backticks
+	'`(.+?)`',
 }
 
 -- keybindings
