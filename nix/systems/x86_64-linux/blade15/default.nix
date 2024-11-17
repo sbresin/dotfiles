@@ -150,9 +150,13 @@
 
   users.mutableUsers = false;
   users.users.root.initialHashedPassword = "$6$7Sq/gCE9D0uBEAlt$QJJS0FCjeIk0dFyQi7MnZIm7nKZ4wYbubjNmCvFA5JqJa8Mzmgv2gCGY7UXDXSoEJPwBTL9cQNBkwrz2LzquJ.";
+
+  users.groups = {
+    storage = {};
+  };
   users.users.sebe = {
     isNormalUser = true;
-    extraGroups = ["wheel" "input" "uinput" "networkmanager" "openrazer"];
+    extraGroups = ["wheel" "input" "uinput" "networkmanager" "openrazer" "storage"];
     initialHashedPassword = "$6$.7TC31zU0p1OfOH2$b7.CZMpPB.X6YFZMR5akKaEhDTlUPnUJc.gXmv1GqnVV528RuQKvqCp0sRTUk/ZXo.eofNBD9QUup6s9adyXI/";
   };
 
