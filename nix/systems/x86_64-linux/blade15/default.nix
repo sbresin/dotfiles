@@ -235,6 +235,7 @@
     pkgs.${namespace}.sf-cli
     pkgs.${namespace}.oclif
     pkgs.${namespace}.rusty-psn
+    pkgs.${namespace}.duckstation
     # pkgs.${namespace}.ryujinx
   ];
 

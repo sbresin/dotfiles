@@ -21,7 +21,6 @@
       "com.valvesoftware.Steam".Context.sockets = ["x11"]; # No Wayland support
       "org.DolphinEmu.dolphin-emu".Context.sockets = ["x11"]; # No Wayland support
       "org.jdownloader.JDownloader".Context.sockets = ["x11"]; # No Wayland support
-      "org.duckstation.DuckStation".Context.sockets = ["x11"]; # No Wayland support
       "org.ryujinx.Ryujinx".Context.sockets = ["x11"]; # No Wayland support
     };
     packages = [
@@ -34,7 +33,6 @@
       # emulators
       "net.rpcs3.RPCS3"
       "info.cemu.Cemu"
-      "org.duckstation.DuckStation"
       "org.flycast.Flycast"
       # proprietary
       "com.slack.Slack"
