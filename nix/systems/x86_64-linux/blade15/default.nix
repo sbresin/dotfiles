@@ -206,6 +206,10 @@
     fzf
     lazygit
     gh
+    ffmpeg-full
+    imagemagick
+    ocrmypdf
+    tectonic
     unzip
     unar
     # languageservers
@@ -225,6 +229,8 @@
     pngquant
     ocrmypdf
     # GUI Apps
+    libreoffice-fresh
+    pdfarranger
     gnome-tweaks
     vscodium
     telegram-desktop
@@ -233,6 +239,8 @@
     lime3ds
     mgba
     mame.tools
+    # gaming
+    mangohud
     # this flakes packages
     pkgs.${namespace}.razer-cli
     pkgs.${namespace}.apple-emoji-linux
