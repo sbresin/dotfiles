@@ -18,7 +18,7 @@
 
       // users in storage group can do udisk internal mounts
       polkit.addRule(function(action, subject) {
-        if (["org.freedesktop.udisks2.filesystem-mount-system", "org.freedesktop.udisks.filesystem-mount-system-internal"].contains(action.id) &&
+        if (("org.freedesktop.udisks2.filesystem-mount-system" === action.id || "org.freedesktop.udisks.filesystem-mount-system-internal" === action.id) &&
           subject.local && subject.active && subject.isInGroup("storage")) {
           return polkit.Result.YES;
         }
