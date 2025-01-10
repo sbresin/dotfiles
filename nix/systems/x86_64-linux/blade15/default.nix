@@ -32,7 +32,7 @@
 
   boot.lanzaboote = {
     enable = true;
-    pkiBundle = "/etc/secureboot";
+    pkiBundle = "/var/lib/sbctl";
   };
 
   # for TPM based LUKS decryption we need systemd
@@ -43,12 +43,12 @@
     hideMounts = true;
     directories = [
       "/var/log"
+      "/var/lib/sbctl"
       "/var/lib/bluetooth"
       "/var/lib/nixos"
       "/var/lib/systemd/coredump"
       "/var/lib/flatpak"
       "/var/cache/tuigreet"
-      "/etc/secureboot"
       "/etc/NetworkManager/system-connections"
       {
         directory = "/var/lib/colord";
