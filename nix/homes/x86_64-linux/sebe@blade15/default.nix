@@ -23,8 +23,16 @@
   # use standalone home-manager
   programs.home-manager.enable = true;
 
+  # set default apps
+  xdg.mimeApps = {
     enable = true;
 
+    defaultApplications = {
+      "text/html" = "io.github.zen_browser.zen.desktop";
+      "x-scheme-handler/http" = "io.github.zen_browser.zen.desktop";
+      "x-scheme-handler/https" = "io.github.zen_browser.zen.desktop";
+      "x-scheme-handler/about" = "io.github.zen_browser.zen.desktop";
+      "x-scheme-handler/unknown" = "io.github.zen_browser.zen.desktop";
     };
   };
 
