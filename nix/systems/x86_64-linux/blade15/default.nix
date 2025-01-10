@@ -147,16 +147,15 @@
     openFirewall = true;
   };
 
-  # Enable sound.
+  # Enable sound through pipewire
   hardware.pulseaudio.enable = false;
-  # OR
   services.pipewire = {
     enable = true;
     pulse.enable = true;
     alsa.enable = true;
   };
 
-  # Enable touchpad support (enabled default in most desktopManager).
+  # Enable touchpad support (enabled default in most desktopManagers).
   services.libinput.enable = true;
 
   users.mutableUsers = false;
@@ -171,14 +170,16 @@
     initialHashedPassword = "$6$.7TC31zU0p1OfOH2$b7.CZMpPB.X6YFZMR5akKaEhDTlUPnUJc.gXmv1GqnVV528RuQKvqCp0sRTUk/ZXo.eofNBD9QUup6s9adyXI/";
   };
 
+  # Add direct access to game controllers
   services.udev = {
     enable = true;
     packages = with pkgs; [game-devices-udev-rules];
   };
 
-  # Appimage auto
+  # allow to directly execute Appimages
   programs.appimage.binfmt = true;
 
+  # Use nh nix cli wrapper
   programs.nh.enable = true;
 
 
