@@ -51,6 +51,14 @@ shell: **fish**
 - clone repo
 - `stow --verbose --dotfiles --restow --target=$HOME .`
 
+## efiboot
+### add OpenCore to boot menu
+`sudo efibootmgr --create --disk /dev/nvme0n1p1 --loader "\\EFI\\OC\\OpenCore.efi" --label "OpenCore"`
+
+### enroll secureboot keys
+
+### enroll tpm to LUKS
+
 ## nvim plugins
 
 - [Telescope.nvim](https://github.com/nvim-telescope/telescope.nvim)
