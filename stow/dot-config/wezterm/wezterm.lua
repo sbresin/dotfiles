@@ -45,6 +45,7 @@ config.quick_select_patterns = {
     "\\s-\\w{1}|\\s--[\\w-]+=?", -- match flags from commands --help
     '"(.+?)"', -- match quoted strings 
     '`(.+?)`', -- match content in backticks
+    'sha256-[A-Za-z0-9+/=]+' -- nix sha256 hash
 }
 
 -- keybindings
