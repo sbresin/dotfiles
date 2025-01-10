@@ -23,53 +23,10 @@
   # use standalone home-manager
   programs.home-manager.enable = true;
 
-  programs.bat = {
     enable = true;
-    extraPackages = with pkgs.bat-extras; [
-      batdiff
-      batgrep
-      batman
-    ];
-  };
 
-  programs.broot.enable = true;
-
-  programs.eza = {
-    enable = true;
-  };
-
-  programs.git = {
-    enable = true;
-    extraConfig = {
-      user = {
-        # signingkey = "B24A1D10508180D8";
-        email = "sebastian.bresin@gmail.com";
-        name = "Sebastian Bresin";
-      };
-      init.defaultBranch = "main";
-      # commit.gpgsign = true;
-      pull.rebase = false;
-      # rebase.autosquash = true;
-    };
-    delta.enable = true;
-    delta.options = {
-      line-numbers = true;
-      navigate = true;
-      dark = true;
-      tabs = 2;
-      syntax-theme = "rose-pine";
     };
   };
-
-  programs.gh = {
-    enable = true;
-    gitCredentialHelper.enable = true;
-    settings = {
-      # git_protocol = "ssh";
-      prompt = "enabled";
-    };
-  };
-  programs.gh-dash.enable = true;
 
   programs.anyrun = {
     enable = true;
