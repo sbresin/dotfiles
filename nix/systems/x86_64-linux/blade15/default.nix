@@ -19,7 +19,7 @@
     ./desktop-env.nix
   ];
 
-  nix.package = pkgs.lix;
+  # nix.package = pkgs.lix;
 
   # Use the systemd-boot EFI boot loader.
   boot.loader.efi = {

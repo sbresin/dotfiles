@@ -73,7 +73,7 @@
       };
 
       overlays = with inputs; [
-        lix-module.overlays.lixFromNixpkgs
+        # lix-module.overlays.lixFromNixpkgs
       ];
 
       systems.modules.nixos = with inputs; [
