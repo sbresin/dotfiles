@@ -172,6 +172,9 @@
     initialHashedPassword = "$6$.7TC31zU0p1OfOH2$b7.CZMpPB.X6YFZMR5akKaEhDTlUPnUJc.gXmv1GqnVV528RuQKvqCp0sRTUk/ZXo.eofNBD9QUup6s9adyXI/";
   };
 
+  # enable adb
+  programs.adb.enable = true;
+
   # Add direct access to game controllers
   services.udev = {
     enable = true;
