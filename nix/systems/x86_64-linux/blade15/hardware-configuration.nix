@@ -17,6 +17,8 @@
   boot.extraModulePackages = [];
   # nouveau boots to blackscreen
   boot.blacklistedKernelModules = ["nouveau"];
+  # "mem_sleep_default=s2idle"
+  boot.kernelParams = ["pcie_aspm=force" "mem_sleep_default=deep"];
 
   boot.tmp = {
     useTmpfs = true;
