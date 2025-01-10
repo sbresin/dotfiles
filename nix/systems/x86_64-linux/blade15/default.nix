@@ -289,6 +289,15 @@
   ];
 
   fonts.fontDir.enable = true;
+  fonts.enableDefaultPackages = true;
+  fonts.fontconfig.hinting.style = "medium";
+
+  fonts.fontconfig.defaultFonts = {
+    serif = ["Noto Serif"];
+    sansSerif = ["Noto Sans"];
+    monospace = ["Dank Mono" "Symbols Nerd Font"];
+    emoji = ["Apple Color Emoji"];
+  };
 
   # Some programs need SUID wrappers, can be configured further or are
   # started in user sessions.
