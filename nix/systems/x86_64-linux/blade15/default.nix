@@ -154,6 +154,8 @@
     pulse.enable = true;
     alsa.enable = true;
   };
+  # needed by pipewire
+  security.rtkit.enable = true;
 
   # Enable touchpad support (enabled default in most desktopManagers).
   services.libinput.enable = true;
