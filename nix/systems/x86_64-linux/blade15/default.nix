@@ -43,11 +43,12 @@
     hideMounts = true;
     directories = [
       "/var/log"
-      "/var/lib/sbctl"
       "/var/lib/bluetooth"
-      "/var/lib/nixos"
-      "/var/lib/systemd/coredump"
       "/var/lib/flatpak"
+      "/var/lib/nixos"
+      "/var/lib/sbctl"
+      "/var/lib/systemd/backlight"
+      "/var/lib/systemd/coredump"
       "/var/cache/tuigreet"
       "/etc/NetworkManager/system-connections"
       {
