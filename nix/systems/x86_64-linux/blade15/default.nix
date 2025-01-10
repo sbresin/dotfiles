@@ -118,6 +118,7 @@
   services.xserver.desktopManager.gnome = {
     enable = true;
     extraGSettingsOverridePackages = [pkgs.mutter];
+    # TODO: not all are needed post GNOME 47
     extraGSettingsOverrides = ''
       [org.gnome.mutter]
       experimental-features=['scale-monitor-framebuffer', 'xwayland-native-scaling', 'variable-refresh-rate']
@@ -129,7 +130,22 @@
   services.xserver.xkb.options = "eurosign:e,caps:escape";
 
   # Enable CUPS to print documents.
-  services.printing.enable = true;
+  services.printing = {
+    enable = true;
+    # add hp printer drivers
+    drivers = with pkgs; [hplip];
+    # enable virtual pdf printer
+    cups-pdf.enable = true;
+  };
+  # Enable Scanner support
+  hardware.sane.enable = true;
+
+  # Enable Avahi for IPP network printing
+  services.avahi = {
+    enable = true;
+    nssmdns4 = true;
+    openFirewall = true;
+  };
 
   # Enable sound.
   hardware.pulseaudio.enable = false;
