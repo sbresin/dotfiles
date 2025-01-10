@@ -187,6 +187,23 @@
   # Use nh nix cli wrapper
   programs.nh.enable = true;
 
+  # enable cd burning (needed for k3b)
+  security.wrappers = {
+    cdrdao = {
+      setuid = true;
+      owner = "root";
+      group = "cdrom";
+      permissions = "u+wrx,g+x";
+      source = "${pkgs.cdrdao}/bin/cdrdao";
+    };
+    cdrecord = {
+      setuid = true;
+      owner = "root";
+      group = "cdrom";
+      permissions = "u+wrx,g+x";
+      source = "${pkgs.cdrtools}/bin/cdrecord";
+    };
+  };
 
   # List packages installed in system profile. To search, run:
   environment.systemPackages = with pkgs;
