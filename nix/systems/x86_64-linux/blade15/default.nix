@@ -323,7 +323,11 @@
     };
   };
 
-  hardware.openrazer.enable = true;
+  hardware.openrazer = {
+    enable = true;
+    # useless on laptop, leads to no backlight in gdm after suspend
+    devicesOffOnScreensaver = false;
+  };
   # services.razer-laptop-control = {
   #   enable = true;
   #   package = pkgs.${namespace}.razer-laptop-control;
