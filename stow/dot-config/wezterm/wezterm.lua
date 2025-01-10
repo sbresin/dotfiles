@@ -27,10 +27,15 @@ local theme = require('lua/rose-pine').main
 config.colors = theme.colors()
 config.window_frame = theme.window_frame();
 config.window_background_opacity = 0.95
--- default font size on darwin is just too small
-config.font_size = 11.0
+
+-- font config
+config.font = wezterm.font_with_fallback {
+    {family = 'Dank Mono', weight = 'Regular'}, 'Apple Color Emoji',
+    'Symbols Nerd Font'
+}
+config.font_size = 12
 if is_darwin() then
-	config.font_size = 15.0
+    config.font_size = 15.0 -- default font size on darwin is just too small
 end
 
 -- tabbar settings
