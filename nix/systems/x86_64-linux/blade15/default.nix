@@ -165,91 +165,88 @@
 
   programs.nh.enable = true;
 
-  # List packages installed in system profile. To search, run:
-  environment.systemPackages = with pkgs; [
-    nvd
-    gcc
-    vim
-    neovim
-    sbctl
-    sbsigntool
-    git
-    # desktop setup
-    inputs.anyrun.packages.${system}.anyrun
-    # runtimes
-    nodejs
-    python3
-    temurin-bin
-    go
-    rustup
-    # Terminal setup
-    zoxide
-    fish
-    starship
-    inputs.wezterm.packages.${system}.default
-    wl-clipboard
-    # CLI tools
-    stow
-    wget
-    ripgrep
-    eza
-    bat
-    fd
-    sad
-    glow
-    delta
-    fzf
-    lazygit
-    gh
-    ffmpeg-full
-    imagemagick
-    ocrmypdf
-    tectonic
-    unzip
-    unar
-    # languageservers
-    lua-language-server
-    luaformatter
-    efm-langserver
-    marksman
-    # formatters
-    alejandra
-    # language support
-    hunspell
-    hunspellDicts.en_US
-    hunspellDicts.de_DE
-    piper-tts
-    # media / document tools
-    ffmpeg-full
-    pngquant
-    ocrmypdf
-    # GUI Apps
-    libreoffice-fresh
-    pdfarranger
-    gnome-tweaks
-    vscodium
-    telegram-desktop
-    # Emulators
-    dolphin-emu
-    lime3ds
-    mgba
-    mame.tools
-    # gaming
-    mangohud
-    # this flakes packages
-    pkgs.${namespace}.razer-cli
-    pkgs.${namespace}.apple-emoji-linux
-    pkgs.${namespace}.sf-cli
-    pkgs.${namespace}.oclif
-    pkgs.${namespace}.rusty-psn
-    pkgs.${namespace}.duckstation
-    # pkgs.${namespace}.ryujinx
-  ];
 
-  fonts.packages = with pkgs; [
-    (nerdfonts.override {fonts = ["JetBrainsMono" "NerdFontsSymbolsOnly"];})
+  # List packages installed in system profile. To search, run:
+  environment.systemPackages = with pkgs;
+    [
+      gnome-tweaks
+      gnome-browser-connector
+      kdePackages.k3b
+      lime3ds
+    ]
+    ++ (with pkgs.unstable; [
+      nvd
+      gcc
+      vim
+      neovim
+      git
+      git-crypt
+      # os setup/debug
+      sbctl
+      sbsigntool
+      # desktop setup
+      inputs.anyrun.packages.${system}.anyrun
+      # Terminal setup
+      inputs.wezterm.packages.${system}.default
+      # TODO: get wayland working
+      #
+      # (inputs.wezterm.packages.${system}.default.overrideAttrs {
+      #   patches = [./wezterm-wayland-resize.patch ./wezterm-wayland.patch];
+      # })
+      # CLI tools
+      unzip
+      unar
+      # language support
+      hunspell
+      hunspellDicts.en_US
+      hunspellDicts.de_DE
+      piper-tts
+      # media / document tools
+      imagemagick
+      tectonic
+      ffmpeg-full
+      pngquant
+      ocrmypdf
+      streamrip
+      # GUI Apps
+      libreoffice-fresh
+      pdfarranger
+      vscodium
+      telegram-desktop
+      brasero
+      dvdplusrwtools
+      cdrdao
+      cdrtools
+      # Emulators
+      dolphin-emu
+      mgba
+      mame.tools
+      # gaming
+      mangohud
+      # this flakes packages
+      pkgs.${namespace}.razer-cli
+      # pkgs.${namespace}.apple-emoji-linux
+      pkgs.${namespace}.sf-cli
+      pkgs.${namespace}.oclif
+      pkgs.${namespace}.rusty-psn
+      pkgs.${namespace}.duckstation
+      pkgs.${namespace}.bt-dualboot
+      pkgs.${namespace}.export-ble-infos
+      # pkgs.${namespace}.ryujinx
+    ]);
+
+  fonts.packages = with pkgs.unstable; [
+    # (nerdfonts.override {fonts = ["JetBrainsMono" "NerdFontsSymbolsOnly"];})
+    nerd-fonts.jetbrains-mono
+    nerd-fonts.symbols-only
     jetbrains-mono
     iosevka
+    inter
+    noto-fonts
+    tamzen
+    pkgs.${namespace}.dank-mono
+    pkgs.${namespace}.apple-emoji-linux
+    # TODO: windows fonts
   ];
 
   fonts.fontDir.enable = true;

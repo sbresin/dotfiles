@@ -17,8 +17,9 @@
   };
 
   inputs = {
-    nixpkgs.url = "github:nixos/nixpkgs?ref=nixos-unstable";
+    nixpkgs.url = "github:nixos/nixpkgs?ref=nixos-24.11";
     # nixpkgs.url = "github:nixos/nixpkgs/f5c96d88c1d87fa801c831abde2113a1217af993";
+    nixpkgs-unstable.url = "github:nixos/nixpkgs?ref=nixos-unstable";
 
     # use Lix fork (faster and community driven)
     lix-module = {
@@ -34,7 +35,7 @@
 
     # use home-manager
     home-manager = {
-      url = "github:nix-community/home-manager";
+      url = "github:nix-community/home-manager?ref=release-24.11";
     };
 
     # # In order to configure macOS systems.
@@ -86,6 +87,14 @@
 
       overlays = with inputs; [
         # lix-module.overlays.lixFromNixpkgs
+        (final: prev: {
+          unstable = nixpkgs-unstable.legacyPackages.${prev.system};
+          # use this variant if unfree packages are needed:
+          # unstable = import nixpkgs-unstable {
+          #   inherit system;
+          #   config.allowUnfree = true;
+          # };#
+        })
       ];
 
       systems.modules.nixos = with inputs; [

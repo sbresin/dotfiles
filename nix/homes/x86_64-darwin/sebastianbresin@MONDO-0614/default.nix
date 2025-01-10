@@ -54,7 +54,7 @@
     '';
   };
 
-  home.packages = with pkgs; [
+  home.packages = with pkgs.unstable; [
     # nix tools
     alejandra
     devbox
