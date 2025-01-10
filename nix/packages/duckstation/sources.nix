@@ -2,7 +2,7 @@
   duckstation = let
     self = {
       pname = "duckstation";
-      version = "0.1-7836";
+      version = "0.1-7928";
       src = fetchFromGitHub {
         owner = "stenzek";
         repo = "duckstation";
@@ -28,7 +28,7 @@
           git log -1 --date=iso8601-strict --format=%cd > .nixpkgs-auxfiles/git_date
           find $out -name .git -print0 | xargs -0 rm -fr
         '';
-        hash = "sha256-+3DgqP20VVLe8k7yw5NfAcrmTKHGmuqjLSfn2mfDgj8=";
+        hash = "sha256-xubtMxOyWoCHWhutMx4YiOsFBhiEDg1k9U5re6Fp3TE=";
       };
     };
   in
