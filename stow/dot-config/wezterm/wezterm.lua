@@ -13,7 +13,7 @@ config.enable_wayland = false
 
 -- feature settings
 config.term = "wezterm"
-config.enable_kitty_keyboard = false
+config.enable_kitty_keyboard = true
 
 -- Spawn a xonsh shell in login mode
 config.default_prog = {'sh', '-c', 'xonsh -l'}
