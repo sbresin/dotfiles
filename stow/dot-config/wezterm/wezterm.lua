@@ -7,7 +7,7 @@ local is_darwin =
     function() return wezterm.target_triple:find("darwin") ~= nil end
 
 -- GPU settings
-config.front_end = "OpenGL"
+config.front_end = "WebGpu"
 config.webgpu_power_preference = "LowPower"
 config.enable_wayland = false
 
