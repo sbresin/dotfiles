@@ -16,6 +16,9 @@ config.enable_wayland = false
 config.term = "wezterm"
 config.enable_kitty_keyboard = false
 
+-- Spawn a xonsh shell in login mode
+config.default_prog = {'sh', '-c', 'xonsh -l'}
+
 -- window settings
 config.window_decorations = "RESIZE"
 config.adjust_window_size_when_changing_font_size = false
@@ -131,6 +134,30 @@ end)
 
 wezterm.on("window-config-reloaded", function(window)
 	recompute_padding(window)
+
+local function log_proc(proc, indent)
+    indent = indent or ''
+    -- wezterm.log_info(indent .. 'pid=' .. proc.pid .. ', name=' .. proc.name ..
+    --                      ', status=' .. proc.status)
+    -- wezterm.log_info(indent .. 'argv=' .. table.concat(proc.argv, ' '))
+    -- wezterm.log_info(indent .. 'executable=' .. proc.executable .. ', cwd=' ..
+    --                      proc.cwd)
+    for pid, child in pairs(proc.children) do log_proc(child, indent .. '  ') end
+
+    -- 	10:42:34.942  INFO   logging > lua: pid=8805, name=xonsh, status=Sleep
+    -- 10:42:34.942  INFO   logging > lua: argv=/nix/store/nmqxyr00in2arwrq5qd1qipsanz1yrn5-python3-3.11.10/bin/python3.11 /nix/store/dvc7wnipn59p1dzarfsdpamljgm9s30i-python3.11-xonsh-0.18.4/bin/xonsh -l
+    -- 10:42:34.942  INFO   logging > lua: executable=/nix/store/nmqxyr00in2arwrq5qd1qipsanz1yrn5-python3-3.11.10/bin/python3.11, cwd=/home/sebe
+end
+
+wezterm.on('mux-is-process-stateful', function(proc)
+    -- log_proc(proc)
+    -- wezterm.log_info(proc.children)
+    -- config.skip_close_confirmation_for_processes_named does somehow not work
+    if proc.name == 'xonsh' and
+        (proc.children == nil or not next(proc.children)) then return false end
+
+    -- Just use the default behavior
+    return nil
 end)
 
 return config
