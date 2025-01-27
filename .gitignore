@@ -4,4 +4,4 @@ tmp/
 result/
 
 TODO.md
-.config/lazygit/state.yml
+**/lazygit/state.yml
