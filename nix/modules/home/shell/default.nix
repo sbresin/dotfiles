@@ -45,6 +45,7 @@
 
   #TODO: xonsh config
   xdg.configFile."xonsh/rc.d/01_xonshrc.py".source = ./01_xonshrc.py;
+  xdg.configFile."xonsh/starship.toml".source = ./starship_xonsh.toml;
 
   # ************************************************************************************************
   # PROMPTS
