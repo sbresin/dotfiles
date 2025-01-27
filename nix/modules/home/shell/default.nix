@@ -232,11 +232,24 @@
     python3
     pipx
     # CLI tools
+    miller
+    jq
     stow
     wget
     sad
     glow
     chafa
+    pre-commit
+    yq
+    # platform tools
+    act
+    fastly
+    google-cloud-sdk
+    heroku
+    pkgs.terraform #TODO: fix unfree on unstable nixpkgs instance
+    # sfdc development
+    pkgs.${namespace}.sf-cli
+    pkgs.${namespace}.sfp-cli
     # xonsh with xontribs
     (pkgs.${namespace}.xonsh.override
       {pkgs = pkgs.unstable;})

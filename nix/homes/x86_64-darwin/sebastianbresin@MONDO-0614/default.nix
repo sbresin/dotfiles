@@ -56,53 +56,26 @@
   };
 
   home.packages = with pkgs.unstable; [
-    # nix tools
-    alejandra
-    devbox
-    nh
     # basics
     colima
     docker
-    git
+    # git
     neovim
-    starship
     # cli tools
-    bat
-    delta
-    eza
-    fd
     findutils
-    fzf
-    glow
     gnugrep
     gnused
     imagemagick
-    jq
-    lazygit
     less
-    miller
-    pre-commit
-    ripgrep
-    sad
     scc
     shellcheck
     sloc
-    stow
     unar
-    yq
-    zoxide
     # lnav
     bottom
     lazydocker
     oxipng
     rsync
-    # platform tools
-    act
-    fastly
-    gh
-    google-cloud-sdk
-    heroku
-    pkgs.${namespace}.sf-cli
     # stacks + tools
     cargo-nextest
     esbuild
@@ -110,11 +83,7 @@
     gopls
     jdt-language-server
     nodejs
-    poetry
     protobuf
-    python3
-    rustup
-    terraform
     # servers + tools
     postgresql
     rabbitmq-server

@@ -265,7 +265,6 @@
       # this flakes packages
       pkgs.${namespace}.razer-cli
       # pkgs.${namespace}.apple-emoji-linux
-      pkgs.${namespace}.sf-cli
       pkgs.${namespace}.oclif
       pkgs.${namespace}.rusty-psn
       pkgs.${namespace}.duckstation
