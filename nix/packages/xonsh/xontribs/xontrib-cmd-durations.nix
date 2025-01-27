@@ -1,6 +1,7 @@
 {
   buildPythonPackage,
   fetchFromGitHub,
+  stdenv,
   setuptools,
   wheel,
   poetry-core,
@@ -30,7 +31,7 @@ in
       poetry-core
     ];
 
-    propagatedBuildInputs = [notify-py xdotool];
+    propagatedBuildInputs = [notify-py] ++ (lib.optionals stdenv.hostPlatform.isLinux [xdotool]);
 
     format = "pyproject";
 
