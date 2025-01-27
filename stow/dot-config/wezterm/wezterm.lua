@@ -30,12 +30,12 @@ config.window_background_opacity = 0.95
 
 -- font config
 config.font = wezterm.font_with_fallback {
-    {family = 'Dank Mono', weight = 'Regular'}, 'Apple Color Emoji',
-    'Symbols Nerd Font'
+    'Dank Mono', 'Apple Color Emoji', 'Symbols Nerd Font Regular' -- no fake-bold icons
 }
+config.use_cap_height_to_scale_fallback_fonts = true
 config.font_size = 12
 if is_darwin() then
-    config.font_size = 15.0 -- default font size on darwin is just too small
+    config.font_size = 17.0 -- default font size on darwin is just too small
 end
 
 -- tabbar settings
