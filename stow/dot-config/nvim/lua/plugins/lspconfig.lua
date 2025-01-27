@@ -51,6 +51,11 @@ local actionlint = {
 	rootMarkers = { ".git/", ".github/" },
 }
 
+local afmt = {
+	formatCommand = '~/workspace/afmt/result/bin/afmt',
+	formatStdin = true,
+}
+
 local alejandra = {
   formatCommand = "alejandra - ",
   formatStdin = true,
@@ -114,6 +119,7 @@ return {
 							apexcode = {
 								prettierd,
 								-- sedTrailingSpace,
+								-- afmt,
 								pmd,
 							},
 							python = {
