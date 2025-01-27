@@ -8,6 +8,14 @@
   # SHELLS
   programs.bash = {
     enable = true;
+    initExtra = ''
+      # auto start xonsh after sourcing all the relevant home-manager things
+      if [[ $(${pkgs.procps}/bin/ps -p $PPID -o "ucomm=") != "xonsh" && -z ''${BASH_EXECUTION_STRING} && ''${SHLVL} == 1 ]]
+      then
+        shopt -q login_shell && LOGIN_OPTION='--login' || LOGIN_OPTION='''
+        exec xonsh $LOGIN_OPTION
+      fi
+    '';
   };
 
   programs.fish = {
@@ -25,6 +33,13 @@
       # unsetopt BEEP
       # Turn off autocomplete beeps
       unsetopt LIST_BEEP
+
+      # auto start xonsh after sourcing all the relevant home-manager things
+      if [[ $(${pkgs.procps}/bin/ps -p $PPID -o "ucomm=") != "xonsh" && ''${SHLVL} == 1 ]]
+      then
+        [[ -o login ]] && LOGIN_OPTION='--login' || LOGIN_OPTION='''
+        exec xonsh $LOGIN_OPTION
+      fi
     '';
   };
 
