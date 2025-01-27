@@ -28,12 +28,13 @@
 
   nix = {
     # https://github.com/NixOS/nixpkgs/issues/337036
-    package = pkgs.lix.overrideAttrs {
-      doCheck = false;
-      doInstallCheck = false;
-    };
+    # package = pkgs.lix.overrideAttrs {
+    #   doCheck = false;
+    #   doInstallCheck = false;
+    # };
     settings = {
       experimental-features = ["nix-command" "flakes"];
+      max-jobs = 8;
     };
   };
 
