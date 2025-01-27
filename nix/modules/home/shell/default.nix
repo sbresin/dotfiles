@@ -29,7 +29,7 @@
   };
 
   #TODO: xonsh config
-  home.file.".xonshrc".source = ./xonshrc.xsh;
+  xdg.configFile."xonsh/rc.d/01_xonshrc.py".source = ./01_xonshrc.py;
 
   # ************************************************************************************************
   # PROMPTS
