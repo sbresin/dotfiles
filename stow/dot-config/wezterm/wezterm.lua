@@ -1,3 +1,11 @@
+function startswith(s, prefix)
+    return prefix == "" or string.sub(s, 1, #prefix) == prefix
+end
+
+function endswith(s, suffix)
+    return suffix == "" or s:sub(-string.len(suffix)) == suffix
+end
+
 local wezterm = require("wezterm")
 
 local config = wezterm.config_builder()
@@ -16,7 +24,7 @@ config.term = "wezterm"
 config.enable_kitty_keyboard = true
 
 -- Spawn a xonsh shell in login mode
-config.default_prog = {'sh', '-c', 'xonsh -l'}
+-- config.default_prog = {'bash'}
 
 -- window settings
 config.window_decorations = "RESIZE"
@@ -135,16 +143,20 @@ wezterm.on("window-config-reloaded",
 
 local function log_proc(proc, indent)
     indent = indent or ''
-    -- wezterm.log_info(indent .. 'pid=' .. proc.pid .. ', name=' .. proc.name ..
-    --                      ', status=' .. proc.status)
-    -- wezterm.log_info(indent .. 'argv=' .. table.concat(proc.argv, ' '))
-    -- wezterm.log_info(indent .. 'executable=' .. proc.executable .. ', cwd=' ..
-    --                      proc.cwd)
+    wezterm.log_info(indent .. 'pid=' .. proc.pid .. ', name=' .. proc.name ..
+                         ', status=' .. proc.status)
+    wezterm.log_info(indent .. 'argv=' .. table.concat(proc.argv, ' '))
+    wezterm.log_info(indent .. 'executable=' .. proc.executable .. ', cwd=' ..
+                         proc.cwd)
     for pid, child in pairs(proc.children) do log_proc(child, indent .. '  ') end
 
     -- 	10:42:34.942  INFO   logging > lua: pid=8805, name=xonsh, status=Sleep
     -- 10:42:34.942  INFO   logging > lua: argv=/nix/store/nmqxyr00in2arwrq5qd1qipsanz1yrn5-python3-3.11.10/bin/python3.11 /nix/store/dvc7wnipn59p1dzarfsdpamljgm9s30i-python3.11-xonsh-0.18.4/bin/xonsh -l
     -- 10:42:34.942  INFO   logging > lua: executable=/nix/store/nmqxyr00in2arwrq5qd1qipsanz1yrn5-python3-3.11.10/bin/python3.11, cwd=/home/sebe
+    -- 07:41:20.317  INFO   logging > lua: pid=66680, name=python3.11, status=Run
+    -- 07:41:20.317  INFO   logging > lua: argv=/nix/store/hkg39maay6a494ida8h0vmvvpxbppcfp-python3-3.11.11/bin/python3.11 /nix/store/7bm3mfkb80k2dc0gy4zz22wimkv0b8vm-python3.11-xonsh-0.19.0/bin/xonsh
+    -- 07:41:20.317  INFO   logging > lua: executable=/nix/store/hkg39maay6a494ida8h0vmvvpxbppcfp-python3-3.11.11/bin/python3.11, cwd=/Users/sebastianbresin
+    -- 07:41:20.317  INFO   logging > lua: []
 end
 
 wezterm.on('mux-is-process-stateful', function(proc)
@@ -152,6 +164,16 @@ wezterm.on('mux-is-process-stateful', function(proc)
     -- wezterm.log_info(proc.children)
     -- config.skip_close_confirmation_for_processes_named does somehow not work
     if proc.name == 'xonsh' and
+        (proc.children == nil or not next(proc.children)) then return false end
+
+    -- wezterm.log_info("proc.name: " .. proc.name)
+    -- wezterm.log_info(startswith(proc.name, "python"))
+    -- wezterm.log_info(proc.argv[#proc.argv])
+    -- wezterm.log_info(endswith(proc.argv[#proc.argv], "xonsh"))
+
+    -- TODO: handle wezterm on macOS case, where proc.name is python and xonsh is the last argv
+    if startswith(proc.name, "python") and
+        -- endswith(proc.argv[#proc.argv], "xonsh") and
         (proc.children == nil or not next(proc.children)) then return false end
 
     -- Just use the default behavior
