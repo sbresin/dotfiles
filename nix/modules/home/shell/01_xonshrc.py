@@ -72,9 +72,8 @@ if env["XONSH_INTERACTIVE"]:
     env["COMPLETIONS_CONFIRM"] = True
     env["COMPLETIONS_MENU_ROWS"] = 10
     env["COMPLETIONS_DISPLAY"] = "single"  # 'multi'
-    env["AUTO_SUGGEST_IN_COMPLETIONS"] = True
+    env["AUTO_SUGGEST_IN_COMPLETIONS"] = False
 
-    # TODO: move to wez config?
     env["PROMPT_TOOLKIT_COLOR_DEPTH"] = "DEPTH_24_BIT"
 
     env["XONTRIB_PROMPT_BAR_THEME"] = {
@@ -126,7 +125,7 @@ if env["XONSH_INTERACTIVE"]:
     # If found, the env name is searched inside the $VIRTUALENV_HOME
     # rather than invoking `poetry env info -p` command every time `cd` happens
     # It is faster setting this variable. It will also be used by poetry.
-    env["VIRTUALENV_HOME"] = "~/.virtualenvs"
+    env["VIRTUALENV_HOME"] = f"{env['HOME']}/.virtualenvs"
 
     # name of the venv folder. If found will activate it.
     # if set to None then local folder activation will not work.
