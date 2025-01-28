@@ -232,6 +232,12 @@
     rustup
     python3
     pipx
+    # wasm
+    binaryen
+    wasm-bindgen-cli
+    wasm-tools
+    wasm-pack
+    twiggy
     # CLI tools
     miller
     jq
