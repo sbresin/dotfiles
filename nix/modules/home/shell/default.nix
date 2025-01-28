@@ -151,6 +151,7 @@
 
   services.gpg-agent = {
     enable = true;
+    pinentryPackage = pkgs.unstable.pinentry-curses;
     enableBashIntegration = true;
   };
 
