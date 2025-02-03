@@ -117,6 +117,10 @@ if env["XONSH_INTERACTIVE"]:
     ).stdout
     XSH.builtins.execx(mise_init, "exec", ctx, filename="mise")
 
+    # initialize nix-your-shell
+    aliases['nix-shell'] = 'nix-your-shell  xonsh nix-shell -- @($args)'
+    aliases['nix'] = 'nix-your-shell  xonsh nix -- @($args)'
+
     # GPG agent
     env["GPG_TTY"] = subprocess.run(
         ["tty"], capture_output=True, encoding="UTF-8"

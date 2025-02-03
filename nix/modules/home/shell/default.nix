@@ -216,6 +216,7 @@
     xclip
     xsel
     # nix tools
+    nix-your-shell
     alejandra
     nh
     devbox
