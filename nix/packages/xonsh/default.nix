@@ -1,8 +1,8 @@
-{pkgs}: let
+{channels, ...}: let
   xontribs = import ./xontribs;
 in
-  pkgs.xonsh.override {
-    python3 = pkgs.python311;
+  channels.nixpkgs-unstable.xonsh.override {
+    python3 = channels.nixpkgs-unstable.python313;
     extraPackages = pythonPackages:
       with xontribs {inherit pythonPackages;}; [
         xonsh-direnv
