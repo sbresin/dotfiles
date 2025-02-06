@@ -19,7 +19,7 @@
 - `sad` (better sed)
 - `delta` (syntax highlighted diffs)
 - `xplr` (file explorer)
-  - don't want a file-tree in nvim, since fuzzy finding is more efficient and this is all about getting faster
+  - don't want a file-tree in nvim, fuzzy finding is more efficient
   - for other cases, xplr seems great
 - up to date `less` (`brew install less`)
 - JetBrains Mono Font
@@ -31,7 +31,7 @@ emulator: **WezTerm**
 - lua configuration with excellent documentation
 - friendly and responsive maintainer
 - rust codebase :crab: :trollface:
-- cross platform and very nice feature set (search, quick select mode, copy mode, ssh client, serial mode)
+- cross platform and very nice feature set (search, quick select mode, copy mode, ssh client)
 - alacritty has no ligatures :sob:
 - kitty is python, high mem usage and maintainer is a d\*\*k
 - no tmux, because i have to learn too much new stuff already and wezterm already has a multiplexer
@@ -52,7 +52,9 @@ shell: **fish**
 - `stow --verbose --dotfiles --restow --target=$HOME .`
 
 ## efiboot
+
 ### add OpenCore to boot menu
+
 `sudo efibootmgr --create --disk /dev/nvme0n1p1 --loader "\\EFI\\OC\\OpenCore.efi" --label "OpenCore"`
 
 ### enroll secureboot keys
@@ -83,11 +85,11 @@ shell: **fish**
 - [nvim-web-devicons](https://github.com/nvim-tree/nvim-web-devicons)
 - [nvim-nonicons](https://github.com/yamatsum/nvim-nonicons)
 
-# considering
+## considering
 
-- https://github.com/sindrets/diffview.nvim
-- https://github.com/folke/flash.nvim
-- https://github.com/zbirenbaum/copilot-cmp
+- [diffview](https://github.com/sindrets/diffview.nvim)
+- [flash](https://github.com/folke/flash.nvim)
+- [copilot-cmp](https://github.com/zbirenbaum/copilot-cmp)
 - Codewindow.nvim
 - ssr.nvim
 - hardtime.nvim
