@@ -255,7 +255,7 @@
     fastly
     google-cloud-sdk
     heroku
-    pkgs.terraform #TODO: fix unfree on unstable nixpkgs instance
+    terraform
     # sfdc development
     pkgs.${namespace}.sf-cli
     pkgs.${namespace}.sfp-cli

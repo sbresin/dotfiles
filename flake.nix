@@ -85,18 +85,6 @@
         };
       };
 
-      overlays = with inputs; [
-        # lix-module.overlays.lixFromNixpkgs
-        (final: prev: {
-          unstable = nixpkgs-unstable.legacyPackages.${prev.system};
-          # use this variant if unfree packages are needed:
-          # unstable = import nixpkgs-unstable {
-          #   inherit system;
-          #   config.allowUnfree = true;
-          # };#
-        })
-      ];
-
       systems.modules.nixos = with inputs; [
         home-manager.nixosModules.home-manager
         impermanence.nixosModules.impermanence
