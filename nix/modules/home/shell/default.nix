@@ -1,6 +1,5 @@
 {
   pkgs,
-  lib,
   namespace,
   ...
 }: {
@@ -183,6 +182,7 @@
   # STACKS
   programs.poetry = {
     enable = true;
+    package = pkgs.unstable.poetry;
     settings = {
       virtualenvs.create = true;
       virtualenvs.in-project = true;
@@ -205,7 +205,7 @@
     SF_DISABLE_TELEMETRY = "true";
     SF_ORG_METADATA_REST_DEPLOY = "true";
     SF_IMPROVED_CODE_COVERAGE = "true";
-    OCLIF_CARAPACE_SPEC_MACROS_FILE = "~/.sf-carapace-macros.yaml";
+    SF_CARAPACE_SPEC_MACROS_FILE = "~/.sf-carapace-macros.yaml";
   };
 
   home.packages = with pkgs.unstable; [
