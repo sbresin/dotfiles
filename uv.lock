@@ -1,0 +1,30 @@
+version = 1
+requires-python = ">=3.11"
+
+[[package]]
+name = "dotfiles"
+version = "0.1.0"
+source = { virtual = "." }
+
+[package.dev-dependencies]
+dev = [
+    { name = "xonsh" },
+]
+
+[package.metadata]
+
+[package.metadata.requires-dev]
+dev = [{ name = "xonsh", specifier = ">=0.19.1" }]
+
+[[package]]
+name = "xonsh"
+version = "0.19.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/98/6e/b54a0b2685535995ee50f655103c463f9d339455c9b08c4bce3e03e7bb17/xonsh-0.19.1.tar.gz", hash = "sha256:5d3de649c909f6d14bc69232219bcbdb8152c830e91ddf17ad169c672397fb97", size = 796468 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/8c/e6/db44068c5725af9678e37980ae9503165393d51b80dc8517fa4ec74af1cf/xonsh-0.19.1-py310-none-any.whl", hash = "sha256:83eb6610ed3535f8542abd80af9554fb7e2805b0b3f96e445f98d4b5cf1f7046", size = 640686 },
+    { url = "https://files.pythonhosted.org/packages/77/4e/e487e82349866b245c559433c9ba626026a2e66bd17d7f9ac1045082f146/xonsh-0.19.1-py311-none-any.whl", hash = "sha256:c176e515b0260ab803963d1f0924f1e32f1064aa6fd5d791aa0cf6cda3a924ae", size = 640680 },
+    { url = "https://files.pythonhosted.org/packages/5d/88/09060815548219b8f6953a06c247cb5c92d03cbdf7a02a980bda1b5754db/xonsh-0.19.1-py312-none-any.whl", hash = "sha256:fe1266c86b117aced3bdc4d5972420bda715864435d0bd3722d63451e8001036", size = 640604 },
+    { url = "https://files.pythonhosted.org/packages/83/ff/7873cb8184cffeafddbf861712831c2baa2e9dbecdbfd33b1228f0db0019/xonsh-0.19.1-py313-none-any.whl", hash = "sha256:3f158b6fc0bba954e0b989004d4261bafc4bd94c68c2abd75b825da23e5a869c", size = 641166 },
+    { url = "https://files.pythonhosted.org/packages/cc/03/b9f8dd338df0a330011d104e63d4d0acd8bbbc1e990ff049487b6bdf585d/xonsh-0.19.1-py39-none-any.whl", hash = "sha256:a900a6eb87d881a7ef90b1ac8522ba3699582f0bcb1e9abd863d32f6d63faf04", size = 632912 },
+]

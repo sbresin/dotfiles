@@ -232,7 +232,8 @@
     go
     rustup
     python3
-    pipx
+    uv
+    ruff
     # wasm
     binaryen
     wasm-bindgen-cli

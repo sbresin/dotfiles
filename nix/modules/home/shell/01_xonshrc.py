@@ -1,12 +1,29 @@
+from typing import Optional, cast, Protocol, Any
+from xonsh.aliases import Aliases
 from xonsh.built_ins import XSH
+from xonsh.environ import Env
 from xonsh.events import events
 from xonsh.xontribs import xontribs_load
-from xonsh.dirstack import cd
 import subprocess
 
-aliases = XSH.aliases
+
+class Builtins(Protocol):
+    def execx(
+        self,
+        input: str,
+        mode: Optional[str],
+        glbs: Optional[Any] = None,
+        locs: Optional[Any] = None,
+        stacklevel: Optional[int] = 2,
+        filename: Optional[str] = None,
+        transform: Optional[bool] = False,
+    ) -> None: ...
+
+
+builtins = cast(Builtins, XSH.builtins)
+aliases = cast(Aliases, XSH.aliases)
 ctx = XSH.ctx
-env = XSH.env
+env = cast(Env, XSH.env)
 
 if env["XONSH_INTERACTIVE"]:
     # The SQLite history backend:
@@ -31,31 +48,17 @@ if env["XONSH_INTERACTIVE"]:
         # cd-ing shortcuts.
         "-": "cd -",
         "..": "cd ..",
+        ",": "cd ..",
+        ",,": "cd ../..",
+        ",,,": "cd ../../..",
+        ",,,,": "cd ../../../..",
+        # eza instead of ls
         "ls": "eza",
         "la": "eza -a",
         "ll": "eza -l",
         "lla": "eza -la",
         "lt": "eza -lt",
     }
-
-    # Easy way to go back cd-ing.
-    # Example: `,,` the same as `cd ../../`
-    @aliases.register(",")
-    @aliases.register(",,")
-    @aliases.register(",,,")
-    @aliases.register(",,,,")
-    def _alias_supercomma():
-        """Easy way to go back cd-ing."""
-        # change_dir = subprocess.run(
-        #     ["cd", "../" * len(XSH.env["__ALIAS_NAME"])],
-        #     capture_output=True,
-        #     encoding="UTF-8",
-        # ).stdout
-        # XSH.builtins.execx(change_dir, "exec", ctx, filename="cd")
-        # TODO: fix this
-        cd("../" * len(env["__ALIAS_NAME"]))
-
-        # cd @("../" * len($__ALIAS_NAME))
 
     # Avoid typing cd just directory path.
     # Docs: https://xonsh.github.io/envvars.html#auto-cd
@@ -101,25 +104,24 @@ if env["XONSH_INTERACTIVE"]:
     zoxide_init = subprocess.run(
         ["zoxide", "init", "xonsh"], capture_output=True, encoding="UTF-8"
     ).stdout
-    XSH.builtins.execx(zoxide_init, "exec", ctx, filename="zoxide")
+    builtins.execx(zoxide_init, "exec", ctx, filename="zoxide")
 
     # initialize carapace
     env["CARAPACE_BRIDGES"] = "zsh,fish,bash,inshellisense"  # optional
     carapace_init = subprocess.run(
         ["carapace", "_carapace", "xonsh"], capture_output=True, encoding="UTF-8"
     ).stdout
-    XSH.builtins.execx(carapace_init, "exec", ctx, filename="carapace")
-    # exec($(carapace _carapace xonsh))
+    builtins.execx(carapace_init, "exec", ctx, filename="carapace")
 
     # initialize mise
     mise_init = subprocess.run(
         ["mise", "activate", "xonsh"], capture_output=True, encoding="UTF-8"
     ).stdout
-    XSH.builtins.execx(mise_init, "exec", ctx, filename="mise")
+    builtins.execx(mise_init, "exec", ctx, filename="mise")
 
     # initialize nix-your-shell
-    aliases['nix-shell'] = 'nix-your-shell  xonsh nix-shell -- @($args)'
-    aliases['nix'] = 'nix-your-shell  xonsh nix -- @($args)'
+    aliases["nix-shell"] = "nix-your-shell  xonsh nix-shell -- @($args)"
+    aliases["nix"] = "nix-your-shell  xonsh nix -- @($args)"
 
     # GPG agent
     env["GPG_TTY"] = subprocess.run(
