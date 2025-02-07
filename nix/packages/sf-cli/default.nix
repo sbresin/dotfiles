@@ -34,12 +34,12 @@
 in
   stdenvNoCC.mkDerivation {
     pname = "sf-cli";
-    version = "2.71.6";
+    version = "2.75.5";
 
     # TODO: install from npm instead, but set SF_INSTALLER, so auto updates work
     src = fetchurl {
-      url = "https://developer.salesforce.com/media/salesforce-cli/sf/versions/2.71.6/df87f59/sf-v2.71.6-df87f59-linux-x64.tar.xz";
-      hash = "sha256-8l4Vu+WAwHPBdTBYTZn86+mRP9lm/xCIvU0ihfLJ94k=";
+      url = "https://developer.salesforce.com/media/salesforce-cli/sf/versions/2.75.5/eef8ca4/sf-v2.75.5-eef8ca4-linux-x64.tar.xz";
+      hash = "sha256-3BRrVF+tY2jOAFWtz3PsnVki23YgjT5Kgzenb1kzDoo=";
     };
 
     installPhase = ''
