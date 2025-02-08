@@ -136,12 +136,15 @@
     enable = true;
     package = pkgs.unstable.gh;
     gitCredentialHelper.enable = true;
+    extensions = with pkgs.unstable; [
+      # not using programs.gh-dash.enable, in order to stow config file
+      gh-dash
+    ];
     settings = {
       # git_protocol = "ssh";
       prompt = "enabled";
     };
   };
-  programs.gh-dash.enable = true;
 
   programs.gpg = {
     enable = true;
@@ -250,6 +253,7 @@
     chafa
     pre-commit
     yq
+    gh-dash
     # platform tools
     act
     fastly
