@@ -14,7 +14,7 @@
   discord-rpc = "144f3a3f1209994d8d9e8a87964a989cb9911c1e";
   libbacktrace = "86885d14049fab06ef8a33aac51664230ca09200";
   lunasvg = "9af1ac7b90658a279b372add52d6f77a4ebb482c";
-  sdl2 = "2.30.9";
+  sdl2 = "2.30.11";
   soundtouch = "463ade388f3a51da078dc9ed062bf28e4ba29da7";
   spirv_cross = "vulkan-sdk-1.3.290.0";
 
@@ -40,7 +40,7 @@
   };
   sdl2_src = fetchurl {
     url = "https://github.com/libsdl-org/SDL/releases/download/release-${sdl2}/SDL2-${sdl2}.tar.gz";
-    hash = "sha256-JLV09xyHp2P1BwS7tjDL44KY1USh+JDwmaRpax1r66Q=";
+    hash = "sha256-i41K7yA4Uz2oFJZSIPiPd9YN+g8yaF+A6tZeUBM32n8=";
   };
   soundtouch_src = fetchurl {
     url = "https://github.com/stenzek/soundtouch/archive/${soundtouch}.tar.gz";

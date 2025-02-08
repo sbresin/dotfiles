@@ -111,8 +111,8 @@ in
       cp -r bin $out/share/duckstation
       ln -s $out/share/duckstation/duckstation-qt $out/bin/
 
-      install -Dm644 $src/scripts/org.duckstation.DuckStation.desktop $out/share/applications/org.duckstation.DuckStation.desktop
-      install -Dm644 $src/scripts/org.duckstation.DuckStation.png $out/share/pixmaps/org.duckstation.DuckStation.png
+      install -Dm644 $src/scripts/packaging/org.duckstation.DuckStation.desktop $out/share/applications/org.duckstation.DuckStation.desktop
+      install -Dm644 $src/scripts/packaging/org.duckstation.DuckStation.png $out/share/pixmaps/org.duckstation.DuckStation.png
 
       runHook postInstall
     '';
