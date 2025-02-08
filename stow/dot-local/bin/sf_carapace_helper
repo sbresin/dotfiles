@@ -1,0 +1,68 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+function _echoerr() { printf "%s\n" "$*" >&2; }
+
+function _upfind() {
+	([[ -e "$1/$2" ]] && echo "$1") ||
+		([[ $1 != '/' ]] && [[ $1 != "$HOME" ]] && _upfind "$(dirname "$1")" "$2") ||
+		return 1
+}
+
+function project_root() {
+	_upfind "$PWD" "sfdx-project.json" ||
+		(_echoerr "no sfdx-project.json found in any parent directory" && exit 1)
+}
+
+function metadata_names() {
+	local project_root
+	project_root=$(project_root)
+	local -r substitution_patterns=(
+		# prefix SObject names to CustomField names
+		-e 's|objects/(.*)/.*/(.*)|\1.\2|'
+		# TODO: lwc bundles, aura definitions, email foldername
+		# remove path, keep only basename
+		-e 's|.*/||'
+		# remove -meta.xml suffix and prefix metadata type
+		-e 's|^(.*)\.(.*)-meta\.xml$|\2:\1|'
+		# replace type names where needed
+		-e 's|cls:|ApexClass:|;s|object:|CustomObject:|;s|field:|CustomField:|;s|trigger:|ApexTrigger:|'
+		# make the first letter uppercase
+		-e 's|^.|\U&|'
+	)
+	find "$project_root" -not -path '*/[@.]*' -type f -name '*-meta.xml' |
+		sed -E "${substitution_patterns[@]}"
+}
+
+function test_classes() {
+	local project_root
+	project_root=$(project_root)
+	find "$project_root" -not -path '*/[@.]*' -type f -name "*Test.cls" | awk -F'/' '{print $NF}' | sed 's/.cls$//'
+}
+
+function usernames() {
+	find "$HOME/.sfdx" -type f -name "*@*.json" | sed -E 's|.*/(.*).json|\1|'
+}
+
+function aliases() {
+	if [ -f "$HOME/.sfdx/alias.json" ]; then
+		mapfile -t usernames_arr <<<"$(usernames)"
+		local -r usernames_json=$(jq --compact-output --null-input '$ARGS.positional' --args -- "${usernames_arr[@]}")
+		jq -r --argjson unames "$usernames_json" '.orgs | with_entries(select(.value | IN($unames[]))) | keys.[]' <"$HOME/.sfdx/alias.json"
+	fi
+}
+
+function orgs() {
+	aliases
+	usernames
+}
+
+if declare -f "$1" >/dev/null; then
+	func="$1"
+	shift
+	"$func" "$@" # invoke our named function w/ all remaining arguments
+else
+	echo "subcommand $1 not recognized" >&2
+	exit 1
+fi
