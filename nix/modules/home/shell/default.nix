@@ -205,6 +205,11 @@
     SF_ORG_METADATA_REST_DEPLOY = "true";
     SF_IMPROVED_CODE_COVERAGE = "true";
     SF_CARAPACE_SPEC_MACROS_FILE = "~/.sf-carapace-macros.yaml";
+    FZF_DEFAULT_OPTS = ''
+      --color=bg+:#1f1d2e,bg:#191724,spinner:#9ccfd8,hl:#c4a7e7
+      --color=fg:#908caa,header:#c4a7e7,info:#ebbcba,pointer:#9ccfd8
+      --color=marker:#9ccfd8,fg+:#e0def4,prompt:#ebbcba,hl+:#c4a7e7
+    '';
   };
 
   home.packages = with pkgs.unstable; [
