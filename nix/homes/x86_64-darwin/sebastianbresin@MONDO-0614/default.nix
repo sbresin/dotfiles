@@ -85,7 +85,7 @@
     nodejs
     protobuf
     # servers + tools
-    postgresql
+    # postgresql # TODO: figure out how to use this in macOS
     rabbitmq-server
     valkey
     # macOS tools
