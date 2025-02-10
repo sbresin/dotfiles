@@ -245,6 +245,7 @@
     wasm-pack
     twiggy
     # CLI tools
+    bkt
     miller
     jq
     stow
