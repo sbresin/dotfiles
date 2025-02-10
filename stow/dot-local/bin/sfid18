@@ -1,0 +1,50 @@
+#!/usr/bin/env bash
+
+# Converts 15 digit salesforce ids to case-insensitive 18 digit ids
+# Usage: sfid18 "<sfid>" ...
+# or pipe line delimited ids: echo "0014T00000eMdzS\n00558000002rHda" | sfid18
+# requires a up to date bash version (mac users, use homebrew or nix to get it)
+# save it somewhere in your $PATH (e.g. ~/.local/bin/) and `chmod +x` it
+
+set -euo pipefail
+
+sfid_regex='^([a-zA-Z0-9]{15}|[a-zA-Z0-9]{18})$'
+alphabet=('A' 'B' 'C' 'D' 'E' 'F' 'G' 'H' 'I' 'J' 'K' 'L' 'M' 'N' 'O' 'P' 'Q' 'R' 'S' 'T' 'U' 'V' 'W' 'X' 'Y' 'Z' '0' '1' '2' '3' '4' '5')
+
+function to18() {
+	local sfid=$1
+	[[ $sfid =~ $sfid_regex ]] || (echo "Invalid SFID: $sfid" >&2 && return 1)
+	[[ ${#sfid} -eq 18 ]] && echo "$sfid" && return 0
+
+	# the id has 3 quintets of 5 chars each, that we check one by one
+	for ((i = 0; i < 3; i++)); do
+		local alphabet_index=0
+
+		for ((j = 0; j < 5; j++)); do
+			# get the char at index j from the current quintet
+			local charindex=$((i * 5 + j))
+			local char=${sfid:$charindex:1}
+			if [[ $char =~ [A-Z] ]]; then
+				# for any uppercase char we shift the bit by j and sum them to get the alphabet index
+				local shifted=$((1 << j))
+				((alphabet_index += shifted))
+			fi
+		done
+
+		sfid+=${alphabet[alphabet_index]}
+	done
+
+	echo "$sfid"
+}
+
+if [ -t 0 ]; then
+	# we have positional args, so we loop them
+	for sfid in "$@"; do
+		to18 "$sfid"
+	done
+else
+	# no args, so we read from stdin
+	while read -r line; do
+		to18 "$line"
+	done <&0
+fi
