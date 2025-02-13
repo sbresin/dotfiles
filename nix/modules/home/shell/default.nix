@@ -238,6 +238,7 @@
     python3
     uv
     ruff
+    sqruff
     # wasm
     binaryen
     wasm-bindgen-cli
