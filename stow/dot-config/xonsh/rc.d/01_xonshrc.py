@@ -57,7 +57,8 @@ if env["XONSH_INTERACTIVE"]:
         "la": "eza -a",
         "ll": "eza -l",
         "lla": "eza -la",
-        "lt": "eza -lt",
+        "lt": "eza -lT",
+        "lta": "eza -alT",
     }
 
     # Avoid typing cd just directory path.
