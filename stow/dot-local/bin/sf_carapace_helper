@@ -42,7 +42,7 @@ function metadata_names() {
 		# make the first letter uppercase
 		-e 's|^.|\U&|'
 	)
-	bkt --ttl=1d --stale=2m -- find "$project_root" -not -path '*/[@.]*' -type f -name '*-meta.xml' |
+	bkt --ttl=1month --stale=2m -- find "$project_root" -not -path '*/[@.]*' -type f -name '*-meta.xml' |
 		sed -E "${substitution_patterns[@]}"
 }
 
