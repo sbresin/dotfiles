@@ -10,7 +10,7 @@ persistentFlagsCompletion:
   path: ["$files"]
 
 # override flag completion for specific commands.
-  # important: command ids need to separated by colons.
+# important: command ids need to separated by colons.
 commandOverrides:
   flags:
     'project:deploy:start':
