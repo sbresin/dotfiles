@@ -1,5 +1,10 @@
 "$schema" = 'https://starship.rs/config-schema.json'
 
+[env_var.HEROKU_APP]
+symbol = " "
+format = "on [$symbol$env_value]($style) "
+style = "bold purple"
+
 [character]
 success_symbol = "[@](bold green)"
 error_symbol = "[@](bold red)"

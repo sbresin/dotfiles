@@ -144,6 +144,11 @@ if env["XONSH_INTERACTIVE"]:
         if venv.exists():
             return venv
 
+    # some useful aliases
+    aliases["happ"] = (
+        "if _happ_choice:=$(bkt --ttl=1week --stale=2m -- heroku apps:list --all --json | jq -r '.[] | .name' | fzf --layout reverse --height=40% --border): $HEROKU_APP=_happ_choice\ndel _happ_choice"
+    )
+
     #
     # Xontribs - https://github.com/topics/xontrib
     #
