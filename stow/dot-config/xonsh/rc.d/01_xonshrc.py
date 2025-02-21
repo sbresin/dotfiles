@@ -108,7 +108,7 @@ if env["XONSH_INTERACTIVE"]:
     builtins.execx(zoxide_init, "exec", ctx, filename="zoxide")
 
     # initialize carapace
-    env["CARAPACE_BRIDGES"] = "zsh,fish,bash,inshellisense"  # optional
+    env["CARAPACE_BRIDGES"] = "zsh,fish"  # optional
     carapace_init = subprocess.run(
         ["carapace", "_carapace", "xonsh"], capture_output=True, encoding="UTF-8"
     ).stdout
