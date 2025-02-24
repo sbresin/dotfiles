@@ -223,6 +223,7 @@
     nix-your-shell
     alejandra
     nh
+    nurl
     devbox
     # languageservers
     nil
