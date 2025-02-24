@@ -1,18 +1,22 @@
-function startswith(s, prefix)
-    return prefix == "" or string.sub(s, 1, #prefix) == prefix
-end
-
-function endswith(s, suffix)
-    return suffix == "" or s:sub(-string.len(suffix)) == suffix
-end
-
 local wezterm = require("wezterm")
-
 local config = wezterm.config_builder()
 
 -- helper functions
 local is_darwin =
     function() return wezterm.target_triple:find("darwin") ~= nil end
+
+local function file_exists(name)
+    local f = io.open(name, "r")
+    return f ~= nil and io.close(f)
+end
+
+local function startswith(s, prefix)
+    return prefix == "" or string.sub(s, 1, #prefix) == prefix
+end
+
+-- local function endswith(s, suffix)
+--     return suffix == "" or s:sub(-string.len(suffix)) == suffix
+-- end
 
 -- GPU settings
 config.front_end = "WebGpu"
@@ -41,14 +45,14 @@ config.font = wezterm.font_with_fallback {
     'Dank Mono', 'Apple Color Emoji', 'Symbols Nerd Font Regular' -- no fake-bold icons
 }
 config.use_cap_height_to_scale_fallback_fonts = true
-config.font_size = 12
+config.font_size = 13
 if is_darwin() then
     config.font_size = 17.0 -- default font size on darwin is just too small
 end
 
 -- tabbar settings
 config.use_fancy_tab_bar = false
-config.tab_bar_at_bottom = true
+config.tab_bar_at_bottom = false
 
 -- additional quickselect patterns
 config.quick_select_patterns = {
@@ -62,6 +66,7 @@ config.quick_select_patterns = {
 }
 
 -- keybindings
+config.leader = {key = 'a', mods = 'CTRL', timeout_milliseconds = 1000}
 local act = wezterm.action
 
 config.keys = {
@@ -85,6 +90,115 @@ if wezterm.gui then
 end
 
 config.key_tables = {copy_mode = copy_mode}
+
+-- plugins
+if file_exists(os.getenv("HOME") .. "/.config/wezterm/plugins.lua") then
+    local plugins = require("plugins")
+    plugins.tabline().setup({
+        options = {
+            theme = 'Rosé Pine (base16)',
+            section_separators = {
+                left = wezterm.nerdfonts.ple_right_half_circle_thick,
+                right = wezterm.nerdfonts.ple_left_half_circle_thick
+            },
+            component_separators = {
+                left = wezterm.nerdfonts.ple_right_half_circle_thin,
+                right = wezterm.nerdfonts.ple_left_half_circle_thin
+            },
+            tab_separators = {
+                left = wezterm.nerdfonts.ple_right_half_circle_thick,
+                right = wezterm.nerdfonts.ple_left_half_circle_thick
+            }
+
+        }
+    })
+
+    plugins.switcher().apply_to_config(config)
+
+    plugins.presentation().apply_to_config(config, {
+        font_size_multiplier = 1.5 -- multiplier for font size for both modes
+    })
+
+    local resurrect = plugins.resurrect()
+    resurrect.state_manager.periodic_save()
+    wezterm.on("gui-startup", resurrect.state_manager.resurrect_on_gui_startup)
+    local resurrect_bindings = {
+        {
+            key = "w",
+            mods = "ALT",
+            action = wezterm.action_callback(function(win, pane)
+                resurrect.state_manager.save_state(
+                    resurrect.workspace_state.get_workspace_state())
+            end)
+        },
+        {
+            key = "W",
+            mods = "ALT",
+            action = resurrect.window_state.save_window_action()
+        },
+        {
+            key = "T",
+            mods = "ALT",
+            action = resurrect.tab_state.save_tab_action()
+        }, {
+            key = "s",
+            mods = "ALT",
+            action = wezterm.action_callback(function(win, pane)
+                resurrect.state_manager.save_state(
+                    resurrect.workspace_state.get_workspace_state())
+                resurrect.window_state.save_window_action()
+            end)
+        }, {
+            key = "r",
+            mods = "ALT",
+            action = wezterm.action_callback(function(win, pane)
+                resurrect.fuzzy_loader.fuzzy_load(win, pane, function(id, label)
+                    local type = string.match(id, "^([^/]+)") -- match before '/'
+                    id = string.match(id, "([^/]+)$") -- match after '/'
+                    id = string.match(id, "(.+)%..+$") -- remove file extention
+                    local opts = {
+                        relative = true,
+                        restore_text = true,
+                        on_pane_restore = resurrect.tab_state
+                            .default_on_pane_restore
+                    }
+                    if type == "workspace" then
+                        local state = resurrect.state_manager.load_state(id,
+                                                                         "workspace")
+                        resurrect.workspace_state.restore_workspace(state, opts)
+                    elseif type == "window" then
+                        local state = resurrect.state_manager.load_state(id,
+                                                                         "window")
+                        resurrect.window_state.restore_window(pane:window(),
+                                                              state, opts)
+                    elseif type == "tab" then
+                        local state = resurrect.state_manager.load_state(id,
+                                                                         "tab")
+                        resurrect.tab_state.restore_tab(pane:tab(), state, opts)
+                    end
+                end)
+            end)
+        }, {
+            key = "d",
+            mods = "ALT",
+            action = wezterm.action_callback(function(win, pane)
+                resurrect.fuzzy_loader.fuzzy_load(win, pane, function(id)
+                    resurrect.state_manager.delete_state(id)
+                end, {
+                    title = "Delete State",
+                    description = "Select State to Delete and press Enter = accept, Esc = cancel, / = filter",
+                    fuzzy_description = "Search State to Delete: ",
+                    is_fuzzy = true
+                })
+            end)
+        }
+    }
+
+    for _, value in ipairs(resurrect_bindings) do
+        table.insert(config.keys, value)
+    end
+
+end
 
 -- compute padding -> center horizontally and bottom align vertically
 local function recompute_padding(window)
