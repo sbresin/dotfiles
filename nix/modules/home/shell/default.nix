@@ -237,6 +237,7 @@
     marksman
     # stacks
     nodejs
+    pnpm
     temurin-bin
     go
     rustup
