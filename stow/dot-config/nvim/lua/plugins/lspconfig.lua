@@ -84,6 +84,7 @@ return {
                 },
                 eslint = {settings = {codeActionOnSave = {enable = false}}},
                 jsonls = {init_options = {provideFormatter = false}},
+                tailwindcss = {},
                 efm = {
                     init_options = {
                         documentFormatting = true,
