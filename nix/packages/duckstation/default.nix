@@ -21,6 +21,7 @@
   vulkan-loader,
   wayland,
   xorg,
+  zlib-ng,
   zstd,
 }: let
   sources = callPackage ./sources.nix {};
@@ -69,6 +70,7 @@ in
         qtwayland
         wayland
         xorg.libXrandr
+        zlib-ng
         zstd
       ]
       ++ cubeb.passthru.backendLibs;
