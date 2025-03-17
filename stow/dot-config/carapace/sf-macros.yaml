@@ -8,6 +8,11 @@ persistentFlagsCompletion:
   manifest: ["$files([.xml])"]
   file: ["$files"]
   path: ["$files"]
+  config: ["$files"]
+  source-dir: ["$files"]
+  source-file: ["$files"]
+  output-dir: ["$files"]
+  target-metadata-dir: ["$files"]
 
 # override flag completion for specific commands.
 # important: command ids need to separated by colons.
