@@ -1,7 +1,7 @@
 .DS_Store
-.vim-force.com/
 tmp/
 result/
 
 TODO.md
 **/lazygit/state.yml
+**/wezterm/plugins.lua
