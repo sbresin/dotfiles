@@ -1,0 +1,2 @@
+nix/packages/dank-mono/Dank_Mono_15_Oct_2020.encrypted.zip filter=git-crypt diff=git-crypt
+*.key filter=git-crypt diff=git-crypt
