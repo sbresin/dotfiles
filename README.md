@@ -1,28 +1,28 @@
-# sebes dotfiles
+# sebes dotfiles + nix config
+
+this is only for myself and not yet documented and really usable for others.
+you can look around, but it may be better to just asks me. :smile:
+
+this is using nix for things where it makes sense and just stow symlinks for the rest,
+especially things where the nix abstractions don't really add value.
+theres lots of devenv setup, some nix derivations (packages), etc.
 
 ## todo
 
-- pipewire + bluetooth
-- xwayland refactor + hidpi patch
-- hyprland base setup
-- home manager strategy
+### dev env
+
+- nixOS virtual machine and utm as better dev setup
+- fzf shell integration for xonsh
+  - plus modal like menu to choose picker
+- xonsh transient prompt
+
+### laptop
+
+- pipewire + bluetooth (codec setup, tweaks etc.)
+- autoEq things
+- xwayland hidpi patch (if still needed)
+- hyprland or niri setup?
 - stylix ?
-
-## Base Software
-
-- `stow` (symlink dotfiles)
-- `fzf` (fuzzy finding)
-- `eza` (better ls)
-- `fd` (better find)
-- `ripgrep` (better grep)
-- `bat` (better cat)
-- `sad` (better sed)
-- `delta` (syntax highlighted diffs)
-- `xplr` (file explorer)
-  - don't want a file-tree in nvim, fuzzy finding is more efficient
-  - for other cases, xplr seems great
-- up to date `less` (`brew install less`)
-- JetBrains Mono Font
 
 ## terminal
 
@@ -32,64 +32,50 @@ emulator: **WezTerm**
 - friendly and responsive maintainer
 - rust codebase :crab: :trollface:
 - cross platform and very nice feature set (search, quick select mode, copy mode, ssh client)
-- alacritty has no ligatures :sob:
-- kitty is python, high mem usage and maintainer is a d\*\*k
+- kitty maintainer is a d\*\*k
 - no tmux, because i have to learn too much new stuff already and wezterm already has a multiplexer
 
-shell: **fish**
+shell: **xonsh**
 
-- because it's nice
-- `fisher install franciscolourenco/done` for system notifications on long running commands
-  - `brew install terminal-notifier`
-- `fisher install ilancosman/tide@v6` like the prompt
-- `fisher install patrickf1/fzf.fish` useful as alternative to find/fd
-- `fisher install catppuccin/fish` matching theme with nvim is nice
-- `fisher install jorgebucaran/nvm.fish` fish friendly nvm
+- because it's kinda cool
+- interactive features matter more to me than scripting
+- extending with python is powerful
 
-## dotfiles usage
+## usage
 
-- clone repo
-- `stow --verbose --dotfiles --restow --target=$HOME .`
+- `nh os switch -a ~/workspace/dotfiles/ -- --accept-flake-config`
+- `nh home switch -a ~/workspace/dotfiles/ -- --accept-flake-config`
+- `cd stow && stow --verbose --dotfiles --restow --target=$HOME .`
 
-## efiboot
+## efiboot secureboot setup
 
 ### add OpenCore to boot menu
 
 `sudo efibootmgr --create --disk /dev/nvme0n1p1 --loader "\\EFI\\OC\\OpenCore.efi" --label "OpenCore"`
 
-### enroll secureboot keys
+### hack razer bios
 
-### enroll tpm to LUKS
+TODO: document bios hack for unlocking secure boot key management
 
-## nvim plugins
+### enroll secureboot keys using sbctl
 
-- [Telescope.nvim](https://github.com/nvim-telescope/telescope.nvim)
-- [nvim-lspconfig](https://github.com/neovim/nvim-lspconfig)
-- [mason.nvim](https://github.com/williamboman/mason.nvim)
-- [mason-lspconfig.nvim](https://github.com/williamboman/mason-lspconfig.nvim)
+TODO: document for future reference
+
+### enroll tpm to auto unlock LUKS volume using systemd-cryptenroll
+
+TODO: document for future reference
+
+## nvim plugins i need to checkout
+
 - [lspkind.nvim](https://github.com/onsails/lspkind.nvim)
-- [nvim-treesitter](https://github.com/nvim-treesitter/nvim-treesitter)
-- [nvim-treesitter-context](https://github.com/nvim-treesitter/nvim-treesitter-context)
-- [which-key.nvim](https://github.com/folke/which-key.nvim)
-- [nvim-cmp](https://github.com/hrsh7th/nvim-cmp)
 - [tailwindcss-colorizer-cmp](https://github.com/roobert/tailwindcss-colorizer-cmp.nvim)
 - [rainbow-delimiters.nvim](https://github.com/hiphish/rainbow-delimiters.nvim)
-- [nvim-surround](https://github.com/kylechui/nvim-surround)
-- [surround-ui.nvim](https://github.com/roobert/surround-ui.nvim)
 - [markdown-preview.nvim](https://github.com/iamcco/markdown-preview.nvim)
 - [otter.nvim](https://github.com/jmbuhr/otter.nvim)
-- [copilot.lua](https://github.com/zbirenbaum/copilot.lua)
 - [nvim-neoclip.lua](https://github.com/AckslD/nvim-neoclip.lua)
 - [zen-mode.nvim](https://github.com/folke/zen-mode.nvim)
-- [gitsigns.nvim](https://github.com/lewis6991/gitsigns.nvim)
-- [nvim-web-devicons](https://github.com/nvim-tree/nvim-web-devicons)
 - [nvim-nonicons](https://github.com/yamatsum/nvim-nonicons)
-
-## considering
-
 - [diffview](https://github.com/sindrets/diffview.nvim)
-- [flash](https://github.com/folke/flash.nvim)
-- [copilot-cmp](https://github.com/zbirenbaum/copilot-cmp)
 - Codewindow.nvim
 - ssr.nvim
 - hardtime.nvim
@@ -97,6 +83,5 @@ shell: **fish**
 - nvim-lspfuzzy
 - rocks.nvim
 - hop.nvim
-- neodev.nvim
 - vim-be-good
 - follow-md-links
