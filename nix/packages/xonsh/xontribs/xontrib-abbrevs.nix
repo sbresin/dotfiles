@@ -51,6 +51,5 @@ in
       description = "Command abbreviations. This expands input words as you type.";
       homepage = "https://github.com/xonsh/xontrib-abbrevs";
       license = licenses.mit;
-      maintainers = [maintainers.greg];
     };
   }

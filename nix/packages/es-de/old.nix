@@ -12,9 +12,8 @@
   libgit2,
   poppler,
   pugixml,
-  SDL2
+  SDL2,
 }:
-
 stdenv.mkDerivation {
   pname = "emulationstation-de";
   version = "2.2.1";
@@ -24,7 +23,7 @@ stdenv.mkDerivation {
     hash = "sha256:1kp9p3fndnx4mapgfvy742zwisyf0y5k57xkqkis0kxyibx0z8i6";
   };
 
-  patches = [ ./001-add-nixpkgs-retroarch-cores.patch ];
+  patches = [./001-add-nixpkgs-retroarch-cores.patch];
 
   nativeBuildInputs = [
     cmake
@@ -51,7 +50,6 @@ stdenv.mkDerivation {
   meta = {
     description = "EmulationStation Desktop Edition is a frontend for browsing and launching games from your multi-platform game collection";
     homepage = "https://es-de.org";
-    maintainers = with lib.maintainers; [ ivarmedi ];
     license = lib.licenses.mit;
     platforms = lib.platforms.linux;
     mainProgram = "emulationstation";

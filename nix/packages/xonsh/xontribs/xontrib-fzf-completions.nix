@@ -31,6 +31,5 @@ in
       description = "fzf completions for xonsh";
       homepage = "https://github.com/doronz88/xontrib-fzf-completions";
       license = licenses.gpl3;
-      # maintainers = [maintainers.greg];
     };
   }

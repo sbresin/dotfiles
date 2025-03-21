@@ -28,8 +28,7 @@ stdenvNoCC.mkDerivation {
   meta = with lib; {
     description = "A typeface designed for coding aesthetes with modern displays in mind";
     homepage = "https://philpl.gumroad.com/l/dank-mono";
-    # license = licenses.ofl;
-    # maintainers = with maintainers; [vinnymeller];
+    license = licenses.unfree;
     platforms = platforms.all;
   };
 }

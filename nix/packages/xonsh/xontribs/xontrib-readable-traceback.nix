@@ -31,6 +31,5 @@ in
       description = "Make traceback easier to see for xonsh.";
       homepage = "https://github.com/vaaaaanquish/xontrib-readable-traceback";
       license = licenses.mit;
-      # maintainers = with maintainers; [greg];
     };
   }

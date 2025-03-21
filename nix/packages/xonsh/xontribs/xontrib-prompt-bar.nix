@@ -28,7 +28,6 @@ in
     meta = with lib; {
       homepage = "https://github.com/anki-code/xontrib-prompt-bar";
       license = licenses.bsd2;
-      # maintainers = [maintainers.drmikecrowe];
       description = "The bar prompt for xonsh shell with customizable sections and Starship support.";
     };
   }

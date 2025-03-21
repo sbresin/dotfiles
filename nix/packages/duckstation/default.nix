@@ -141,7 +141,6 @@ in
       description = "Fast PlayStation 1 emulator for x86-64/AArch32/AArch64";
       license = lib.licenses.gpl3Only;
       mainProgram = "duckstation-qt";
-      maintainers = with lib.maintainers; [guibou AndersonTorres];
       platforms = lib.platforms.linux;
     };
   })

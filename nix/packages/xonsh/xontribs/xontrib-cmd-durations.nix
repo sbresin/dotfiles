@@ -48,7 +48,6 @@ in
     meta = with lib; {
       homepage = "https://github.com/jnoortheen/xontrib-cmd-durations";
       license = licenses.mit;
-      # maintainers = [maintainers.drmikecrowe];
       description = "Show long running commands durations in prompt with option to send notification when terminal is not focused.";
     };
   }

@@ -36,6 +36,5 @@ stdenvNoCC.mkDerivation {
     mainProgram = "export-ble-infos";
     homepage = "https://gist.github.com/Mygod/f390aabf53cf1406fc71166a47236ebf";
     license = licenses.asl20;
-    # maintainers = [maintainers.greg];
   };
 }

@@ -50,6 +50,5 @@ in
       description = "Xonsh Python mode completions using jedi";
       homepage = "https://github.com/xonsh/xontrib-jedi";
       license = licenses.mit;
-      maintainers = [maintainers.greg];
     };
   }

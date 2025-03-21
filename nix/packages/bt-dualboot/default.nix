@@ -34,6 +34,5 @@ python3Packages.buildPythonApplication {
     mainProgram = "bt-dualboot";
     homepage = "https://github.com/Simon128/bt-dualboot";
     license = licenses.mit;
-    # maintainers = [maintainers.greg];
   };
 }

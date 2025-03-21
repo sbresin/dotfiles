@@ -25,6 +25,5 @@ in
       description = "Argcomplete support to tab completion of python and xonsh scripts in xonsh shell.";
       homepage = "https://github.com/anki-code/xontrib-argcomplete";
       license = licenses.mit;
-      # maintainers = with maintainers; [greg];
     };
   }

@@ -46,7 +46,6 @@ in
     meta = with lib; {
       homepage = "https://github.com/jnoortheen/xontrib-term-integrations";
       license = licenses.mit;
-      # maintainers = [maintainers.drmikecrowe];
       description = "Support shell integration of terminal programs iTerm2, Kitty, etc in the [xonsh shell](https://xon.sh).";
     };
   }

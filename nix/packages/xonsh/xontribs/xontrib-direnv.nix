@@ -30,7 +30,5 @@ in
       description = "Direnv support for Xonsh";
       homepage = "https://github.com/74th/xonsh-direnv/";
       license = licenses.mit;
-      maintainers = with maintainers; [greg];
     };
   }
-
