@@ -103,6 +103,7 @@
       channels-config = {
         allowUnfreePredicate = pkg:
           builtins.elem (inputs.nixpkgs.lib.getName pkg) [
+            "corefonts"
             "nvidia-x11"
             "nvidia-settings"
             "dank-mono"

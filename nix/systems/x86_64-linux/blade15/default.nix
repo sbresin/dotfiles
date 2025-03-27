@@ -287,7 +287,8 @@
     ]);
 
   fonts.packages = with pkgs.unstable; [
-    # (nerdfonts.override {fonts = ["JetBrainsMono" "NerdFontsSymbolsOnly"];})
+    adwaita-fonts
+    corefonts
     nerd-fonts.jetbrains-mono
     nerd-fonts.symbols-only
     jetbrains-mono
