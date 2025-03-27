@@ -283,6 +283,7 @@
       pkgs.${namespace}.duckstation
       pkgs.${namespace}.bt-dualboot
       pkgs.${namespace}.export-ble-infos
+      pkgs.${namespace}.threedstool
       # pkgs.${namespace}.ryujinx
     ]);
 
