@@ -18,6 +18,7 @@
           GTK_THEME = "Adwaita:dark";
         };
       };
+      "com.discordapp.Discord".Context.sockets = ["x11"]; # No Wayland support
       "com.valvesoftware.Steam".Context.sockets = ["x11"]; # No Wayland support
       "org.DolphinEmu.dolphin-emu".Context.sockets = ["x11"]; # No Wayland support
       "org.jdownloader.JDownloader".Context.sockets = ["x11"]; # No Wayland support
@@ -37,6 +38,7 @@
       # proprietary
       "com.slack.Slack"
       "com.valvesoftware.Steam"
+      "com.discordapp.Discord"
       # sketchy
       "org.jdownloader.JDownloader"
     ];
