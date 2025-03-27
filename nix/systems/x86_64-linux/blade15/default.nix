@@ -182,7 +182,10 @@
   };
 
   # allow to directly execute Appimages
-  programs.appimage.binfmt = true;
+  programs.appimage = {
+    enable = true;
+    binfmt = true;
+  };
 
   # Use nh nix cli wrapper
   programs.nh.enable = true;
