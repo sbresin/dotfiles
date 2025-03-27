@@ -18,6 +18,9 @@ end
 --     return suffix == "" or s:sub(-string.len(suffix)) == suffix
 -- end
 
+-- disable update check
+config.check_for_updates = false
+
 -- GPU settings
 config.front_end = "WebGpu"
 config.webgpu_power_preference = "LowPower"
