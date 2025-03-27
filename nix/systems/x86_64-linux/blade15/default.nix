@@ -225,7 +225,6 @@
       gnome-tweaks
       gnome-browser-connector
       kdePackages.k3b
-      lime3ds
     ]
     ++ (with pkgs.unstable; [
       nvd
