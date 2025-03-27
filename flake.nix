@@ -105,6 +105,7 @@
           builtins.elem (inputs.nixpkgs.lib.getName pkg) [
             "nvidia-x11"
             "nvidia-settings"
+            "dank-mono"
             "terraform"
           ];
       };
