@@ -208,6 +208,17 @@
     };
   };
 
+  # enable game mode
+  programs.gamemode = {
+    enable = true;
+    settings = {
+      custom = {
+        start = "${pkgs.libnotify}/bin/notify-send 'GameMode started'";
+        end = "${pkgs.libnotify}/bin/notify-send 'GameMode ended'";
+      };
+    };
+  };
+
   # List packages installed in system profile. To search, run:
   environment.systemPackages = with pkgs;
     [
