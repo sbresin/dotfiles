@@ -245,6 +245,8 @@
     uv
     ruff
     sqruff
+    buf
+    protobuf
     # wasm
     binaryen
     wasm-bindgen-cli
@@ -263,6 +265,7 @@
     pre-commit
     yq
     gh-dash
+    just
     # platform tools
     act
     fastly

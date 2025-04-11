@@ -80,11 +80,8 @@
     # stacks + tools
     cargo-nextest
     esbuild
-    go
     gopls
     jdt-language-server
-    nodejs
-    protobuf
     # servers + tools
     # postgresql # TODO: figure out how to use this in macOS
     rabbitmq-server
