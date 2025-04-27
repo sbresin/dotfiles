@@ -22,7 +22,7 @@
   lunasvg = "9af1ac7b90658a279b372add52d6f77a4ebb482c";
   sdl3 = "3.2.4";
   soundtouch = "463ade388f3a51da078dc9ed062bf28e4ba29da7";
-  spirv_cross = "vulkan-sdk-1.4.304.0";
+  spirv_cross = "vulkan-sdk-1.4.309.0";
 
   shaderc_src = fetchurl {
     url = "https://github.com/stenzek/shaderc/archive/${shaderc}.tar.gz";
@@ -56,7 +56,7 @@
     owner = "KhronosGroup";
     repo = "SPIRV-Cross";
     rev = spirv_cross;
-    hash = "sha256-KIWptAhjnWw6nqCfTOnNs0XytFHqBO9On2N1JUcGVxA=";
+    hash = "sha256-VooaAnCAsTOKXjq9bHKnBbbRFU44imwwr0HzagqTT+k=";
     leaveDotGit = true;
   };
 
