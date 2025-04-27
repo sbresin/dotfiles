@@ -246,10 +246,6 @@
       pngquant
       ocrmypdf
       # GUI Apps
-      libreoffice-fresh
-      pdfarranger
-      vscodium
-      telegram-desktop
       brasero
       dvdplusrwtools
       cdrdao

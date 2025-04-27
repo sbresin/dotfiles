@@ -23,6 +23,11 @@
     packages = [
       # tools
       "com.github.tchx84.Flatseal"
+      # desktop apps
+      "com.github.jeromerobert.pdfarranger"
+      "com.vscodium.codium"
+      "org.telegram.desktop"
+      "org.libreoffice.LibreOffice"
       # browsers
       "org.mozilla.firefox"
       "io.github.zen_browser.zen"
