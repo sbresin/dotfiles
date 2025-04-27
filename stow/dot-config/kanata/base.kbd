@@ -1,4 +1,9 @@
-;; global settings
+;; global config
+(defcfg
+  log-layer-changes no
+)
+
+;; global vars
 (defvar
   tap-timeout   300
   hold-timeout  300
