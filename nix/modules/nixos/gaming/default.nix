@@ -35,6 +35,17 @@ in {
       };
     };
 
+    # friidump needs setuid bit
+    security.wrappers = {
+      friidump = {
+        setuid = true;
+        owner = "root";
+        group = "cdrom";
+        permissions = "u+wrx,g+x";
+        source = "${pkgs.${namespace}.friidump}/bin/friidump";
+      };
+    };
+
     environment.systemPackages = with pkgs.unstable; [
       # Emulators
       dolphin-emu

@@ -1,0 +1,26 @@
+diff --git a/libfriidump/unscrambler.c b/libfriidump/unscrambler.c
+index 2198ee9..fba0730 100644
+--- a/libfriidump/unscrambler.c
++++ b/libfriidump/unscrambler.c
+@@ -48,6 +48,7 @@
+ /*! \brief Number of bytes of a sector on which the EDC is calculated */
+ #define EDC_LENGTH (RAW_SECTOR_SIZE - 4)		/* The EDC value is contained in the bottom 4 bytes of a frame */
+ 
++u_int8_t disctype;
+ 
+ /*! \brief A structure that represents a seed
+  */
+diff --git a/libfriidump/unscrambler.h b/libfriidump/unscrambler.h
+index b7f3da6..4c2209f 100644
+--- a/libfriidump/unscrambler.h
++++ b/libfriidump/unscrambler.h
+@@ -31,8 +31,6 @@ typedef struct unscrambler_s unscrambler;
+    the progress function the same format we use elsewhere */
+ typedef void (*unscrambler_progress_func) (bool start, u_int32_t current_sector, u_int32_t total_sectors, void *progress_data);
+ 
+-u_int8_t disctype;
+-
+ FRIIDUMPLIB_EXPORT unscrambler *unscrambler_new (void);
+ FRIIDUMPLIB_EXPORT void *unscrambler_destroy (unscrambler *u);
+ FRIIDUMPLIB_EXPORT bool unscrambler_unscramble_16sectors (unscrambler *u, u_int32_t sector_no, u_int8_t *inbuf, u_int8_t *outbuf);
+
