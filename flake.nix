@@ -101,14 +101,21 @@
       ];
 
       channels-config = {
-        allowUnfreePredicate = pkg:
-          builtins.elem (inputs.nixpkgs.lib.getName pkg) [
+        allowUnfreePredicate = pkg: let
+          pkgName = inputs.nixpkgs.lib.getName pkg;
+        in
+          (builtins.elem pkgName [
             "corefonts"
             "nvidia-x11"
             "nvidia-settings"
             "dank-mono"
             "terraform"
-          ];
+            # nvtop dependencies
+            "libnpp"
+          ])
+          || (inputs.nixpkgs.lib.strings.hasPrefix "cuda" pkgName)
+          || (inputs.nixpkgs.lib.strings.hasPrefix "libcu" pkgName)
+          || (inputs.nixpkgs.lib.strings.hasPrefix "libnv" pkgName);
       };
 
       outputs-builder = channels: {
