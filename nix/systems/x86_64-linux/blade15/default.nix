@@ -168,18 +168,12 @@
   };
   users.users.sebe = {
     isNormalUser = true;
-    extraGroups = ["wheel" "input" "uinput" "networkmanager" "lp" "scanner" "cdrom" "adbusers" "openrazer" "storage"];
+    extraGroups = ["wheel" "input" "uinput" "networkmanager" "lp" "scanner" "cdrom" "adbusers" "openrazer" "storage" "gamemode"];
     initialHashedPassword = "$6$.7TC31zU0p1OfOH2$b7.CZMpPB.X6YFZMR5akKaEhDTlUPnUJc.gXmv1GqnVV528RuQKvqCp0sRTUk/ZXo.eofNBD9QUup6s9adyXI/";
   };
 
   # enable adb
   programs.adb.enable = true;
-
-  # Add direct access to game controllers
-  services.udev = {
-    enable = true;
-    packages = with pkgs; [game-devices-udev-rules];
-  };
 
   # allow to directly execute Appimages
   programs.appimage = {
@@ -208,16 +202,8 @@
     };
   };
 
-  # enable game mode
-  programs.gamemode = {
-    enable = true;
-    settings = {
-      custom = {
-        start = "${pkgs.libnotify}/bin/notify-send 'GameMode started'";
-        end = "${pkgs.libnotify}/bin/notify-send 'GameMode ended'";
-      };
-    };
-  };
+  # gaming stuff
+  modules.gaming.enable = true;
 
   # List packages installed in system profile. To search, run:
   environment.systemPackages = with pkgs;
@@ -268,21 +254,12 @@
       dvdplusrwtools
       cdrdao
       cdrtools
-      # Emulators
-      dolphin-emu
-      mgba
-      mame.tools
-      # gaming
-      mangohud
       # this flakes packages
       pkgs.${namespace}.razer-cli
       # pkgs.${namespace}.apple-emoji-linux
       pkgs.${namespace}.oclif
-      pkgs.${namespace}.rusty-psn
-      pkgs.${namespace}.duckstation
       pkgs.${namespace}.bt-dualboot
       pkgs.${namespace}.export-ble-infos
-      pkgs.${namespace}.threedstool
       # pkgs.${namespace}.ryujinx
     ]);
 

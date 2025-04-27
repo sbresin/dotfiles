@@ -18,11 +18,7 @@
           GTK_THEME = "Adwaita:dark";
         };
       };
-      "com.discordapp.Discord".Context.sockets = ["x11"]; # No Wayland support
-      "com.valvesoftware.Steam".Context.sockets = ["x11"]; # No Wayland support
-      "org.DolphinEmu.dolphin-emu".Context.sockets = ["x11"]; # No Wayland support
       "org.jdownloader.JDownloader".Context.sockets = ["x11"]; # No Wayland support
-      "org.ryujinx.Ryujinx".Context.sockets = ["x11"]; # No Wayland support
     };
     packages = [
       # tools
@@ -31,14 +27,8 @@
       "org.mozilla.firefox"
       "io.github.zen_browser.zen"
       "io.github.ungoogled_software.ungoogled_chromium"
-      # emulators
-      "net.rpcs3.RPCS3"
-      "info.cemu.Cemu"
-      "org.flycast.Flycast"
       # proprietary
       "com.slack.Slack"
-      "com.valvesoftware.Steam"
-      "com.discordapp.Discord"
       # sketchy
       "org.jdownloader.JDownloader"
     ];
