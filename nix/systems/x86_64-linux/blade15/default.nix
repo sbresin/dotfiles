@@ -224,6 +224,7 @@
     [
       gnome-tweaks
       gnome-browser-connector
+      gnome-network-displays
       kdePackages.k3b
       streamrip
     ]
@@ -237,6 +238,7 @@
       # os setup/debug
       sbctl
       sbsigntool
+      ntfs3g
       # desktop setup
       inputs.anyrun.packages.${system}.anyrun
       # Terminal setup
