@@ -245,9 +245,6 @@
       # (inputs.wezterm.packages.${system}.default.overrideAttrs {
       #   patches = [./wezterm-wayland-resize.patch ./wezterm-wayland.patch];
       # })
-      # CLI tools
-      unzip
-      unar
       # language support
       hunspell
       hunspellDicts.en_US

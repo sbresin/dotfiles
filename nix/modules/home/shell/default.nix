@@ -210,6 +210,7 @@
     SF_ORG_METADATA_REST_DEPLOY = "true";
     SF_IMPROVED_CODE_COVERAGE = "true";
     SF_CARAPACE_SPEC_MACROS_FILE = "$HOME/.config/carapace/sf-macros.yaml";
+    # fzf with rose-pine colors
     FZF_DEFAULT_OPTS = ''
       --color=bg+:#1f1d2e,spinner:#9ccfd8,hl:#c4a7e7
       --color=fg:#908caa,header:#c4a7e7,info:#ebbcba,pointer:#9ccfd8
@@ -270,6 +271,8 @@
     yq
     gh-dash
     just
+    unar
+    unzip
     # platform tools
     act
     fastly
