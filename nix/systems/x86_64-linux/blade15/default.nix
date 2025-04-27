@@ -225,6 +225,7 @@
       gnome-tweaks
       gnome-browser-connector
       kdePackages.k3b
+      streamrip
     ]
     ++ (with pkgs.unstable; [
       nvd
@@ -256,7 +257,6 @@
       ffmpeg-full
       pngquant
       ocrmypdf
-      streamrip
       # GUI Apps
       libreoffice-fresh
       pdfarranger
