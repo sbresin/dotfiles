@@ -86,7 +86,9 @@
     rabbitmq-server
     valkey
     # macOS tools
+    yabai
     skhd
+    jankyborders
     terminal-notifier
   ];
 
