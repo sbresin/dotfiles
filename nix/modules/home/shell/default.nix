@@ -248,7 +248,7 @@
     temurin-bin
     go
     rustup
-    python3
+    python313
     uv
     ruff
     sqruff
