@@ -71,7 +71,6 @@
     scc
     shellcheck
     sloc
-    unar
     # lnav
     bottom
     lazydocker
