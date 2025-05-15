@@ -275,6 +275,7 @@
     just
     unar
     unzip
+    ngrok
     # platform tools
     act
     fastly

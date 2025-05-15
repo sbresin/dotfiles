@@ -110,6 +110,7 @@
             "nvidia-settings"
             "dank-mono"
             "terraform"
+            "ngrok"
             # nvtop dependencies
             "libnpp"
           ])
