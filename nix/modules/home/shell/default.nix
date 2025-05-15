@@ -75,11 +75,11 @@
   programs.bat = {
     enable = true;
     package = pkgs.unstable.bat;
-    # extraPackages = with pkgs.unstable.bat-extras; [
-    #   batdiff
-    #   batgrep
-    #   batman
-    # ];
+    extraPackages = with pkgs.unstable.bat-extras; [
+      batdiff
+      batgrep
+      batman
+    ];
   };
 
   programs.broot.enable = true;
