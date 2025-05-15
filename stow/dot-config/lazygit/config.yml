@@ -7,27 +7,25 @@ gui:
   expandFocusedSidePanel: true
   expandedSidePanelWeight: 4
   showDivergenceFromBaseBranch: arrowAndNumber
-
-# rose-pine colors
-theme:
-  activeBorderColor:
-    - "#ebbcba"
-    - bold
-  inactiveBorderColor:
-    - "#6e6a86"
-  optionsTextColor:
-    - "#31748f"
-  selectedLineBgColor:
-    - "#1f1d2e"
-  selectedRangeBgColor:
-    - "#1f1d2e"
-  cherryPickedCommitBgColor:
-    - "#26233a"
-  cherryPickedCommitFgColor:
-    - "#f6c177"
-  unstagedChangesColor:
-    - "#eb6f92"
-  defaultFgColor:
-    - "#e0def4"
-  searchingActiveBorderColor:
-    - "#f6c177"
+  nerdFontsVersion: "3"
+  # rose-pine colors
+  theme:
+    activeBorderColor:
+      - "#ebbcba"
+      - bold
+    inactiveBorderColor:
+      - "#6e6a86"
+    optionsTextColor:
+      - "#31748f"
+    selectedLineBgColor:
+      - "#1f1d2e"
+    cherryPickedCommitBgColor:
+      - "#26233a"
+    cherryPickedCommitFgColor:
+      - "#f6c177"
+    unstagedChangesColor:
+      - "#eb6f92"
+    defaultFgColor:
+      - "#e0def4"
+    searchingActiveBorderColor:
+      - "#f6c177"
