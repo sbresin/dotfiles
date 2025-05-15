@@ -1,0 +1,40 @@
+#!/usr/bin/env sh
+
+# initialize script addon
+yabai -m signal --add event=dock_did_restart action="sudo yabai --load-sa"
+sudo yabai --load-sa
+
+# use bsp tiling
+yabai -m config layout bsp
+
+# gaps
+yabai -m config window_gap 10
+yabai -m config top_padding 0 bottom_padding 0 left_padding 0 right_padding 0
+
+# smart gaps, but unfortunatly very yanky in yabai
+# yabai -m signal --add event=window_created action="((yabai -m query --spaces --space | jq -e '.windows | length == 1') && yabai -m config top_padding 0 bottom_padding 0 left_padding 0 right_padding 0) || yabai -m config top_padding 10 bottom_padding 10 left_padding 10 right_padding 10"
+# yabai -m signal --add event=window_destroyed action="((yabai -m query --spaces --space | jq -e '.windows | length == 1') && yabai -m config top_padding 0 bottom_padding 0 left_padding 0 right_padding 0) || yabai -m config top_padding 10 bottom_padding 10 left_padding 10 right_padding 10"
+
+# "set focus follows mouse mode (default: off, options: off, autoraise, autofocus)
+yabai -m config focus_follows_mouse autofocus
+
+# set mouse follows focus mode (default: off)
+# yabai -m config mouse_follows_focus on
+
+## window rules
+
+# float system preferences
+yabai -m rule --add app="^System Settings$" manage=off
+
+# enable yankyborders (disbale when only one window in space)
+borders active_color=0xffe1e3e4 inactive_color=0xff494d64 width=3.0 hidpi=on &
+yabai -m signal --add event=window_focused action="(yabai -m query --spaces --space | jq -e '.windows | length == 1' && borders active_color=0x00000000) || borders active_color=0xebbcbaff"
+yabai -m signal --add event=window_destroyed action="(yabai -m query --spaces --space | jq -e '.windows | length == 1' && borders active_color=0x00000000) || borders active_color=0xebbcbaff"
+
+# # set the correct starting active_color upon initializing yabai, based on number of windows in current space
+# n=$(yabai -m query --spaces --space | jq '.windows | length')
+# if [ $n = 1 ]; then
+#     borders hidpi=on width=6.0 inactive_color=0x00000000 active_color=0x00000000 &
+# else
+#     borders hidpi=on width=6.0 inactive_color=0x00000000 active_color=0xffff9bd2 &
+# fi
