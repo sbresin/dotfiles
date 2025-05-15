@@ -22,7 +22,7 @@ end
 config.check_for_updates = false
 
 -- GPU settings
-config.front_end = "WebGpu"
+config.front_end = "OpenGL"
 config.webgpu_power_preference = "LowPower"
 config.enable_wayland = false
 
