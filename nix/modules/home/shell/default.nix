@@ -11,6 +11,9 @@
     initExtra =
       # bash
       ''
+        # home-manager home.sessionPath always appends vars, but we need prepending
+        export PATH=$HOME/.local/bin:$PATH
+
         # auto start xonsh after sourcing all the relevant home-manager things
         if [[ $(${pkgs.procps}/bin/ps -p $PPID -o "ucomm=") != "xonsh" && -z ''${BASH_EXECUTION_STRING} && ''${SHLVL} == 1 ]]
         then
@@ -33,6 +36,9 @@
     initExtra =
       # bash
       ''
+        # home-manager home.sessionPath always appends vars, but we need prepending
+        export PATH=$HOME/.local/bin:$PATH
+
         # Turn off all beeps
         # unsetopt BEEP
         # Turn off autocomplete beeps
@@ -195,10 +201,6 @@
 
   # ************************************************************************************************
   # VARS & PACKAGES
-
-  home.sessionPath = [
-    "$HOME/.local/bin"
-  ];
 
   home.sessionVariables = {
     EDITOR = "nvim";
