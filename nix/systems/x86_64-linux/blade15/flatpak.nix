@@ -28,6 +28,7 @@
       "com.vscodium.codium"
       "org.telegram.desktop"
       "org.libreoffice.LibreOffice"
+      "com.mastermindzh.tidal-hifi"
       # browsers
       "org.mozilla.firefox"
       "io.github.zen_browser.zen"
