@@ -114,7 +114,7 @@
   services.xserver.videoDrivers = ["nvidia"];
 
   # Enable the GNOME Desktop Environment.
-  services.xserver.displayManager.gdm.enable = true;
+  services.xserver.displayManager.gdm.enable = false;
   services.xserver.desktopManager.gnome = {
     enable = true;
     extraGSettingsOverridePackages = [pkgs.mutter];
