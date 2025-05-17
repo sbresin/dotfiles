@@ -1,6 +1,7 @@
 {
   config,
   pkgs,
+  lib,
   ...
 }: {
   # early KMS
@@ -28,14 +29,26 @@
     package = config.boot.kernelPackages.nvidiaPackages.latest;
     open = true;
     modesetting.enable = true;
-    powerManagement.finegrained = true;
     nvidiaSettings = true;
+    powerManagement.enable = false;
+    powerManagement.finegrained = true;
     prime = {
       intelBusId = "PCI:0:2:0";
       nvidiaBusId = "PCI:1:0:0";
       offload = {
         enable = true;
         enableOffloadCmd = true;
+      };
+    };
+  };
+
+  specialisation = {
+    nvidia.configuration = {
+      hardware.nvidia = {
+        powerManagement.enable = lib.mkForce true;
+        powerManagement.finegrained = lib.mkForce false;
+        prime.offload.enable = lib.mkForce false;
+        prime.offload.enableOffloadCmd = lib.mkForce false;
       };
     };
   };
