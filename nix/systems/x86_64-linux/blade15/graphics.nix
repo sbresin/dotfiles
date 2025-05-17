@@ -4,7 +4,8 @@
   ...
 }: {
   # early KMS
-  boot.initrd.kernelModules = ["i915"];
+  boot.initrd.kernelModules = ["i915" "nvidia"];
+  boot.extraModulePackages = [config.boot.kernelPackages.nvidia_x11];
   # enable HuC firmware for intel-media-driver
   boot.kernelParams = ["i915.enable_guc=2"];
 
