@@ -153,7 +153,18 @@
     enable = true;
     pulse.enable = true;
     alsa.enable = true;
+    wireplumber = {
+      enable = true;
+      configPackages = [
+        (pkgs.writeTextDir "share/wireplumber/wireplumber.conf.d/10-bluez.conf" ''
+          monitor.bluez.properties = {
+            bluez5.enable-sbc-xq = true
+          }
+        '')
+      ];
+    };
   };
+
   # needed by pipewire
   security.rtkit.enable = true;
 
