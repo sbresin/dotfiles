@@ -1,0 +1,30 @@
+diff --git a/shell/cc-application.c b/shell/cc-application.c
+index 4ce5a63..bc5785f 100644
+--- a/shell/cc-application.c
++++ b/shell/cc-application.c
+@@ -212,12 +212,6 @@ cc_application_handle_local_options (GApplication *application,
+       return 0;
+     }
+ 
+-  if (!is_supported_desktop ())
+-    {
+-      g_printerr ("Running gnome-control-center is only supported under GNOME and Unity, exiting\n");
+-      return 1;
+-    }
+-
+   if (g_variant_dict_contains (options, "list"))
+     {
+       cc_panel_loader_list_panels ();
+diff --git a/shell/org.gnome.Settings.desktop.in b/shell/org.gnome.Settings.desktop.in
+index 1af2cd1..358db88 100644
+--- a/shell/org.gnome.Settings.desktop.in
++++ b/shell/org.gnome.Settings.desktop.in
+@@ -7,8 +7,6 @@ Terminal=false
+ Type=Application
+ StartupNotify=true
+ Categories=GNOME;GTK;Settings;
+-# See also is_supported_desktop() in main.c
+-OnlyShowIn=GNOME;
+ # Translators: Search terms to find this app. Do NOT translate or localize the semicolons! The list MUST also end with a semicolon!
+ Keywords=Preferences;Settings;
+ # Translators: Do NOT translate or transliterate this text (these are enum types)!
