@@ -15,7 +15,11 @@ in {
     # add direct user access to game controllers
     services.udev = {
       enable = true;
-      packages = with pkgs; [game-devices-udev-rules];
+      packages = with pkgs.unstable; [game-devices-udev-rules];
+      extraRules = ''
+        # enable access to wii Bluetooth chip for dolphin-emu passthrough
+        SUBSYSTEM=="usb", ATTRS{idVendor}=="057e", ATTRS{idProduct}=="0305", TAG+="uaccess", GROUP="plugdev", MODE="0666"
+      '';
     };
 
     # enable combining joycons to single controller

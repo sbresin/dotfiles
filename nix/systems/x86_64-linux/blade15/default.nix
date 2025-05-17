@@ -165,10 +165,11 @@
 
   users.groups = {
     storage = {};
+    plugdev = {};
   };
   users.users.sebe = {
     isNormalUser = true;
-    extraGroups = ["wheel" "input" "uinput" "networkmanager" "lp" "scanner" "cdrom" "adbusers" "openrazer" "storage" "gamemode"];
+    extraGroups = ["wheel" "input" "uinput" "networkmanager" "lp" "scanner" "plugdev" "cdrom" "adbusers" "openrazer" "storage" "gamemode"];
     initialHashedPassword = "$6$.7TC31zU0p1OfOH2$b7.CZMpPB.X6YFZMR5akKaEhDTlUPnUJc.gXmv1GqnVV528RuQKvqCp0sRTUk/ZXo.eofNBD9QUup6s9adyXI/";
   };
 
@@ -221,6 +222,7 @@
       neovim
       git
       git-crypt
+      usbutils
       # os setup/debug
       sbctl
       sbsigntool
