@@ -266,6 +266,7 @@
       pngquant
       ocrmypdf
       # GUI Apps
+      easyeffects
       brasero
       dvdplusrwtools
       cdrdao
@@ -288,6 +289,7 @@
     iosevka
     inter
     noto-fonts
+    geist-font
     tamzen
     pkgs.${namespace}.dank-mono
     pkgs.${namespace}.apple-emoji-linux
