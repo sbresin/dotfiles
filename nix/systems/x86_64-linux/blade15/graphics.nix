@@ -11,6 +11,10 @@
 
   hardware.graphics = {
     enable = true;
+
+    # 32-bit support (e.g for Steam)
+    enable32Bit = true;
+
     # add VAAPI drivers for hardware video acceleration
     extraPackages = with pkgs; [
       intel-media-driver
