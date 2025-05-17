@@ -35,6 +35,8 @@
       "x-scheme-handler/unknown" = "io.github.zen_browser.zen.desktop";
     };
   };
+  # use bluetooth device buttons for media control
+  services.mpris-proxy.enable = true;
 
   programs.anyrun = {
     enable = true;
