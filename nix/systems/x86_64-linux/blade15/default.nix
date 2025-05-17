@@ -165,6 +165,13 @@
     };
   };
 
+  # Enable Bluetooth battery reporting
+  hardware.bluetooth.settings = {
+    General = {
+      Experimental = true;
+    };
+  };
+
   # needed by pipewire
   security.rtkit.enable = true;
 
