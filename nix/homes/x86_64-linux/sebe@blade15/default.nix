@@ -45,30 +45,30 @@
         inputs.anyrun.packages.${pkgs.system}.translate
         inputs.anyrun.packages.${pkgs.system}.websearch
       ];
-      # x = { fraction = 0.5; };
-      # y = { fraction = 0.3; };
-      # width = { fraction = 0.3; };
-      # hideIcons = false;
-      # ignoreExclusiveZones = false;
-      # layer = "overlay";
-      # hidePluginInfo = false;
-      # closeOnClick = false;
-      # showResultsImmediately = false;
-      # maxEntries = null;
+      x = {fraction = 0.5;};
+      y = {fraction = 0.3;};
+      width = {fraction = 0.3;};
+      hideIcons = false;
+      ignoreExclusiveZones = false;
+      layer = "overlay";
+      hidePluginInfo = false;
+      closeOnClick = false;
+      showResultsImmediately = false;
+      maxEntries = null;
     };
-    # extraCss = ''
-    #   .some_class {
-    #     background: red;
-    #   }
-    # '';
-    #
-    # extraConfigFiles."some-plugin.ron".text = ''
-    #   Config(
-    #     // for any other plugin
-    #     // this file will be put in ~/.config/anyrun/some-plugin.ron
-    #     // refer to docs of xdg.configFile for available options
-    #   )
-    # '';
+    extraCss = ''
+      .some_class {
+        background: red;
+      }
+    '';
+
+    extraConfigFiles."some-plugin.ron".text = ''
+      Config(
+        // for any other plugin
+        // this file will be put in ~/.config/anyrun/some-plugin.ron
+        // refer to docs of xdg.configFile for available options
+      )
+    '';
   };
 
   home.stateVersion = "24.05";
