@@ -11,9 +11,11 @@
 
   hardware.graphics = {
     enable = true;
+    package = pkgs.unstable.mesa;
 
     # 32-bit support (e.g for Steam)
     enable32Bit = true;
+    package32 = pkgs.unstable.pkgsi686Linux.mesa;
 
     # add VAAPI drivers for hardware video acceleration
     extraPackages = with pkgs; [
