@@ -41,7 +41,7 @@ config.adjust_window_size_when_changing_font_size = false
 local theme = require('lua/rose-pine').main
 config.colors = theme.colors()
 config.window_frame = theme.window_frame();
-config.window_background_opacity = 0.95
+config.window_background_opacity = 0.90
 
 -- font config
 config.font = wezterm.font_with_fallback {
