@@ -105,7 +105,6 @@
 
   # Enable the X11 windowing system.
   services.xserver.enable = true;
-  programs.xwayland.enable = true;
 
   # default to Wayland for chromium/electron apps
   environment.sessionVariables.NIXOS_OZONE_WL = "1";
@@ -148,7 +147,7 @@
   };
 
   # Enable sound through pipewire
-  hardware.pulseaudio.enable = false;
+  services.pulseaudio.enable = false;
   services.pipewire = {
     enable = true;
     pulse.enable = true;

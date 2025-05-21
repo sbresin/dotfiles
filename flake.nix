@@ -15,8 +15,8 @@
   };
 
   inputs = {
-    nixpkgs.url = "github:nixos/nixpkgs?ref=nixos-24.11";
-    # nixpkgs.url = "github:nixos/nixpkgs/f5c96d88c1d87fa801c831abde2113a1217af993";
+    nixpkgs.url = "github:nixos/nixpkgs?ref=nixos-25.05";
+    # nixpkgs.url = "github:nixos/nixpkgs/73fa8c1289d22294e2f061de6d3653d338d819ae";
     nixpkgs-unstable.url = "github:nixos/nixpkgs?ref=nixos-unstable";
 
     # use Lix fork (faster and community driven)
@@ -33,7 +33,7 @@
 
     # use home-manager
     home-manager = {
-      url = "github:nix-community/home-manager?ref=release-24.11";
+      url = "github:nix-community/home-manager?ref=release-25.05";
     };
 
     # manages bind mounts to persistent storage
@@ -41,11 +41,11 @@
 
     # secureboot for nixOS
     lanzaboote = {
-      url = "github:nix-community/lanzaboote/v0.4.1";
+      url = "github:nix-community/lanzaboote/v0.4.2";
     };
 
     # declarative flatpak installs
-    nix-flatpak.url = "github:gmodena/nix-flatpak/?ref=v0.4.1";
+    nix-flatpak.url = "github:gmodena/nix-flatpak/?ref=latest";
 
     };
 

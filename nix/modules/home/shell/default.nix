@@ -33,7 +33,7 @@
     package = pkgs.unstable.zsh;
     syntaxHighlighting.enable = true;
     autosuggestion.enable = true;
-    initExtra =
+    initContent =
       # bash
       ''
         # home-manager home.sessionPath always appends vars, but we need prepending
@@ -160,7 +160,7 @@
 
   services.gpg-agent = {
     enable = true;
-    pinentryPackage = pkgs.unstable.pinentry-curses;
+    pinentry.package = pkgs.unstable.pinentry-curses;
     enableBashIntegration = true;
   };
 
