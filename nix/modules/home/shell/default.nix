@@ -263,6 +263,7 @@
     # CLI tools
     bkt
     miller
+    fx
     jq
     stow
     wget
