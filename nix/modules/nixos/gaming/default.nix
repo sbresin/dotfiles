@@ -60,10 +60,10 @@ in {
       mangohud
       evtest-qt
       nvtopPackages.intel
-      nvtopPackages.nvidia
+      # nvtopPackages.nvidia
       # rom tools
       mame.tools
-      pkgs.${namespace}.rusty-psn
+      # pkgs.${namespace}.rusty-psn
       pkgs.${namespace}.threedstool
     ];
 
