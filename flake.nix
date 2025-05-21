@@ -6,13 +6,11 @@
       "nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs="
       "wezterm.cachix.org-1:kAbhjYUC9qvblTE+s7S+kl5XM1zVa4skO+E/1IDWdH0="
       "hyprland.cachix.org-1:a7pgxzMz7+chwVL3/pzj6jIBMioiJM7ypFP8PwtkuGc="
-      "anyrun.cachix.org-1:pqBobmOjI7nKlsUMV25u9QHa9btJK65/C8vnO3p346s="
     ];
     extra-substituters = [
       "https://nix-community.cachix.org"
       "https://wezterm.cachix.org"
       "https://hyprland.cachix.org"
-      "https://anyrun.cachix.org"
     ];
   };
 
@@ -23,7 +21,7 @@
 
     # use Lix fork (faster and community driven)
     lix-module = {
-      url = "https://git.lix.systems/lix-project/nixos-module/archive/2.91.0.tar.gz";
+      url = "https://git.lix.systems/lix-project/nixos-module/archive/2.93.0.tar.gz";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
@@ -55,9 +53,6 @@
     # declarative flatpak installs
     nix-flatpak.url = "github:gmodena/nix-flatpak/?ref=v0.4.1";
 
-    # anyrun launcher
-    anyrun = {
-      url = "github:anyrun-org/anyrun";
     };
 
     # razer hardware settings
