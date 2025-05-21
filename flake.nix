@@ -47,8 +47,13 @@
     # declarative flatpak installs
     nix-flatpak.url = "github:gmodena/nix-flatpak/?ref=latest";
 
+    ashell = {
+      url = "github:MalpenZibo/ashell";
+      inputs.nixpkgs.follows = "nixpkgs-unstable";
     };
 
+    nix-alien = {
+      url = "github:thiagokokada/nix-alien";
     };
 
     # get nightly wezterm

@@ -1,0 +1,33 @@
+#!/usr/bin/env sh
+
+# use internal gpu by default
+export AQ_DRM_DEVICES='/dev/dri/card0'
+export AQ_TRACE=1
+
+# set if nvidia is the primary GPU
+if [ "$PRIME_MODE" = "sync" ] || [ "$PRIME_MODE" = "discrete" ]; then
+	export LIBVA_DRIVER_NAME='nvidia'
+	export __GLX_VENDOR_LIBRARY_NAME='nvidia'
+	export GBM_BACKEND='nvidia-drm'
+	# make Hyprland use both GPUs
+	export AQ_DRM_DEVICES='/dev/dri/card0:/dev/dri/card1'
+fi
+
+# app2unit integration
+export APP2UNIT_SLICES='a=app-graphical.slice b=background-graphical.slice s=session-graphical.slice'
+export APP2UNIT_TYPE='service'
+
+# cursor theme
+export XCURSOR_SIZE=32
+export HYPRCURSOR_SIZE=32
+export XCURSOR_THEME='BreezeX-RosePine-Linux'
+export HYPRCURSOR_THEME='rose-pine-hyprcursor'
+
+# GTK: Use wayland if available. If not: try x11, then any other GDK backend.
+export GDK_BACKEND='wayland,x11,*'
+# Qt: Use wayland if available, fall back to x11 if not.
+export QT_QPA_PLATFORM='wayland;xcb'
+# Run SDL2 applications on Wayland. Remove or set to x11 if games that provide older versions of SDL cause compatibility issues
+export SDL_VIDEODRIVER='wayland'
+# Clutter package already has wayland enabled, this variable will force Clutter applications to try and use the Wayland backend
+export CLUTTER_BACKEND='wayland'
