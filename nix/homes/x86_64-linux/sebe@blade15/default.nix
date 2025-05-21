@@ -42,10 +42,10 @@
     enable = true;
     config = {
       plugins = [
-        inputs.anyrun.packages.${pkgs.system}.applications
-        inputs.anyrun.packages.${pkgs.system}.symbols
-        inputs.anyrun.packages.${pkgs.system}.translate
-        inputs.anyrun.packages.${pkgs.system}.websearch
+        "applications"
+        "symbols"
+        "translate"
+        "websearch"
       ];
       x = {fraction = 0.5;};
       y = {fraction = 0.3;};

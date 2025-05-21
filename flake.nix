@@ -36,12 +36,6 @@
       url = "github:nix-community/home-manager?ref=release-24.11";
     };
 
-    # # In order to configure macOS systems.
-    # darwin = {
-    #   url = "github:lnl7/nix-darwin";
-    #   inputs.nixpkgs.follows = "nixpkgs";
-    # };
-
     # manages bind mounts to persistent storage
     impermanence.url = "github:nix-community/impermanence";
 
@@ -55,10 +49,6 @@
 
     };
 
-    # razer hardware settings
-    razer-laptop-control = {
-      url = "github:Razer-Linux/razer-laptop-control-no-dkms";
-      inputs.nixpkgs.follows = "nixpkgs";
     };
 
     # get nightly wezterm
@@ -88,11 +78,6 @@
 
       systems.hosts.blade15.modules = with inputs; [
         nix-flatpak.nixosModules.nix-flatpak
-        razer-laptop-control.nixosModules.default
-      ];
-
-      homes.modules = with inputs; [
-        anyrun.homeManagerModules.default
       ];
 
       channels-config = {

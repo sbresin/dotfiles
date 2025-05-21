@@ -245,8 +245,6 @@
       sbctl
       sbsigntool
       ntfs3g
-      # desktop setup
-      inputs.anyrun.packages.${system}.anyrun
       # Terminal setup
       inputs.wezterm.packages.${system}.default
       # TODO: get wayland working
@@ -333,13 +331,9 @@
 
   hardware.openrazer = {
     enable = true;
-    # useless on laptop, leads to no backlight in gdm after suspend
+    # useless on laptop, leads to no backlight in dm after suspend
     devicesOffOnScreensaver = false;
   };
-  # services.razer-laptop-control = {
-  #   enable = true;
-  #   package = pkgs.${namespace}.razer-laptop-control;
-  # };
 
   services.speechd.enable = true;
 
