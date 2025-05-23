@@ -143,10 +143,7 @@
     enable = true;
     package = pkgs.unstable.gh;
     gitCredentialHelper.enable = true;
-    extensions = with pkgs.unstable; [
-      # not using programs.gh-dash.enable, in order to stow config file
-      gh-dash
-    ];
+    extensions = []; # not setting it to allow local installation of extensions
     settings = {
       # git_protocol = "ssh";
       prompt = "enabled";
