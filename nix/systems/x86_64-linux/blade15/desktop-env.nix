@@ -39,8 +39,6 @@
   # network gui and applet
   programs.nm-applet.enable = true;
 
-  programs.plotinus.enable = true;
-
   # TODO: nerdshade, lule,
 
   environment.systemPackages = with pkgs.unstable; [
