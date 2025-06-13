@@ -130,6 +130,7 @@ def metadata_names() -> List[str]:
             "object:": "CustomObject:",
             "field:": "CustomField:",
             "trigger:": "ApexTrigger:",
+            "site": "CustomSite",
         }
         for old, new in replacements.items():
             basename = basename.replace(old, new)
