@@ -147,5 +147,23 @@ return {
                 end
             }
         }
-    }, {"williamboman/mason.nvim", opts = {PATH = "append"}}
+    }, {"williamboman/mason.nvim", opts = {PATH = "append"}}, {
+        "mrcjkb/rustaceanvim",
+        opts = {
+            server = {
+                default_settings = {
+                    ["rust-analyzer"] = {
+                        cargo = {
+                            allFeatures = true,
+                            loadOutDirsFromCheck = true,
+                            buildScripts = {enable = true},
+                            -- fixes tauri incremental compilation
+                            targetDir = './target-analyzer'
+                        }
+                    }
+                }
+            }
+        }
+    }
+
 }
