@@ -56,7 +56,7 @@
     owner = "KhronosGroup";
     repo = "SPIRV-Cross";
     rev = spirv_cross;
-    hash = "sha256-v/BnS0fVZRUgvrc+vLoX1g+X+z3Vl9b/rs8bRvhw4qA=";
+    hash = "sha256-jME+8MH5j+WYANw3gdzf3jsvYyunR8Xn4zyiH1hNL5M=";
     leaveDotGit = true;
   };
 
