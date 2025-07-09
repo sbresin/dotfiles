@@ -190,10 +190,6 @@
   programs.poetry = {
     enable = true;
     package = pkgs.unstable.poetry;
-    settings = {
-      virtualenvs.create = true;
-      virtualenvs.in-project = true;
-    };
   };
 
   # ************************************************************************************************
@@ -215,6 +211,8 @@
       --color=fg:#908caa,header:#c4a7e7,info:#ebbcba,pointer:#9ccfd8
       --color=marker:#9ccfd8,fg+:#e0def4,prompt:#ebbcba,hl+:#c4a7e7
     '';
+    # use same poetry config on macOS & Linux
+    POETRY_CONFIG_DIR = "$HOME/.config/pypoetry";
   };
 
   home.packages = with pkgs.unstable; [
