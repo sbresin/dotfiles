@@ -13,7 +13,7 @@
 
   boot.initrd.availableKernelModules = ["xhci_pci" "nvme" "usbhid" "usb_storage" "sd_mod"];
   boot.kernelModules = ["kvm-intel"];
-  boot.extraModulePackages = [];
+  boot.extraModulePackages = [config.boot.kernelPackages.apfs];
   # nouveau boots to blackscreen
   boot.blacklistedKernelModules = ["nouveau"];
   # "mem_sleep_default=s2idle"

@@ -64,7 +64,17 @@
   };
 
   # Use Linux_zen kernel
-  boot.kernelPackages = pkgs.linuxPackages_zen;
+  boot.kernelPackages = pkgs.linuxPackages_zen.extend (self: super: {
+    apfs = super.apfs.overrideAttrs (o: {
+      version = "0.3.14-6.15";
+      src = pkgs.fetchFromGitHub {
+        owner = "linux-apfs";
+        repo = "linux-apfs-rw";
+        rev = "v0.3.14";
+        hash = "sha256-bv3WGcIKx5RVj+cQg0U5U1zGPRzjxMlCZmol9QvAmc4=";
+      };
+    });
+  });
 
   # use system76 rust scheduler
   services.system76-scheduler.enable = true;
