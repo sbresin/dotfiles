@@ -18,6 +18,9 @@ in
       sha256 = "sha256-KL/AxcsvjxqxvjDlf1axitgME3T+iyuW6OFb1foRzN8=";
     };
 
+    pyproject = true;
+    build-system = [setuptools];
+
     doCheck = false;
 
     nativeBuildInputs = [

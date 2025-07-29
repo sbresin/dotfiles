@@ -15,7 +15,7 @@ in
           xontrib-jedi
           xontrib-prompt-bar
           xontrib-prompt-starship
-          xontrib-readable-traceback
+          # xontrib-readable-traceback
           xontrib-sh
           xontrib-term-integrations
           xontrib-vox

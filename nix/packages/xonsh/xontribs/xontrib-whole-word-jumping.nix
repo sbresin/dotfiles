@@ -4,6 +4,8 @@
   fetchFromGitHub,
   pytestCheckHook,
   xonsh,
+  setuptools,
+  wheel,
 }:
 buildPythonPackage rec {
   pname = "xontrib-whole-word-jumping";
@@ -16,6 +18,8 @@ buildPythonPackage rec {
     hash = "sha256-zLAOGW9prjYDQBDITFNMggn4X1JTyAnVdjkBOH9gXPs=";
   };
 
+  format = "pyproject";
+
   prePatch = ''
     substituteInPlace pyproject.toml \
       --replace '"xonsh>=0.12.5", ' ""
@@ -24,6 +28,11 @@ buildPythonPackage rec {
   preCheck = ''
     export HOME=$TMPDIR
   '';
+
+  nativeBuildInputs = [
+    setuptools
+    wheel
+  ];
 
   checkInputs = [
     pytestCheckHook
