@@ -3,6 +3,7 @@
   lib,
   fetchFromGitHub,
   setuptools,
+  xonsh,
 }: let
   pname = "xontrib-argcomplete";
   version = "0.3.3";
@@ -17,8 +18,15 @@ in
       hash = "sha256-4tw5nnwmETu+iGvNxC9FUZ0h6Pu7W3dxSMxIGSBRlxg=";
     };
 
+    pyproject = true;
+    build-system = [setuptools];
+
     nativeBuildInputs = [
       setuptools
+    ];
+
+    checkInputs = [
+      xonsh
     ];
 
     meta = with lib; {

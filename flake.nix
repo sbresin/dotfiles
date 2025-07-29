@@ -47,6 +47,8 @@
     # declarative flatpak installs
     nix-flatpak.url = "github:gmodena/nix-flatpak/?ref=latest";
 
+    hyprland.url = "github:hyprwm/Hyprland";
+
     ashell = {
       url = "github:MalpenZibo/ashell";
       inputs.nixpkgs.follows = "nixpkgs-unstable";

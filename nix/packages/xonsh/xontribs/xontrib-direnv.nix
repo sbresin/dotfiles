@@ -18,6 +18,9 @@ in
       hash = "sha256-huBJ7WknVCk+WgZaXHlL+Y1sqsn6TYqMP29/fsUPSyU=";
     };
 
+    pyproject = true;
+    build-system = [setuptools];
+
     propagatedBuildInputs = [
       direnv
     ];
