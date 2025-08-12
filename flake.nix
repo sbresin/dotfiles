@@ -44,6 +44,9 @@
       url = "github:nix-community/lanzaboote/v0.4.2";
     };
 
+    # patched kernel
+    chaotic.url = "github:chaotic-cx/nyx/nyxpkgs-unstable";
+
     # declarative flatpak installs
     nix-flatpak.url = "github:gmodena/nix-flatpak/?ref=latest";
 
@@ -77,10 +80,17 @@
         };
       };
 
+      overlays = with inputs; [
+        chaotic.overlays.default
+      ];
+
       systems.modules.nixos = with inputs; [
         home-manager.nixosModules.home-manager
         impermanence.nixosModules.impermanence
         lanzaboote.nixosModules.lanzaboote
+        chaotic.nixosModules.nyx-cache
+        chaotic.nixosModules.nyx-overlay
+        chaotic.nixosModules.nyx-registry
       ];
 
       systems.hosts.blade15.modules = with inputs; [
@@ -97,6 +107,8 @@
           "dank-mono"
           "terraform"
           "ngrok"
+          "steam"
+          "steam-unwrapped"
           # nvtop dependencies
           #   "libnpp"
         ]);
