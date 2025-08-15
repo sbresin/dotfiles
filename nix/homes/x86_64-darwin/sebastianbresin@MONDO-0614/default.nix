@@ -20,19 +20,7 @@
   # use standalone home-manager
   programs.home-manager.enable = true;
 
-  # upstream pypi django needs help finding these
-  # TODO: should not be necessary when setting DYLD_PATH correctly
-  home.sessionVariables = {
-    GDAL_LIBRARY_PATH = "${pkgs.gdal}/lib/libgdal.dylib";
-    GEOS_LIBRARY_PATH = "${pkgs.geos}/lib/libgeos_c.dylib";
-  };
-
   nix = {
-    # https://github.com/NixOS/nixpkgs/issues/337036
-    # package = pkgs.lix.overrideAttrs {
-    #   doCheck = false;
-    #   doInstallCheck = false;
-    # };
     settings = {
       experimental-features = ["nix-command" "flakes"];
       max-jobs = 8;
