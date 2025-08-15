@@ -128,6 +128,7 @@
       # commit.gpgsign = true;
       pull.rebase = false;
       # rebase.autosquash = true;
+      dir.workspace = "$HOME/workspace";
     };
     delta.enable = true;
     delta.options = {
@@ -215,74 +216,80 @@
     POETRY_CONFIG_DIR = "$HOME/.config/pypoetry";
   };
 
-  home.packages = with pkgs.unstable; [
-    # use rust coreutils over gnu, only at user level for now
-    (lib.hiPrio pkgs.unstable.uutils-coreutils-noprefix)
-    (lib.hiPrio pkgs.unstable.uutils-findutils)
-    git-crypt
-    dig
+  home.packages = with pkgs.unstable;
+    [
+      # use rust coreutils over gnu, only at user level for now
+      (lib.hiPrio pkgs.unstable.uutils-coreutils-noprefix)
+      (lib.hiPrio pkgs.unstable.uutils-findutils)
+      git-crypt
+      dig
+      # nix tools
+      nix-your-shell
+      alejandra
+      nh
+      nurl
+      devbox
+      # languageservers
+      nil
+      lua-language-server
+      luaformatter
+      efm-langserver
+      marksman
+      # stacks
+      nodejs
+      pnpm
+      temurin-bin
+      go
+      rustup
+      python313
+      uv
+      ruff
+      sqruff
+      buf
+      protobuf
+      # wasm
+      binaryen
+      wasm-bindgen-cli
+      wasm-tools
+      wasm-pack
+      twiggy
+      # CLI tools
+      bkt
+      miller
+      fx
+      jq
+      stow
+      wget
+      sad
+      glow
+      chafa
+      pre-commit
+      yq
+      gh-dash
+      just
+      unar
+      unzip
+      ngrok
+      tabiew
+      # pkgs.${namespace}.git-amnesia
+      # platform tools
+      act
+      fastly
+      google-cloud-sdk
+      heroku
+      terraform
+      # sfdc development
+      pkgs.${namespace}.sf-cli
+      pkgs.${namespace}.sfp-cli
+      # xonsh with xontribs
+      (pkgs.${namespace}.xonsh.override
+        {pkgs = pkgs.unstable;})
+    ]
+    ++
     # terminal clipboard
-    wl-clipboard
-    xclip
-    xsel
-    # nix tools
-    nix-your-shell
-    alejandra
-    nh
-    nurl
-    devbox
-    # languageservers
-    nil
-    lua-language-server
-    luaformatter
-    efm-langserver
-    marksman
-    # stacks
-    nodejs
-    pnpm
-    temurin-bin
-    go
-    rustup
-    python313
-    uv
-    ruff
-    sqruff
-    buf
-    protobuf
-    # wasm
-    binaryen
-    wasm-bindgen-cli
-    wasm-tools
-    wasm-pack
-    twiggy
-    # CLI tools
-    bkt
-    miller
-    fx
-    jq
-    stow
-    wget
-    sad
-    glow
-    chafa
-    pre-commit
-    yq
-    gh-dash
-    just
-    unar
-    unzip
-    ngrok
-    # platform tools
-    act
-    fastly
-    google-cloud-sdk
-    heroku
-    terraform
-    # sfdc development
-    pkgs.${namespace}.sf-cli
-    pkgs.${namespace}.sfp-cli
-    # xonsh with xontribs
-    (pkgs.${namespace}.xonsh.override
-      {pkgs = pkgs.unstable;})
-  ];
+    lib.optionals pkgs.stdenv.hostPlatform.isLinux [
+      wl-clipboard
+      xclip
+      xsel
+    ];
 }
