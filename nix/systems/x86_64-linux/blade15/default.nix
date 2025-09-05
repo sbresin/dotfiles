@@ -283,6 +283,8 @@
       gparted
       exfatprogs
       # Terminal setup
+      ghostty
+      tmux
       wezterm
       # language support
       hunspell
