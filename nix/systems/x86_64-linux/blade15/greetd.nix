@@ -5,9 +5,9 @@
     rev = "22cf8e6b6ccbd93a7f0ff36d98a5b454f18bed77";
     sha256 = "sha256-wf5wnSiJsDqcHznbg6rRCZEq/pUneRkqFIJ+mNWb4Go=";
   };
-  cage = "${pkgs.cage}/bin/cage";
-  tuigreet = "${pkgs.greetd.tuigreet}/bin/tuigreet";
-  alacritty = "${pkgs.alacritty}/bin/alacritty";
+  cage = "${pkgs.unstable.cage}/bin/cage";
+  tuigreet = "${pkgs.unstable.tuigreet}/bin/tuigreet";
+  alacritty = "${pkgs.unstable.alacritty}/bin/alacritty";
   alacritty_options = "--option 'window.decorations=\"None\"' --option 'window.startup_mode=\"Fullscreen\"' --option 'font.size=18' --option 'colors.primary.background=\"#191724\"' --option 'mouse.hide_when_typing=true'";
   theme = "text=#e0def4;container=#1f1d2e;border=#6e6a86;title=#9ccfd8;prompt=#ebbcba;input=#eb6f92;time=#ebbcba";
 in {
