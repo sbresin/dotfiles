@@ -210,7 +210,7 @@
   };
   users.users.sebe = {
     isNormalUser = true;
-    extraGroups = ["wheel" "input" "uinput" "networkmanager" "lp" "scanner" "plugdev" "cdrom" "adbusers" "openrazer" "storage" "gamemode"];
+    extraGroups = ["wheel" "input" "uinput" "networkmanager" "lp" "scanner" "plugdev" "cdrom" "adbusers" "openrazer" "storage" "gamemode" "vboxusers" "wireshark"];
     initialHashedPassword = "$6$.7TC31zU0p1OfOH2$b7.CZMpPB.X6YFZMR5akKaEhDTlUPnUJc.gXmv1GqnVV528RuQKvqCp0sRTUk/ZXo.eofNBD9QUup6s9adyXI/";
   };
 
@@ -242,6 +242,20 @@
       permissions = "u+wrx,g+x";
       source = "${pkgs.cdrtools}/bin/cdrecord";
     };
+  };
+
+  # enable wireshark
+  programs.wireshark = {
+    enable = true;
+    usbmon.enable = true;
+  };
+
+  # enable virtualbox
+  virtualisation.virtualbox.host = {
+    enable = true;
+    package = pkgs.unstable.virtualbox;
+    # enableKvm = true;
+    # addNetworkInterface = false;
   };
 
   # gaming stuff
