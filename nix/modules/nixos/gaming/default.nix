@@ -39,6 +39,40 @@ in {
       };
     };
 
+    programs.steam = {
+      enable = true;
+      remotePlay.openFirewall = true;
+      extraCompatPackages = with pkgs; [
+        proton-cachyos_x86_64_v3
+        proton-ge-bin
+      ];
+      gamescopeSession = {
+        enable = true;
+        args = [
+          "-W 1920"
+          "-H 1080"
+          "--fullscreen"
+          "--xwayland-count 2"
+          "--adaptive-sync"
+          "--hdr-enabled"
+          "--hdr-itm-enabled"
+          "--mangoapp"
+        ];
+        steamArgs = [
+          "-pipewire-dmabuf"
+          "-tenfoot"
+        ];
+      };
+    };
+
+    programs.gamescope = {
+      enable = true;
+      capSysNice = true;
+    };
+
+    # gamescope session wants this
+    # services.seatd.enable = true;
+
     # friidump needs setuid bit
     security.wrappers = {
       friidump = {
@@ -79,7 +113,6 @@ in {
         "info.cemu.Cemu"
         "org.flycast.Flycast"
         # proprietary
-        "com.valvesoftware.Steam"
         "com.discordapp.Discord"
       ];
     };
