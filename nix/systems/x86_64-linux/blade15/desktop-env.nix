@@ -44,7 +44,7 @@
   environment.systemPackages = with pkgs.unstable; [
     foot
 
-    inputs.ashell.defaultPackage.${pkgs.system}
+    ashell
     hyprpaper
     hyprsunset
     hyprpolkitagent

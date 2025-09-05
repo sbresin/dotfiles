@@ -50,11 +50,6 @@
 
     hyprland.url = "github:hyprwm/Hyprland";
 
-    ashell = {
-      url = "github:MalpenZibo/ashell";
-      inputs.nixpkgs.follows = "nixpkgs-unstable";
-    };
-
     nix-alien = {
       url = "github:thiagokokada/nix-alien";
     };
