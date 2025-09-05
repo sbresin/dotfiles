@@ -62,7 +62,6 @@
     loupe # gnome photo viewer
     papers # gnome pdf viewer
     baobab # gnome disk analyzer
-    clapper # gnome video viewer
     showtime # gnome totem replacement
     vlc
     nautilus # gnome file manager
