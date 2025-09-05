@@ -267,7 +267,6 @@
       gnome-tweaks
       gnome-browser-connector
       gnome-network-displays
-      kdePackages.k3b
       streamrip
       tectonic
     ]
