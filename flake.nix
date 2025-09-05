@@ -53,7 +53,6 @@
     nix-alien = {
       url = "github:thiagokokada/nix-alien";
     };
-
   };
 
   outputs = inputs:
