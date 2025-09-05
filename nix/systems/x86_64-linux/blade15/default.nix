@@ -280,6 +280,8 @@
       sbctl
       sbsigntool
       ntfs3g
+      gparted
+      exfatprogs
       # Terminal setup
       wezterm
       # language support
