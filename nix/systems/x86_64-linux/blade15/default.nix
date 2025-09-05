@@ -17,6 +17,7 @@
     ./kanata.nix
     ./flatpak.nix
     ./desktop-env.nix
+    ./backups.nix
   ];
 
   # nix.package = pkgs.lix;
