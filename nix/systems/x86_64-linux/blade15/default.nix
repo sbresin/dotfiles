@@ -286,6 +286,7 @@
       ghostty
       tmux
       wezterm
+      zed-editor
       # language support
       hunspell
       hunspellDicts.en_US
