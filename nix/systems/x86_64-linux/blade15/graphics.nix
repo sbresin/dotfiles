@@ -3,26 +3,11 @@
   pkgs,
   lib,
   ...
-}: let
-  gpl_symbols_linux_615_patch = pkgs.fetchpatch {
-    url = "https://github.com/CachyOS/kernel-patches/raw/914aea4298e3744beddad09f3d2773d71839b182/6.15/misc/nvidia/0003-Workaround-nv_vm_flags_-calling-GPL-only-code.patch";
-    hash = "sha256-YOTAvONchPPSVDP9eJ9236pAPtxYK5nAePNtm2dlvb4=";
-    stripLen = 1;
-    extraPrefix = "kernel/";
-  };
-  nvidia_package = config.boot.kernelPackages.nvidiaPackages.mkDriver {
-    version = "575.57.08";
-    openSha256 = "sha256-DOJw73sjhQoy+5R0GHGnUddE6xaXb/z/Ihq3BKBf+lg=";
-    sha256_64bit = "sha256-KqcB2sGAp7IKbleMzNkB3tjUTlfWBYDwj50o3R//xvI=";
-    settingsSha256 = "sha256-AIeeDXFEo9VEKCgXnY3QvrW5iWZeIVg4LBCeRtMs5Io=";
-    persistencedSha256 = "sha256-Len7Va4HYp5r3wMpAhL4VsPu5S0JOshPFywbO7vYnGo=";
-    usePersistenced = true;
-    patches = [gpl_symbols_linux_615_patch];
-  };
-in {
+}: {
   # early KMS
   boot.initrd.kernelModules = ["i915"];
   boot.extraModulePackages = [];
+
   # enable HuC firmware for intel-media-driver
   boot.kernelParams = ["i915.enable_guc=2"];
 
@@ -47,9 +32,12 @@ in {
     vulkan-tools
   ];
 
+  # Load nvidia driver for Xorg and Wayland
+  services.xserver.videoDrivers = ["nvidia"];
+
   hardware.nvidia = {
     open = true;
-    modesetting.enable = true;
+    modesetting.enable = false;
     nvidiaSettings = true;
     powerManagement.enable = false;
     powerManagement.finegrained = true;
@@ -61,7 +49,21 @@ in {
         enableOffloadCmd = true;
       };
     };
-    package = nvidia_package;
+    package = config.boot.kernelPackages.nvidiaPackages.latest;
+  };
+
+  specialisation.nvidia-off.configuration = {
+    services.udev.extraRules = ''
+      # Remove NVIDIA USB xHCI Host Controller devices, if present
+      ACTION=="add", SUBSYSTEM=="pci", ATTR{vendor}=="0x10de", ATTR{class}=="0x0c0330", ATTR{power/control}="auto", ATTR{remove}="1"
+      # Remove NVIDIA USB Type-C UCSI devices, if present
+      ACTION=="add", SUBSYSTEM=="pci", ATTR{vendor}=="0x10de", ATTR{class}=="0x0c8000", ATTR{power/control}="auto", ATTR{remove}="1"
+      # Remove NVIDIA Audio devices, if present
+      ACTION=="add", SUBSYSTEM=="pci", ATTR{vendor}=="0x10de", ATTR{class}=="0x040300", ATTR{power/control}="auto", ATTR{remove}="1"
+      # Remove NVIDIA VGA/3D controller devices
+      ACTION=="add", SUBSYSTEM=="pci", ATTR{vendor}=="0x10de", ATTR{class}=="0x03[0-9]*", ATTR{power/control}="auto", ATTR{remove}="1"
+    '';
+    boot.blacklistedKernelModules = ["nouveau" "nvidia" "nvidia_drm" "nvidia_modeset"];
   };
 
   specialisation.nvidia-sync.configuration = {
@@ -69,15 +71,13 @@ in {
     environment.sessionVariables.PRIME_MODE = "sync";
     hardware.nvidia = {
       powerManagement.finegrained = lib.mkForce false;
-      prime.offload.enable = lib.mkForce false;
-      prime.offload.enableOffloadCmd = lib.mkForce false;
-      prime.sync.enable = true;
+      modesetting.enable = lib.mkForce true;
+      prime = {
+        offload.enable = lib.mkForce false;
+        offload.enableOffloadCmd = lib.mkForce false;
+        sync.enable = true;
+      };
     };
-  };
-  specialisation.nvidia-reverse.configuration = {
-    environment.etc."specialisation".text = "nvidia-reverse";
-    environment.sessionVariables.PRIME_MODE = "reverse";
-    hardware.nvidia.prime.reverseSync.enable = true;
   };
   specialisation.nvidia-discrete.configuration = {
     environment.etc."specialisation".text = "nvidia-discrete";
@@ -85,6 +85,7 @@ in {
     hardware.nvidia = {
       powerManagement.enable = lib.mkForce true;
       powerManagement.finegrained = lib.mkForce false;
+      modesetting.enable = lib.mkForce true;
       prime.offload.enable = lib.mkForce false;
       prime.offload.enableOffloadCmd = lib.mkForce false;
     };

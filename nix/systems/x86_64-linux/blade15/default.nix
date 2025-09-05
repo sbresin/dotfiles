@@ -133,9 +133,6 @@
   # default to Wayland for chromium/electron apps
   environment.sessionVariables.NIXOS_OZONE_WL = "1";
 
-  # Load nvidia driver for Xorg and Wayland
-  services.xserver.videoDrivers = ["nvidia"];
-
   # Enable the GNOME Desktop Environment.
   services.xserver.displayManager.gdm.enable = false;
   services.xserver.desktopManager.gnome = {
