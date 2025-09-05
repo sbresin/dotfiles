@@ -269,6 +269,7 @@
       gnome-network-displays
       kdePackages.k3b
       streamrip
+      tectonic
     ]
     ++ (with pkgs.unstable; [
       nvd
@@ -296,7 +297,6 @@
       piper-tts
       # media / document tools
       imagemagick
-      tectonic
       ffmpeg-full
       pngquant
       ocrmypdf
