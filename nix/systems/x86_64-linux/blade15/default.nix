@@ -283,12 +283,7 @@
       sbsigntool
       ntfs3g
       # Terminal setup
-      inputs.wezterm.packages.${system}.default
-      # TODO: get wayland working
-      #
-      # (inputs.wezterm.packages.${system}.default.overrideAttrs {
-      #   patches = [./wezterm-wayland-resize.patch ./wezterm-wayland.patch];
-      # })
+      wezterm
       # language support
       hunspell
       hunspellDicts.en_US
