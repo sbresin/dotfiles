@@ -287,6 +287,12 @@
       tmux
       wezterm
       zed-editor
+      inputs.wezterm.packages.${system}.default
+      # TODO: get wayland working
+      #
+      # (inputs.wezterm.packages.${system}.default.overrideAttrs {
+      #   patches = [./wezterm-wayland-resize.patch ./wezterm-wayland.patch];
+      # })
       # language support
       hunspell
       hunspellDicts.en_US
