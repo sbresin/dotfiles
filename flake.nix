@@ -57,7 +57,16 @@
     };
 
     # get nightly wezterm
-    wezterm.url = "github:wez/wezterm/main?dir=nix";
+    wezterm = {
+      url = "github:HearseDev/wezterm/sctk-adwaita-wayland?dir=nix";
+      inputs.nixpkgs.follows = "nixpkgs-unstable";
+    };
+
+    nixgl = {
+      url = "github:nix-community/nixGL";
+      # TODO: figure out why using it with mesa-unstable is broken
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs = inputs:
