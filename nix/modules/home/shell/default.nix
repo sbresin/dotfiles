@@ -220,7 +220,7 @@
     [
       # use rust coreutils over gnu, only at user level for now
       (lib.hiPrio pkgs.unstable.uutils-coreutils-noprefix)
-      (lib.hiPrio pkgs.unstable.uutils-findutils)
+      # (lib.hiPrio pkgs.unstable.uutils-findutils)
       git-crypt
       dig
       # nix tools
