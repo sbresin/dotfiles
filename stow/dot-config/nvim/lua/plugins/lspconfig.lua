@@ -92,7 +92,7 @@ return {
                     },
                     filetypes = {
                         "lua", "apexcode", "typescript", "json", "jsonc",
-                        "javascript", "html", "yaml", "nix", "sql"
+                        "javascript", "html", "yaml", "nix", "sql", "vue", "css"
                     }, -- , "python"
                     settings = {
                         rootMarkers = {".git/"},
@@ -117,7 +117,9 @@ return {
                             html = {prettierd},
                             yaml = {actionlint},
                             nix = {alejandra},
-                            sql = {sqruff}
+                            sql = {sqruff},
+                            css = {prettierd},
+                            vue = {prettierd}
                         }
                     }
                 },
