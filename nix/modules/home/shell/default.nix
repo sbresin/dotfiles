@@ -264,6 +264,7 @@
       wget
       sad
       glow
+      go-grip
       chafa
       pre-commit
       yq
