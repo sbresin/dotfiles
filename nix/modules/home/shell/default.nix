@@ -249,11 +249,12 @@
       protobuf
       actionlint
       # wasm
-      binaryen
-      wasm-bindgen-cli
-      wasm-tools
-      wasm-pack
-      twiggy
+      # TODO: create a devshell with these
+      # binaryen
+      # wasm-bindgen-cli
+      # wasm-tools
+      # wasm-pack
+      # twiggy
       # CLI tools
       bkt
       miller
