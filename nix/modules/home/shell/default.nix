@@ -247,6 +247,7 @@
       sqruff
       buf
       protobuf
+      actionlint
       # wasm
       binaryen
       wasm-bindgen-cli
@@ -265,6 +266,7 @@
       chafa
       pre-commit
       yq
+      pinact
       gh-dash
       just
       unar
