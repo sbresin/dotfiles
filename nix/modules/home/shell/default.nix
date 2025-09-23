@@ -174,6 +174,13 @@
     enableZshIntegration = true;
   };
 
+  programs.nix-your-shell = {
+    enable = true;
+    package = pkgs.unstable.nix-your-shell;
+    enableFishIntegration = true;
+    enableZshIntegration = true;
+  };
+
   programs.ripgrep = {
     enable = true;
     package = pkgs.unstable.ripgrep;
@@ -224,7 +231,6 @@
       git-crypt
       dig
       # nix tools
-      nix-your-shell
       alejandra
       nh
       nurl
