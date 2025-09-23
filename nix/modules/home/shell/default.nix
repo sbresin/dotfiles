@@ -67,6 +67,7 @@
   programs.starship = {
     enable = true;
     package = pkgs.unstable.starship;
+    enableZshIntegration = true;
   };
 
   # ************************************************************************************************
@@ -160,6 +161,7 @@
     enable = true;
     pinentry.package = pkgs.unstable.pinentry-curses;
     enableBashIntegration = true;
+    enableZshIntegration = true;
   };
 
   programs.lazygit = {
