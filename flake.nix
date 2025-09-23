@@ -113,6 +113,7 @@
           "ngrok"
           "steam"
           "steam-unwrapped"
+          "zsh-abbr"
           # nvtop dependencies
           #   "libnpp"
         ]);

@@ -3,7 +3,12 @@
   lib,
   namespace,
   ...
-}: {
+}: let
+  wezterm_shell_integration = pkgs.fetchurl {
+    url = "https://raw.githubusercontent.com/wezterm/wezterm/refs/heads/main/assets/shell-integration/wezterm.sh";
+    hash = "sha256-GQGDcxMHv04TEaFguHXi0dOoOX5VUR2He4XjTxPuuaw=";
+  };
+in {
   # ************************************************************************************************
   # SHELLS
   programs.bash = {
@@ -31,8 +36,66 @@
   programs.zsh = {
     enable = true;
     package = pkgs.unstable.zsh;
+    dotDir = ".config/zsh";
+    defaultKeymap = "viins";
+    enableCompletion = true;
+    history = {
+      append = true;
+      expireDuplicatesFirst = true;
+    };
+    autocd = true;
+    shellAliases = {
+      # cd-ing shortcuts.
+      "-" = "cd -";
+      ".." = "cd ..";
+      "," = "cd ..";
+      ",," = "cd ../..";
+      ",,," = "cd ../../..";
+      ",,,," = "cd ../../../..";
+      # eza instead of ls
+      ls = "eza";
+      la = "eza -a";
+      ll = "eza -l";
+      lla = "eza -la";
+      lt = "eza -lT";
+      lta = "eza -alT";
+      # safe remove
+      rm = "rm -i";
+    };
+    # plugins
     syntaxHighlighting.enable = true;
     autosuggestion.enable = true;
+    historySubstringSearch.enable = true;
+    zsh-abbr = {
+      enable = true;
+      abbreviations = {
+        gco = "git checkout";
+        gfo = "git fetch origin";
+        gpu = "git pull";
+        l = "less";
+        grep = "grep --color";
+        "sf pds" = "sf project deploy start";
+      };
+    };
+    plugins = [
+      {
+        name = "vi-mode";
+        src = pkgs.unstable.zsh-vi-mode;
+        file = "share/zsh-vi-mode/zsh-vi-mode.plugin.zsh";
+      }
+      {
+        name = "fzf-tab";
+        src = pkgs.unstable.zsh-fzf-tab;
+        file = "share/fzf-tab/fzf-tab.plugin.zsh";
+      }
+    ];
+    sessionVariables = {
+      CARAPACE_BRIDGES = "zsh,fish,bash,inshellisense";
+      ZVM_SYSTEM_CLIPBOARD_ENABLED = true;
+      ZVM_INIT_MODE = "sourcing";
+      ZVM_TERM = "xterm-256color";
+      ZVM_VI_HIGHLIGHT_BACKGROUND = "#524f67";
+    };
     initContent =
       # bash
       ''
@@ -44,12 +107,28 @@
         # Turn off autocomplete beeps
         unsetopt LIST_BEEP
 
-        # auto start xonsh after sourcing all the relevant home-manager things
-        if [[ $(${pkgs.procps}/bin/ps -p $PPID -o "ucomm=") != "xonsh" && ''${SHLVL} == 1 ]]
-        then
-          [[ -o login ]] && LOGIN_OPTION='--login' || LOGIN_OPTION='''
-          exec xonsh $LOGIN_OPTION
-        fi
+        zvm_config() {
+          ZVM_LINE_INIT_MODE=$ZVM_MODE_INSERT
+        }
+        zvm_config;
+
+        zstyle ':completion:*' format $'Completing %d'
+
+        happ() {
+          heroku auth:whoami &> /dev/null
+          if [[ $? -ne 0 ]] then
+            echo "Not logged in to Heroku. Please run 'heroku auth:login' first."
+            return 1;
+          fi
+          local choice=$(bkt --ttl=1week --stale=2m -- heroku apps:list --all --json | jq -r '.[] | .name' | fzf --layout reverse --height=40% --border)
+          if [[ -z "$choice" ]]; then
+            echo "No app selected."
+            return 1
+          fi
+          export HEROKU_APP=$choice
+        }
+
+        source "${wezterm_shell_integration}"
       '';
   };
 
