@@ -65,7 +65,7 @@
   };
 
   # Use Linux_zen kernel
-  boot.kernelPackages = pkgs.linuxPackages_cachyos.extend (self: super: {
+  boot.kernelPackages = pkgs.linuxPackages_cachyos-gcc.extend (self: super: {
     apfs = super.apfs.overrideAttrs (o: {
       version = "0.3.15-6.16";
       src = pkgs.fetchFromGitHub {
@@ -85,7 +85,7 @@
       };
     });
   });
-  system.modulesTree = [(lib.getOutput "modules" pkgs.linuxPackages_cachyos.kernel)];
+  system.modulesTree = [(lib.getOutput "modules" pkgs.linuxPackages_cachyos-gcc.kernel)];
 
   # use sched_ext
   services.scx = {
