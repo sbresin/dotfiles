@@ -56,13 +56,14 @@
   # ************************************************************************************************
   # PROMPTS
 
-  programs.oh-my-posh = {
-    enable = true;
-    package = pkgs.unstable.oh-my-posh;
-    settings = builtins.fromJSON (builtins.unsafeDiscardStringContext (builtins.readFile ./rosepine.omp.json));
-    enableFishIntegration = true;
-    enableZshIntegration = true;
-  };
+  # programs.oh-my-posh = {
+  #   enable = true;
+  #   package = pkgs.unstable.oh-my-posh;
+  #   settings = builtins.fromJSON (builtins.unsafeDiscardStringContext (builtins.readFile ./rosepine.omp.json));
+  #   enableFishIntegration = true;
+  #   enableZshIntegration = true;
+  #   enableBashIntegration = true;
+  # };
 
   programs.starship = {
     enable = true;
