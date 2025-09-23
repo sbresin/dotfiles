@@ -24,15 +24,22 @@ config.check_for_updates = false
 -- GPU settings
 config.front_end = "OpenGL"
 config.webgpu_power_preference = "LowPower"
-config.enable_wayland = false
+config.enable_wayland = true
 
 -- feature settings
 config.term = "wezterm"
 config.enable_kitty_keyboard = true
 
 -- Spawn a xonsh shell in login mode
--- config.default_prog = {'bash'}
+config.default_prog = {'zsh'}
 
+-- start in multiplexing mode by default
+config.unix_domains = {{name = 'unix'}}
+config.default_gui_startup_args = {'connect', 'unix'}
+-- local function basename(s) return string.gsub(s, "(.*[/\\])(.*)", "%2") end
+-- wezterm.on("update-right-status", function(window, pane)
+--     window:set_right_status(basename(pane:get_foreground_process_name()))
+-- end)
 -- window settings
 config.window_decorations = "RESIZE"
 config.adjust_window_size_when_changing_font_size = false
@@ -255,8 +262,9 @@ wezterm.on("window-resized", function(window) -- , pane )
     recompute_padding(window)
 end)
 
-wezterm.on("window-config-reloaded",
-           function(window) recompute_padding(window) end)
+wezterm.on("window-config-reloaded", function(window) --
+    recompute_padding(window)
+end)
 
 local function log_proc(proc, indent)
     indent = indent or ''
@@ -277,8 +285,6 @@ local function log_proc(proc, indent)
 end
 
 wezterm.on('mux-is-process-stateful', function(proc)
-    -- log_proc(proc)
-    -- wezterm.log_info(proc.children)
     -- config.skip_close_confirmation_for_processes_named does somehow not work
     if proc.name == 'xonsh' and
         (proc.children == nil or not next(proc.children)) then return false end
