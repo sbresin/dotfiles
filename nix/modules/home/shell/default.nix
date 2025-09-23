@@ -221,6 +221,7 @@
     '';
     # use same poetry config on macOS & Linux
     POETRY_CONFIG_DIR = "$HOME/.config/pypoetry";
+    VIRTUALENV_HOME = "$HOME/.virtualenvs";
   };
 
   home.packages = with pkgs.unstable;
