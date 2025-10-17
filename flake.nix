@@ -47,6 +47,11 @@
     # patched kernel
     chaotic.url = "github:chaotic-cx/nyx/nyxpkgs-unstable";
 
+    disko = {
+      url = "github:nix-community/disko/latest";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     # declarative flatpak installs
     nix-flatpak.url = "github:gmodena/nix-flatpak/?ref=latest";
 
