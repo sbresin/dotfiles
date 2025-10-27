@@ -86,7 +86,16 @@ in {
 
     environment.systemPackages = with pkgs.unstable; [
       # Emulators
-      dolphin-emu
+      (dolphin-emu.overrideAttrs
+        (old: {
+          patches = [
+            # fix build with qt 6.10
+            (pkgs.fetchpatch2 {
+              url = "https://github.com/dolphin-emu/dolphin/commit/8edef722ce1aae65d5a39faf58753044de48b6e0.patch?full_index=1";
+              hash = "sha256-QEG0p+AzrExWrOxL0qRPa+60GlL0DlLyVBrbG6pGuog=";
+            })
+          ];
+        }))
       mgba
       ryubing
       # games
