@@ -89,6 +89,8 @@ in {
       dolphin-emu
       mgba
       ryubing
+      # games
+      solarus-launcher
       (duckstation.override
         {
           # doesn't build with qt 6.10 yet
