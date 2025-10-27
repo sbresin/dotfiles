@@ -119,6 +119,7 @@
           "steam"
           "steam-unwrapped"
           "zsh-abbr"
+          "duckstation"
           # nvtop dependencies
           #   "libnpp"
         ]);

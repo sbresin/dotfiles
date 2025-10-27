@@ -89,7 +89,11 @@ in {
       dolphin-emu
       mgba
       ryubing
-      pkgs.${namespace}.duckstation
+      (duckstation.override
+        {
+          # doesn't build with qt 6.10 yet
+          qt6 = pkgs.qt6;
+        })
       # os tools
       mangohud
       evtest-qt
