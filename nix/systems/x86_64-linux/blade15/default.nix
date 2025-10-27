@@ -221,9 +221,6 @@
     binfmt = true;
   };
 
-  # Use nh nix cli wrapper
-  programs.nh.enable = true;
-
   # enable cd burning (needed for k3b)
   security.wrappers = {
     cdrdao = {

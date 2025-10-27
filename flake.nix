@@ -19,12 +19,6 @@
     # nixpkgs.url = "github:nixos/nixpkgs/73fa8c1289d22294e2f061de6d3653d338d819ae";
     nixpkgs-unstable.url = "github:nixos/nixpkgs?ref=nixos-unstable";
 
-    # use Lix fork (faster and community driven)
-    lix-module = {
-      url = "https://git.lix.systems/lix-project/nixos-module/archive/2.93.0.tar.gz";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
-
     # no boilerplate flake structure
     snowfall-lib = {
       url = "github:snowfallorg/lib/v3.0.3";

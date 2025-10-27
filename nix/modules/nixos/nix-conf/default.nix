@@ -1,11 +1,10 @@
-{
-  inputs,
-  system,
-  ...
-}: {
-  nix.package = inputs.lix-module.packages.${system}.default;
+{pkgs, ...}: {
+  # use Lix fork (faster and community driven)
+  # nix dependend packages set through overlay
+  nix.package = pkgs.lixPackageSets.latest.lix;
 
   nix.settings = {
+    experimental-features = ["nix-command" "flakes"];
     trusted-users = ["sebe"];
 
     # the system-level substituters & trusted-public-keys
@@ -20,4 +19,12 @@
       "https://hyprland.cachix.org"
     ];
   };
+
+  # Use nh nix cli wrapper
+  programs.nh.enable = true;
+
+  environment.systemPackages = with pkgs.unstable; [
+    git
+    nix-output-monitor
+  ];
 }
