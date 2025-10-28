@@ -94,10 +94,11 @@
         chaotic.nixosModules.nyx-cache
         chaotic.nixosModules.nyx-overlay
         chaotic.nixosModules.nyx-registry
+        nix-flatpak.nixosModules.nix-flatpak
       ];
 
-      systems.hosts.blade15.modules = with inputs; [
-        nix-flatpak.nixosModules.nix-flatpak
+      systems.hosts.pi-server.modules = with inputs; [
+        disko.nixosModules.default
       ];
 
       channels-config = {
