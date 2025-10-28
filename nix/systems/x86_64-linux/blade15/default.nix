@@ -83,6 +83,11 @@
         tag = "v3.10.3";
         hash = "sha256-M5g3Rn9WuyudhWQfDooopjexEgGVB0rzfJsPg+dqwn4=";
       };
+      # patches =
+      #   o.patches or []
+      #   ++ [
+      #     ./blade15_base_2021_add_fn_toggle.patch
+      #   ];
     });
   });
   system.modulesTree = [(lib.getOutput "modules" pkgs.linuxPackages_cachyos-gcc.kernel)];
@@ -284,14 +289,8 @@
       # Terminal setup
       ghostty
       tmux
-      wezterm
       zed-editor
       inputs.wezterm.packages.${system}.default
-      # TODO: get wayland working
-      #
-      # (inputs.wezterm.packages.${system}.default.overrideAttrs {
-      #   patches = [./wezterm-wayland-resize.patch ./wezterm-wayland.patch];
-      # })
       # language support
       hunspell
       hunspellDicts.en_US
