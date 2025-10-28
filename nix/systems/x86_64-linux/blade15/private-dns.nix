@@ -1,15 +1,26 @@
-{...}: {
+{
+  pkgs,
+  lib,
+  ...
+}: let
+  dnscrypt-forwarding = pkgs.writeTextFile {
+    name = "forwarding-rules.txt";
+    text = ''
+      fritz.box        192.168.178.1
+      192.in-addr.arpa 192.168.178.1
+    '';
+  };
+in {
   networking = {
-    nameservers = ["127.0.0.1" "::1"];
-    # If using dhcpcd:
-    dhcpcd.extraConfig = "nohook resolv.conf";
-    # If using NetworkManager:
-    networkmanager.dns = "none";
+    # don't globally enforce nameservers, configure per network through nnetworkmanager
+    nameservers = lib.mkForce [];
   };
 
   services.dnscrypt-proxy2 = {
     enable = true;
     settings = {
+      forwarding_rules = "${dnscrypt-forwarding}";
+      block_undelegated = false;
       ipv6_servers = true;
       require_dnssec = true;
 
@@ -18,16 +29,18 @@
           "https://raw.githubusercontent.com/DNSCrypt/dnscrypt-resolvers/master/v3/public-resolvers.md"
           "https://download.dnscrypt.info/resolvers-list/v3/public-resolvers.md"
         ];
-        cache_file = "/var/lib/dnscrypt-proxy2/public-resolvers.md";
+        cache_file = "/var/lib/dnscrypt-proxy/public-resolvers.md";
         minisign_key = "RWQf6LRCGA9i53mlYecO4IzT51TGPpvWucNSCh1CBM0QTaLn73Y7GFO3";
       };
 
       # You can choose a specific set of servers from https://github.com/DNSCrypt/dnscrypt-resolvers/blob/master/v3/public-resolvers.md
       server_names = ["cloudflare-security"];
-    };
-  };
 
-  systemd.services.dnscrypt-proxy2.serviceConfig = {
-    StateDirectory = "dnscrypt-proxy";
+      query_log = {
+        file = "/var/log/dnscrypt-proxy/query.log";
+        format = "tsv";
+        ignored_qtypes = ["DNSKEY" "NS"];
+      };
+    };
   };
 }
