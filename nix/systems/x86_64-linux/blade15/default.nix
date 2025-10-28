@@ -67,12 +67,12 @@
   # Use Linux_zen kernel
   boot.kernelPackages = pkgs.linuxPackages_cachyos-gcc.extend (self: super: {
     apfs = super.apfs.overrideAttrs (o: {
-      version = "0.3.15-6.16";
+      version = "0.3.16-6.17";
       src = pkgs.fetchFromGitHub {
         owner = "linux-apfs";
         repo = "linux-apfs-rw";
-        rev = "v0.3.15";
-        hash = "sha256-/qJ8QvnVhVXvuxeZ/UYLTXGMPPVnC7fHOSWI1B15r/M=";
+        rev = "v0.3.16";
+        hash = "sha256-11ypevJwxNKAmJbl2t+nGXq40hjWbLIdltLqSeTVdHc=";
       };
     });
     openrazer = super.openrazer.overrideAttrs (o: {
