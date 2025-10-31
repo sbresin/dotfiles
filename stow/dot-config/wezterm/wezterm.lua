@@ -41,7 +41,8 @@ config.default_gui_startup_args = {'connect', 'unix'}
 --     window:set_right_status(basename(pane:get_foreground_process_name()))
 -- end)
 -- window settings
-config.window_decorations = "RESIZE"
+config.window_decorations = "RESIZE|MACOS_FORCE_DISABLE_SHADOW"
+-- config.window_decorations = ""
 config.adjust_window_size_when_changing_font_size = false
 
 -- appearance settings
