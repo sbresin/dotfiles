@@ -100,7 +100,7 @@ in {
       # bash
       ''
         # home-manager home.sessionPath always appends vars, but we need prepending
-        export PATH=$HOME/.local/bin:$PATH
+        export PATH=$HOME/.local/bin:$PATH:/usr/local/bin
 
         # Turn off all beeps
         # unsetopt BEEP
