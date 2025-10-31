@@ -346,24 +346,25 @@ in {
       # twiggy
       # CLI tools
       bkt
-      miller
+      chafa
       fx
-      jq
-      stow
-      wget
-      sad
+      gh-dash
       glow
       go-grip
-      chafa
-      pre-commit
-      yq
-      pinact
-      gh-dash
+      httpie
+      jq
       just
+      miller
+      ngrok
+      pinact
+      pre-commit
+      sad
+      stow
+      tabiew
       unar
       unzip
-      ngrok
-      tabiew
+      wget
+      yq
       # pkgs.${namespace}.git-amnesia
       # platform tools
       act
