@@ -321,7 +321,7 @@ in {
       # languageservers
       nil
       lua-language-server
-      luaformatter
+      pkgs.luaformatter
       efm-langserver
       marksman
       # stacks
@@ -336,7 +336,7 @@ in {
       sqruff
       buf
       protobuf
-      actionlint
+      pkgs.actionlint
       # wasm
       # TODO: create a devshell with these
       # binaryen
