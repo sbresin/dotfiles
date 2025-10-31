@@ -79,6 +79,8 @@ return {
             servers = {
                 -- automatically installed with mason and loaded with lspconfig
                 apex_ls = {
+                    apex_jar_path = vim.fn.stdpath('data') ..
+                        '/mason/share/apex-language-server/apex-jorje-lsp.jar',
                     apex_enable_semantic_errors = true, -- Whether to allow Apex Language Server to surface semantic errors
                     apex_enable_completion_statistics = false -- Disable telemetry
                 },
