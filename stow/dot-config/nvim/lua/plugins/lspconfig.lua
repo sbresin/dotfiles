@@ -149,7 +149,7 @@ return {
                 end
             }
         }
-    }, {"williamboman/mason.nvim", opts = {PATH = "append"}}, {
+    }, {"mason-org/mason.nvim", opts = {PATH = "append"}}, {
         "mrcjkb/rustaceanvim",
         opts = {
             server = {
