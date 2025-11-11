@@ -16,8 +16,8 @@
 
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs?ref=nixos-25.05";
-    # nixpkgs.url = "github:nixos/nixpkgs/73fa8c1289d22294e2f061de6d3653d338d819ae";
     nixpkgs-unstable.url = "github:nixos/nixpkgs?ref=nixos-unstable";
+    # nixpkgs-d3b2661f7.url = "github:nixos/nixpkgs/d3b2661f728ad6d24b1f4b0fa74394a24d6b1dc4";
 
     # no boilerplate flake structure
     snowfall-lib = {
@@ -41,6 +41,7 @@
     # patched kernel
     chaotic.url = "github:chaotic-cx/nyx/nyxpkgs-unstable";
 
+    # declarative disk partitioning
     disko = {
       url = "github:nix-community/disko/latest";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -49,16 +50,9 @@
     # declarative flatpak installs
     nix-flatpak.url = "github:gmodena/nix-flatpak/?ref=latest";
 
-    hyprland.url = "github:hyprwm/Hyprland";
-
+    # run unpatched dynamically linked binaries
     nix-alien = {
       url = "github:thiagokokada/nix-alien";
-    };
-
-    # get nightly wezterm
-    wezterm = {
-      url = "github:HearseDev/wezterm/sctk-adwaita-wayland?dir=nix";
-      inputs.nixpkgs.follows = "nixpkgs-unstable";
     };
 
     nixgl = {
