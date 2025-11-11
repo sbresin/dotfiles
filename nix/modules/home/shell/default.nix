@@ -88,6 +88,11 @@ in {
         src = pkgs.unstable.zsh-fzf-tab;
         file = "share/fzf-tab/fzf-tab.plugin.zsh";
       }
+      {
+        name = "you-should-use";
+        src = pkgs.unstable.zsh-you-should-use;
+        file = "share/zsh/plugins/you-should-use/you-should-use.plugin.zsh";
+      }
     ];
     sessionVariables = {
       CARAPACE_BRIDGES = "zsh,fish,bash,inshellisense";
