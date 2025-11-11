@@ -55,8 +55,8 @@ in {
       # eza instead of ls
       ls = "eza";
       la = "eza -a";
-      ll = "eza -l";
-      lla = "eza -la";
+      ll = "eza -lg";
+      lla = "eza -lga";
       lt = "eza -lT";
       lta = "eza -alT";
       # safe remove
