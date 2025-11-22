@@ -3,24 +3,27 @@
     disk = {
       main = {
         type = "disk";
-        device = "/dev/nvme0n1";
+        device = "/dev/mmcblk0";
         content = {
           type = "gpt";
+          efiGptPartitionFirst = false;
           partitions = {
             FIRMWARE = {
               priority = 1;
-              label = "FIRMWARE";
-              type = "0700"; # msftdata Microsoft Basic Data
-              size = "128M";
+              type = "EF00";
+              size = "32M";
               content = {
                 type = "filesystem";
                 format = "vfat";
-                mountpoint = "/firmware";
+                mountpoint = null;
+              };
+              hybrid = {
+                mbrPartitionType = "0x0c";
+                mbrBootableFlag = false;
               };
             };
             ESP = {
-              type = "EF00"; # EFI System Partition
-              label = "ESP";
+              type = "EF00";
               size = "1G";
               content = {
                 type = "filesystem";
@@ -31,13 +34,12 @@
             };
             root = {
               size = "100%";
-              label = "ROOT";
               content = {
                 type = "btrfs";
                 extraArgs = ["-f"]; # Override existing partition
                 subvolumes = {
                   "@home" = {
-                    mountOptions = ["compress-force=zstd:1"];
+                    mountOptions = ["compress=zstd" "compress-force=zstd:1"];
                     mountpoint = "/home";
                   };
                   "@nix" = {

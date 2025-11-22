@@ -9,8 +9,9 @@
   ];
 
   boot = {
-    kernelPackages = lib.mkDefault pkgs.linuxKernel.packages.linux_rpi3;
+    kernelPackages = lib.mkDefault pkgs.linuxKernel.packages.linux_rpi4;
     initrd.availableKernelModules = [
+      "nvme"
       "usbhid"
       "usb_storage"
     ];
@@ -32,9 +33,23 @@
   boot.kernelParams = [
     "console=ttyS0,115200n8"
     "console=tty0"
+    "nomodeset"
   ];
 
   boot.supportedFilesystems = lib.mkForce ["vfat" "btrfs" "tmpfs"];
+
+  # Use the systemd-boot EFI boot loader.
+  boot.loader.systemd-boot.enable = true;
+  boot.loader.efi.canTouchEfiVariables = false;
+
+  # Set your time zone.
+  time.timeZone = "Europe/Berlin";
+
+  # Select internationalisation properties.
+  i18n.defaultLocale = "en_US.UTF-8";
+  console = {
+    keyMap = "us";
+  };
 
   networking = {
     hostName = "pi-server"; # Define your hostname.
@@ -101,6 +116,6 @@
 
   environment.systemPackages = [pkgs.neovim];
 
-  system.stateVersion = "25.05";
   nixpkgs.hostPlatform = "aarch64-linux";
+  system.stateVersion = "25.05";
 }
