@@ -360,8 +360,10 @@ in {
       httpie
       jq
       just
+      jwt-cli
       miller
       ngrok
+      opencode
       pinact
       pre-commit
       sad
@@ -374,10 +376,12 @@ in {
       # pkgs.${namespace}.git-amnesia
       # platform tools
       act
+      caddy
       fastly
       google-cloud-sdk
       heroku
       terraform
+      xcaddy
       # sfdc development
       pkgs.${namespace}.sf-cli
       pkgs.${namespace}.sfp-cli
