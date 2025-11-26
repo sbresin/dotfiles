@@ -14,5 +14,14 @@ vim.filetype.add({
 
 vim.treesitter.language.register("apex", {"apexcode"})
 
+vim.filetype.add {
+  extension = {
+    caddy = 'caddy',
+  },
+  filename = {
+    Caddyfile = 'caddy',
+  },
+}
+
 -- anything less would be insane
 vim.opt.tabstop = 4;
