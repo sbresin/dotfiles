@@ -351,6 +351,7 @@ in {
       # twiggy
       # CLI tools
       bkt
+      btop
       chafa
       fx
       gh-dash
