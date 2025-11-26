@@ -381,6 +381,7 @@ in {
       google-cloud-sdk
       heroku
       terraform
+      tflint
       xcaddy
       # sfdc development
       pkgs.${namespace}.sf-cli
