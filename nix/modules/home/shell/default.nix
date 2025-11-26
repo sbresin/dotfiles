@@ -221,7 +221,7 @@ in {
       line-numbers = true;
       navigate = true;
       dark = true;
-      tabs = 2;
+      tabs = 4;
       syntax-theme = "rose-pine";
     };
   };
