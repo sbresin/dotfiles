@@ -58,7 +58,7 @@ config.font = wezterm.font_with_fallback {
 config.use_cap_height_to_scale_fallback_fonts = true
 config.font_size = 13
 if is_darwin() then
-    config.font_size = 17.0 -- default font size on darwin is just too small
+    config.font_size = 18.0 -- default font size on darwin is just too small
 end
 
 -- tabbar settings
