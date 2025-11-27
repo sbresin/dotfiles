@@ -7,9 +7,10 @@
     #extraFlags = ["-U"]; # private user namespace
     config = {pkgs, ...}: {
       networking = {
-        hostname = "pi-hole";
+        hostName = "pi-hole";
         useDHCP = false;
         useNetworkd = true;
+        useHostResolvConf = false;
         firewall.enable = true;
       };
       systemd.network = {

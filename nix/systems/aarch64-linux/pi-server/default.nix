@@ -60,6 +60,7 @@
     interface = "eth0";
     mode = "bridge";
   };
+  networking.interfaces.eth0.ipv4.addresses = lib.mkForce [];
 
   systemd.network = {
     enable = true;
@@ -85,10 +86,11 @@
         linkConfig.RequiredForOnline = "routable";
         networkConfig = {
           BindCarrier = "eth0";
+          DHCP = "no";
           Address = [
             "192.168.178.2/24"
           ];
-          networkConfig.DHCP = "no";
+          Gateway = "192.168.178.1";
         };
       };
     };
