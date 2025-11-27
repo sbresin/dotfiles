@@ -2,7 +2,7 @@
   containers.pi-hole = {
     autoStart = true;
     ephemeral = true;
-    macvlans = ["enu1u1"];
+    macvlans = ["eth0"];
     privateNetwork = true;
     #extraFlags = ["-U"]; # private user namespace
     config = {pkgs, ...}: {
@@ -15,8 +15,8 @@
       systemd.network = {
         enable = true;
         networks = {
-          "40-mv-enu1u1" = {
-            matchConfig.Name = "mv-enu1u1";
+          "40-mv-eth0" = {
+            matchConfig.Name = "mv-eth0";
             linkConfig.RequiredForOnline = "routable";
             address = [
               "192.168.178.3/24"

@@ -41,6 +41,8 @@
 
   networking = {
     hostName = "pi-server"; # Define your hostname.
+    # TODO: still get eth0....
+    usePredictableInterfaceNames = true;
     useDHCP = false;
     useNetworkd = true;
     firewall.enable = true;
@@ -52,8 +54,8 @@
 
   # To be able to call containers from the host, it is necessary
   # to create a macvlan for the host as well.
-  networking.macvlans.mv-enu1u1-host = {
-    interface = "enu1u1";
+  networking.macvlans.mv-eth0-host = {
+    interface = "eth0";
     mode = "bridge";
   };
 
@@ -63,11 +65,11 @@
     # wait-online.enable = lib.mkForce false;
     networks = {
       # don't use the physical interface directly
-      "45-enu1u1" = {
-        matchConfig.Name = "enu1u1";
+      "45-eth0" = {
+        matchConfig.Name = "eth0";
         linkConfig.RequiredForOnline = "carrier";
         networkConfig = {
-          MACVLAN = "mv-enu1u1-host";
+          MACVLAN = "mv-eth0-host";
           DHCP = "no";
           IPv6AcceptRA = false;
           LinkLocalAddressing = "no";
@@ -76,12 +78,12 @@
         };
       };
       # setup macvlan for the host
-      "50-mv-enu1u1-host" = {
-        matchConfig.Name = "mv-enu1u1-host";
+      "50-mv-eth0-host" = {
+        matchConfig.Name = "mv-eth0-host";
         linkConfig.RequiredForOnline = "routable";
         networkConfig = {
-          BindCarrier = "enu1u1";
-          address = [
+          BindCarrier = "eth0";
+          Address = [
             "192.168.178.2/24"
           ];
           networkConfig.DHCP = "no";
