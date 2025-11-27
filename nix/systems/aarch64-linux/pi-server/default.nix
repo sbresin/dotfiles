@@ -17,22 +17,9 @@
     ];
   };
 
-  # fix the following error :
-  # modprobe: FATAL: Module ahci not found in directory
-  # https://github.com/NixOS/nixpkgs/issues/154163#issuecomment-1350599022
-  nixpkgs.overlays = [
-    (_final: super: {
-      makeModulesClosure = x: super.makeModulesClosure (x // {allowMissing = true;});
-    })
-  ];
-
-  # The last console argument in the list that linux can find at boot will receive kernel logs.
-  # The serial ports listed here are:
-  # - ttyS0: serial
-  # - tty0: hdmi
   boot.kernelParams = [
-    "console=ttyS0,115200n8"
-    "console=tty0"
+    "console=ttyS0,115200n8" # uart
+    "console=tty0" # last receives kernel logs
     "nomodeset"
   ];
 
