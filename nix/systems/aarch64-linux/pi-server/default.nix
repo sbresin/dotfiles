@@ -39,6 +39,8 @@
     keyMap = "us";
   };
 
+  hardware.i2c.enable = true;
+
   networking = {
     hostName = "pi-server"; # Define your hostname.
     # TODO: still get eth0....
@@ -104,7 +106,7 @@
     ];
   };
 
-  environment.systemPackages = [pkgs.neovim];
+  environment.systemPackages = with pkgs; [neovim i2c-tools];
 
   nixpkgs.hostPlatform = "aarch64-linux";
   system.stateVersion = "25.05";
