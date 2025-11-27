@@ -9,13 +9,14 @@
   ];
 
   boot = {
-    kernelPackages = lib.mkDefault pkgs.linuxKernel.packages.linux_rpi4;
+    kernelPackages = lib.mkDefault pkgs.unstable.linuxKernel.packages.linux_rpi4;
     initrd.availableKernelModules = [
       "nvme"
       "usbhid"
       "usb_storage"
     ];
   };
+  system.modulesTree = [(lib.getOutput "modules" pkgs.unstable.linuxPackages_rpi4.kernel)];
 
   boot.kernelParams = [
     "console=ttyS0,115200n8" # uart
