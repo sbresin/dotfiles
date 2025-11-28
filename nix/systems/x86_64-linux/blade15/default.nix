@@ -7,7 +7,6 @@
   ...
 }: {
   imports = [
-    # Include the results of the hardware scan.
     ./hardware-configuration.nix
     ./swapfile.nix
     ./graphics.nix
@@ -19,8 +18,6 @@
     ./desktop-env.nix
     ./backups.nix
   ];
-
-  # nix.package = pkgs.lix;
 
   # Use the systemd-boot EFI boot loader.
   boot.loader.efi = {
@@ -102,7 +99,6 @@
   # SSD needs TRIM
   services.fstrim.enable = true;
 
-  # networking.hostName = lib.mkForce "sebe_laptop";
   networking.networkmanager = {
     enable = true;
     wifi.powersave = true;
@@ -110,10 +106,6 @@
 
   # Set your time zone.
   time.timeZone = "Europe/Berlin";
-
-  # Configure network proxy if necessary
-  # networking.proxy.default = "http://user:password@proxy:port/";
-  # networking.proxy.noProxy = "127.0.0.1,localhost,internal.domain";
 
   # Select internationalisation properties.
   i18n.defaultLocale = "en_US.UTF-8";
@@ -133,6 +125,7 @@
   #   '';
   # };
 
+  # needed for cross compiling aarch64 system configs
   boot.binfmt.emulatedSystems = ["aarch64-linux"];
 
   # Enable the X11 windowing system.
