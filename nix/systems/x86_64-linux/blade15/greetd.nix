@@ -20,6 +20,7 @@
       font-bold=Dank Mono:size=18:weight=bold, Symbols Nerd Font Mono:size=18, Apple Color Emoji:size=18
 
       pad=3x3 center-when-maximized-and-fullscreen
+      resize-delay-ms=0
 
       initial-window-mode=fullscreen
 
