@@ -41,6 +41,7 @@ in {
 
     programs.steam = {
       enable = true;
+      package = pkgs.unstable.steam;
       remotePlay.openFirewall = true;
       extraCompatPackages = with pkgs; [
         proton-cachyos_x86_64_v3
@@ -67,6 +68,7 @@ in {
 
     programs.gamescope = {
       enable = true;
+      package = pkgs.unstable.gamescope;
       capSysNice = true;
     };
 
