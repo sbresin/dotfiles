@@ -1,0 +1,38 @@
+# uefi firmware is 64bit only
+arm_64bit=1
+
+arm_boost=1
+
+# chainload uefi & settings required by uefi firmware
+armstub=RPI_EFI.fd
+enable_gic=1
+disable_commandline_tags=1
+device_tree_address=0x3e0000
+device_tree_end=0x400000
+
+# enable uart
+enable_uart=1
+uart_2ndstage=1
+dtoverlay=miniuart-bt
+
+# cm4 device tree
+device_tree=bcm2711-rpi-cm4.dtb
+
+# enable KMS graphics
+dtoverlay=vc4-kms-v3d-pi4
+
+# enable usb2 ports
+dtoverlay=dwc2,dr_mode=host
+
+# enable RTC and FAN
+dtparam=audio=off
+dtparam=i2c_vc=on
+dtoverlay=i2c-rtc,pcf85063a,i2c_csi_dsi
+
+# disable emmc not needed when using nvme ssd
+dtparam=sd=off
+
+[cm4]
+over_voltage=6
+arm_freq=2000
+gpu_mem=64
