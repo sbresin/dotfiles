@@ -290,7 +290,8 @@
       ghostty
       tmux
       zed-editor
-      inputs.wezterm.packages.${system}.default
+      # inputs.wezterm.packages.${system}.default
+      pkgs.${namespace}.wezterm
       # language support
       hunspell
       hunspellDicts.en_US
