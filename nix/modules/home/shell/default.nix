@@ -118,6 +118,10 @@ in {
         zvm_config;
 
         zstyle ':completion:*' format $'Completing %d'
+        zstyle ':fzf-tab:complete:cd:*' fzf-preview 'eza -1 --color=always $realpath'
+        zstyle ':completion:*' menu no
+        zstyle ':completion:*:descriptions' format '[%d]'
+        # zstyle ':completion:*' list-colors $${(s.:.)LS_COLORS}
 
         happ() {
           heroku auth:whoami &> /dev/null
