@@ -1,32 +1,8 @@
 {
   lib,
   pkgs,
-  inputs,
-  modulesPath,
-  system,
   ...
 }: {
-  imports = [
-    (modulesPath + "/installer/cd-dvd/installation-cd-minimal.nix")
-  ];
-
-  boot = {
-    kernelPackages = lib.mkDefault pkgs.linuxKernel.packages.linux_rpi3;
-    initrd.availableKernelModules = [
-      "usbhid"
-      "usb_storage"
-    ];
-  };
-
-  # fix the following error :
-  # modprobe: FATAL: Module ahci not found in directory
-  # https://github.com/NixOS/nixpkgs/issues/154163#issuecomment-1350599022
-  nixpkgs.overlays = [
-    (_final: super: {
-      makeModulesClosure = x: super.makeModulesClosure (x // {allowMissing = true;});
-    })
-  ];
-
   # The last console argument in the list that linux can find at boot will receive kernel logs.
   # The serial ports listed here are:
   # - ttyS0: serial
@@ -34,6 +10,7 @@
   boot.kernelParams = [
     "console=ttyS0,115200n8"
     "console=tty0"
+    "nomodeset" # not needed for headless installers
   ];
 
   boot.supportedFilesystems = lib.mkForce ["vfat" "btrfs" "tmpfs"];
@@ -50,7 +27,7 @@
     ];
   };
 
-  environment.systemPackages = [pkgs.neovim pkgs.disko pkgs.ethtool];
+  environment.systemPackages = with pkgs; [git neovim disko ethtool];
 
   system.stateVersion = "25.05";
   nixpkgs.hostPlatform = "aarch64-linux";
