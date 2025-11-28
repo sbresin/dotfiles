@@ -21,7 +21,7 @@
 
     # add VAAPI drivers for hardware video acceleration
     extraPackages = with pkgs; [
-      intel-media-driver
+      pkgs.unstable.intel-media-driver
       nvidia-vaapi-driver
     ];
   };
