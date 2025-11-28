@@ -141,18 +141,6 @@
   # default to Wayland for chromium/electron apps
   environment.sessionVariables.NIXOS_OZONE_WL = "1";
 
-  # Enable the GNOME Desktop Environment.
-  services.xserver.displayManager.gdm.enable = false;
-  services.xserver.desktopManager.gnome = {
-    enable = true;
-    extraGSettingsOverridePackages = [pkgs.mutter];
-    # TODO: not all are needed post GNOME 47
-    extraGSettingsOverrides = ''
-      [org.gnome.mutter]
-      experimental-features=['scale-monitor-framebuffer', 'xwayland-native-scaling', 'variable-refresh-rate']
-    '';
-  };
-
   # Configure keymap in X11
   services.xserver.xkb.layout = "us";
   services.xserver.xkb.options = "eurosign:e,caps:escape";

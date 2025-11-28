@@ -40,6 +40,22 @@
   programs.nm-applet.enable = true;
 
   # TODO: nerdshade, lule,
+  services.upower.enable = true;
+  programs.dconf.enable = true;
+  services.udisks2.enable = true;
+  services.gvfs.enable = true;
+
+  # show samba shares in nautilus
+  services.samba-wsdd = {
+    enable = true;
+    discovery = true;
+  };
+
+  programs.gnome-disks = {
+    enable = true;
+  };
+
+  services.gnome.sushi.enable = true;
 
   environment.systemPackages = with pkgs.unstable; [
     foot
@@ -48,6 +64,7 @@
     hyprpaper
     hyprsunset
     hyprpolkitagent
+    hyprshot
     walker
     swaynotificationcenter
     brightnessctl
@@ -58,12 +75,23 @@
     grim # grab images from wayland compositor
     slurp # select regions in wayland compositor
     nwg-look # gsettings editor
+    adwaita-icon-theme
 
     loupe # gnome photo viewer
     papers # gnome pdf viewer
     baobab # gnome disk analyzer
     showtime # gnome totem replacement
     vlc
+    gnome-font-viewer
+    gnome-characters
+    gnome-maps
+    resources
+    decibels
+    file-roller
+    gnome-calculator
+    gnome-text-editor
+    # evince
+    simple-scan
     nautilus # gnome file manager
     snapshot # gnome camera
     gnome-disk-utility
