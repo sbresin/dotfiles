@@ -48,6 +48,7 @@
       "/var/lib/systemd/backlight"
       "/var/lib/systemd/coredump"
       "/var/cache/tuigreet"
+      "/var/lib/private/dnscrypt-proxy"
       "/etc/NetworkManager/system-connections"
       {
         directory = "/var/lib/colord";
