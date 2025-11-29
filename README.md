@@ -21,7 +21,6 @@ theres lots of devenv setup, some nix derivations (packages), etc.
 - pipewire + bluetooth (codec setup, tweaks etc.)
 - autoEq things
 - xwayland hidpi patch (if still needed)
-- hyprland or niri setup?
 - stylix ?
 
 ## terminal
@@ -30,7 +29,6 @@ emulator: **WezTerm**
 
 - lua configuration with excellent documentation
 - friendly and responsive maintainer
-- rust codebase :crab: :trollface:
 - cross platform and very nice feature set (search, quick select mode, copy mode, ssh client)
 - kitty maintainer is a d\*\*k
 - no tmux, because i have to learn too much new stuff already and wezterm already has a multiplexer
@@ -61,9 +59,9 @@ TODO: document bios hack for unlocking secure boot key management
 
 TODO: document for future reference
 
-### enroll tpm to auto unlock LUKS volume using systemd-cryptenroll
+### enroll tpm to auto unlock LUKS volume if secureboot checks out
 
-TODO: document for future reference
+`sudo systemd-cryptenroll --tpm2-device=auto --tpm2-pcrs=7 --wipe-slot=tpm2 /dev/nvme0n1p3`
 
 ## nvim plugins i need to checkout
 
