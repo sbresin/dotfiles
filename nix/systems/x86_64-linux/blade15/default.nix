@@ -298,7 +298,6 @@
       cdrtools
       # this flakes packages
       pkgs.${namespace}.razer-cli
-      # pkgs.${namespace}.apple-emoji-linux
       pkgs.${namespace}.oclif
       pkgs.${namespace}.bt-dualboot
       pkgs.${namespace}.export-ble-infos
@@ -323,13 +322,31 @@
 
   fonts.fontDir.enable = true;
   fonts.enableDefaultPackages = true;
-  fonts.fontconfig.hinting.style = "medium";
 
-  fonts.fontconfig.defaultFonts = {
-    serif = ["Noto Serif"];
-    sansSerif = ["Noto Sans"];
-    monospace = ["Dank Mono" "Symbols Nerd Font"];
-    emoji = ["Apple Color Emoji"];
+  fonts.fontconfig = {
+    enable = true;
+
+    # Fixes pixelation
+    antialias = true;
+
+    # Fixes antialiasing blur
+    hinting = {
+      enable = true;
+      style = "full"; # no difference
+    };
+
+    subpixel = {
+      # Makes it bolder
+      rgba = "rgb";
+      lcdfilter = "default"; # no difference
+    };
+
+    defaultFonts = {
+      serif = ["Noto Serif"];
+      sansSerif = ["Noto Sans"];
+      monospace = ["Dank Mono" "Symbols Nerd Font"];
+      emoji = ["Apple Color Emoji"];
+    };
   };
 
   # link zsh completions, so they are available globally TODO: same for fish/bash?
