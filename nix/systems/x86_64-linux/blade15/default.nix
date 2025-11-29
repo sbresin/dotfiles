@@ -105,6 +105,11 @@
     wifi.powersave = true;
   };
 
+  # open static port for packet (Android quickshare)
+  networking.firewall = {
+    allowedTCPPorts = [9300];
+  };
+
   # Set your time zone.
   time.timeZone = "Europe/Berlin";
 
@@ -286,6 +291,7 @@
       ocrmypdf
       # GUI Apps
       easyeffects
+      packet
       brasero
       dvdplusrwtools
       cdrdao
