@@ -116,9 +116,7 @@
   # Select internationalisation properties.
   i18n.defaultLocale = "en_US.UTF-8";
   console = {
-    # font = "Lat2-Terminus32";
-    keyMap = "us";
-    #  useXkbConfig = true; # use xkb.options in tty.
+    useXkbConfig = true; # use xkb.options for tty.
   };
 
   # Use kmscon
@@ -141,8 +139,11 @@
   environment.sessionVariables.NIXOS_OZONE_WL = "1";
 
   # Configure keymap in X11
-  services.xserver.xkb.layout = "us";
-  services.xserver.xkb.options = "eurosign:e,caps:escape";
+  services.xserver.xkb = {
+    layout = "us";
+    variant = "altgr-weur";
+    options = "eurosign:e,caps:escape_shifted_capslock";
+  };
 
   # Enable CUPS to print documents.
   services.printing = {
