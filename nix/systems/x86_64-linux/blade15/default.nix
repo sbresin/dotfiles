@@ -365,7 +365,22 @@
   # };
 
   # Enable the OpenSSH daemon.
-  services.openssh.enable = true;
+  services.openssh = {
+    enable = true;
+    # store hostkeys in persistent storage
+    # https://github.com/nix-community/impermanence/issues/192#issuecomment-2425296799
+    hostKeys = [
+      {
+        type = "ed25519";
+        path = "/persistent/etc/ssh/ssh_host_ed25519_key";
+      }
+      {
+        type = "rsa";
+        bits = 4096;
+        path = "/persistent/etc/ssh/ssh_host_rsa_key";
+      }
+    ];
+  };
 
   # TODO: does not work yet
   virtualisation.docker = {
