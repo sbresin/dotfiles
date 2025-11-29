@@ -294,6 +294,11 @@
       # GUI Apps
       easyeffects
       packet
+      (pkgs.unstable.kicad.override {
+        addons = with pkgs.unstable.kicadAddons; [kikit kikit-library];
+      })
+      freecad
+      # cd burning
       brasero
       dvdplusrwtools
       cdrdao
