@@ -1,30 +1,63 @@
 version = 1
+revision = 3
 requires-python = ">=3.11"
 
 [[package]]
 name = "dotfiles"
 version = "0.1.0"
 source = { virtual = "." }
-
-[package.dev-dependencies]
-dev = [
+dependencies = [
+    { name = "prompt-toolkit" },
+    { name = "pygments" },
     { name = "xonsh" },
 ]
 
 [package.metadata]
+requires-dist = [
+    { name = "prompt-toolkit", specifier = ">=3.0.51,<4.0.0" },
+    { name = "pygments", specifier = ">=2.19.1,<3.0.0" },
+    { name = "xonsh", specifier = ">=0.19.3" },
+]
 
-[package.metadata.requires-dev]
-dev = [{ name = "xonsh", specifier = ">=0.19.1" }]
+[[package]]
+name = "prompt-toolkit"
+version = "3.0.52"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "wcwidth" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/a1/96/06e01a7b38dce6fe1db213e061a4602dd6032a8a97ef6c1a862537732421/prompt_toolkit-3.0.52.tar.gz", hash = "sha256:28cde192929c8e7321de85de1ddbe736f1375148b02f2e17edd840042b1be855", size = 434198, upload-time = "2025-08-27T15:24:02.057Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/84/03/0d3ce49e2505ae70cf43bc5bb3033955d2fc9f932163e84dc0779cc47f48/prompt_toolkit-3.0.52-py3-none-any.whl", hash = "sha256:9aac639a3bbd33284347de5ad8d68ecc044b91a762dc39b7c21095fcd6a19955", size = 391431, upload-time = "2025-08-27T15:23:59.498Z" },
+]
+
+[[package]]
+name = "pygments"
+version = "2.19.2"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/b0/77/a5b8c569bf593b0140bde72ea885a803b82086995367bf2037de0159d924/pygments-2.19.2.tar.gz", hash = "sha256:636cb2477cec7f8952536970bc533bc43743542f70392ae026374600add5b887", size = 4968631, upload-time = "2025-06-21T13:39:12.283Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/c7/21/705964c7812476f378728bdf590ca4b771ec72385c533964653c68e86bdc/pygments-2.19.2-py3-none-any.whl", hash = "sha256:86540386c03d588bb81d44bc3928634ff26449851e99741617ecb9037ee5ec0b", size = 1225217, upload-time = "2025-06-21T13:39:07.939Z" },
+]
+
+[[package]]
+name = "wcwidth"
+version = "0.2.14"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/24/30/6b0809f4510673dc723187aeaf24c7f5459922d01e2f794277a3dfb90345/wcwidth-0.2.14.tar.gz", hash = "sha256:4d478375d31bc5395a3c55c40ccdf3354688364cd61c4f6adacaa9215d0b3605", size = 102293, upload-time = "2025-09-22T16:29:53.023Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/af/b5/123f13c975e9f27ab9c0770f514345bd406d0e8d3b7a0723af9d43f710af/wcwidth-0.2.14-py2.py3-none-any.whl", hash = "sha256:a7bb560c8aee30f9957e5f9895805edd20602f2d7f720186dfd906e82b4982e1", size = 37286, upload-time = "2025-09-22T16:29:51.641Z" },
+]
 
 [[package]]
 name = "xonsh"
-version = "0.19.1"
+version = "0.19.9"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/98/6e/b54a0b2685535995ee50f655103c463f9d339455c9b08c4bce3e03e7bb17/xonsh-0.19.1.tar.gz", hash = "sha256:5d3de649c909f6d14bc69232219bcbdb8152c830e91ddf17ad169c672397fb97", size = 796468 }
+sdist = { url = "https://files.pythonhosted.org/packages/ea/eb/8f544caca583c5f9f0ae7d852769fdb8ed5f63b67646a3c66a2d19357d56/xonsh-0.19.9.tar.gz", hash = "sha256:4cab4c4d7a98aab7477a296f12bc008beccf3d090c6944f0b3375d80a574c37d", size = 730490, upload-time = "2025-06-24T19:59:54.029Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/8c/e6/db44068c5725af9678e37980ae9503165393d51b80dc8517fa4ec74af1cf/xonsh-0.19.1-py310-none-any.whl", hash = "sha256:83eb6610ed3535f8542abd80af9554fb7e2805b0b3f96e445f98d4b5cf1f7046", size = 640686 },
-    { url = "https://files.pythonhosted.org/packages/77/4e/e487e82349866b245c559433c9ba626026a2e66bd17d7f9ac1045082f146/xonsh-0.19.1-py311-none-any.whl", hash = "sha256:c176e515b0260ab803963d1f0924f1e32f1064aa6fd5d791aa0cf6cda3a924ae", size = 640680 },
-    { url = "https://files.pythonhosted.org/packages/5d/88/09060815548219b8f6953a06c247cb5c92d03cbdf7a02a980bda1b5754db/xonsh-0.19.1-py312-none-any.whl", hash = "sha256:fe1266c86b117aced3bdc4d5972420bda715864435d0bd3722d63451e8001036", size = 640604 },
-    { url = "https://files.pythonhosted.org/packages/83/ff/7873cb8184cffeafddbf861712831c2baa2e9dbecdbfd33b1228f0db0019/xonsh-0.19.1-py313-none-any.whl", hash = "sha256:3f158b6fc0bba954e0b989004d4261bafc4bd94c68c2abd75b825da23e5a869c", size = 641166 },
-    { url = "https://files.pythonhosted.org/packages/cc/03/b9f8dd338df0a330011d104e63d4d0acd8bbbc1e990ff049487b6bdf585d/xonsh-0.19.1-py39-none-any.whl", hash = "sha256:a900a6eb87d881a7ef90b1ac8522ba3699582f0bcb1e9abd863d32f6d63faf04", size = 632912 },
+    { url = "https://files.pythonhosted.org/packages/72/ce/429bfed55803d7469fe3d0d02c385bc61eddfa7ace539b4fc0060fd8282d/xonsh-0.19.9-py310-none-any.whl", hash = "sha256:8974981f04740b35a6f283aefe8e50b72b00e83cf4a871d6cc04500c0e3be2dd", size = 645111, upload-time = "2025-06-24T19:59:46.79Z" },
+    { url = "https://files.pythonhosted.org/packages/a0/68/464a07569e8f973339a83d95eda980b60db4dbbe2da8ee82874081f9432c/xonsh-0.19.9-py311-none-any.whl", hash = "sha256:3c872d6f2f109ad3345af4476d2541a71d6ccdbbf2404b2fb2b95755c54e73ab", size = 645114, upload-time = "2025-06-24T19:59:52.857Z" },
+    { url = "https://files.pythonhosted.org/packages/0b/b6/a10c0c11eb2ed9edef4081feb588b1e16d8f9c752a288150163700c876cd/xonsh-0.19.9-py312-none-any.whl", hash = "sha256:ce0b91b8b25da835c0ffdb3f4aa4cf412ec5481f59a33ce9230cfa5fcbb5b0c8", size = 645105, upload-time = "2025-06-24T19:59:49.775Z" },
+    { url = "https://files.pythonhosted.org/packages/ca/8d/45f9bf28a54504cfca126ac13d7f04a564ac7c8559163f8ecbc73e87f0f2/xonsh-0.19.9-py313-none-any.whl", hash = "sha256:fa2b5f200413e92524b17da0bd6db08378e0ded12bbe81335bc94a03ea9fc670", size = 645640, upload-time = "2025-06-24T19:59:50.993Z" },
+    { url = "https://files.pythonhosted.org/packages/54/2a/fd19683e948aaa9fbcd217056417f8b7fdf972ead1b5820cbfe4f28ef93b/xonsh-0.19.9-py39-none-any.whl", hash = "sha256:b136f62f444483de2a83a8005c3e5e4fb1005a1625a4e51a2d35f0a717a7ac6f", size = 637405, upload-time = "2025-06-24T19:59:49.409Z" },
 ]
