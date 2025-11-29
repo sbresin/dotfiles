@@ -1,9 +1,7 @@
 {
   lib,
   pkgs,
-  inputs,
   namespace,
-  system,
   ...
 }: {
   imports = [
@@ -300,6 +298,8 @@
       dvdplusrwtools
       cdrdao
       cdrtools
+      # stuff for tinkering
+      rpiboot
       # this flakes packages
       pkgs.${namespace}.razer-cli
       pkgs.${namespace}.oclif
