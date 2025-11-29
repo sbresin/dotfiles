@@ -22,8 +22,14 @@ end
 config.check_for_updates = false
 
 -- GPU settings
-config.front_end = "OpenGL"
+config.front_end = "WebGpu"
 config.webgpu_power_preference = "LowPower"
+-- in sync prime mode, rendering on the internal GPU causes black screen
+local nv_prime_mode = os.getenv("PRIME_MODE");
+if nv_prime_mode == "sync" then
+    config.webgpu_power_preference = "HighPerformance"
+end
+
 config.enable_wayland = true
 
 -- feature settings
