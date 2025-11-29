@@ -181,10 +181,13 @@
     };
   };
 
-  # Enable Bluetooth battery reporting
-  hardware.bluetooth.settings = {
-    General = {
-      Experimental = true;
+  hardware.bluetooth = {
+    enable = true;
+    settings = {
+      General = {
+        # Enable Bluetooth battery reporting
+        Experimental = true;
+      };
     };
   };
 
