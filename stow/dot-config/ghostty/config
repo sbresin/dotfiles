@@ -42,7 +42,7 @@
 # # Just for example:
 # resize-overlay-duration = 4s 200ms
 
-command = tmux
+command = tmux new -Atlocal
 shell-integration = none
 
 theme = dark:rose-pine,light:rose-pine-dawn
@@ -55,6 +55,8 @@ background-opacity = 0.8
 # TODO: enable when released
 # background-opacity-cells = true
 
+window-padding-x = 3
+window-padding-y = 3
 window-padding-balance = true
 
 # need these for tmux-tilish
