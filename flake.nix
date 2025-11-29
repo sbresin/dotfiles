@@ -54,12 +54,6 @@
     nix-alien = {
       url = "github:thiagokokada/nix-alien";
     };
-
-    nixgl = {
-      url = "github:nix-community/nixGL";
-      # TODO: figure out why using it with mesa-unstable is broken
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
   };
 
   outputs = inputs:
