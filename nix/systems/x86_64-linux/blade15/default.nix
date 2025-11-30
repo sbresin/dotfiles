@@ -241,9 +241,6 @@
   # List packages installed in system profile. To search, run:
   environment.systemPackages = with pkgs;
     [
-      gnome-tweaks
-      gnome-browser-connector
-      gnome-network-displays
       streamrip
       tectonic
     ]
