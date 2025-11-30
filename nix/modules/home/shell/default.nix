@@ -327,6 +327,7 @@ in {
       nh
       nurl
       devbox
+      statix
       # languageservers
       nil
       lua-language-server
