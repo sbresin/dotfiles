@@ -217,24 +217,6 @@
     binfmt = true;
   };
 
-  # enable cd burning (needed for k3b)
-  security.wrappers = {
-    cdrdao = {
-      setuid = true;
-      owner = "root";
-      group = "cdrom";
-      permissions = "u+wrx,g+x";
-      source = "${pkgs.cdrdao}/bin/cdrdao";
-    };
-    cdrecord = {
-      setuid = true;
-      owner = "root";
-      group = "cdrom";
-      permissions = "u+wrx,g+x";
-      source = "${pkgs.cdrtools}/bin/cdrecord";
-    };
-  };
-
   # enable wireshark
   programs.wireshark = {
     enable = true;
@@ -252,6 +234,7 @@
   # gaming stuff
   ${namespace}.gaming.enable = true;
 
+  ${namespace}.cdburning.enable = true;
   # List packages installed in system profile. To search, run:
   environment.systemPackages = with pkgs;
     [
@@ -298,11 +281,6 @@
         addons = with pkgs.unstable.kicadAddons; [kikit kikit-library];
       })
       freecad
-      # cd burning
-      brasero
-      dvdplusrwtools
-      cdrdao
-      cdrtools
       # stuff for tinkering
       rpiboot
       # this flakes packages
