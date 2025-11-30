@@ -232,11 +232,13 @@
   };
 
   # gaming stuff
-  ${namespace}.gaming.enable = true;
+  ${namespace} = {
+    gaming.enable = true;
 
-  ${namespace}.cdburning.enable = true;
+    cdburning.enable = true;
 
-  ${namespace}.font-config.enable = true;
+    font-config.enable = true;
+  };
 
   # List packages installed in system profile. To search, run:
   environment.systemPackages = with pkgs;
