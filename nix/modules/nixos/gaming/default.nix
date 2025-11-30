@@ -5,9 +5,9 @@
   namespace,
   ...
 }: let
-  cfg = config.modules.gaming;
+  cfg = config.${namespace}.gaming;
 in {
-  options.modules.gaming = {
+  options.${namespace}.gaming = {
     enable = lib.mkEnableOption "install gaming stuff";
   };
 

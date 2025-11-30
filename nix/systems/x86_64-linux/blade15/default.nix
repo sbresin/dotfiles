@@ -250,7 +250,7 @@
   };
 
   # gaming stuff
-  modules.gaming.enable = true;
+  ${namespace}.gaming.enable = true;
 
   # List packages installed in system profile. To search, run:
   environment.systemPackages = with pkgs;
