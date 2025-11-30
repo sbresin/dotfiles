@@ -13,7 +13,6 @@
     ./private-dns.nix
     ./kanata.nix
     ./flatpak.nix
-    ./desktop-env.nix
     ./backups.nix
   ];
 
@@ -130,12 +129,6 @@
   # needed for cross compiling aarch64 system configs
   boot.binfmt.emulatedSystems = ["aarch64-linux"];
 
-  # Enable the X11 windowing system.
-  services.xserver.enable = true;
-
-  # default to Wayland for chromium/electron apps
-  environment.sessionVariables.NIXOS_OZONE_WL = "1";
-
   # Configure keymap in X11
   services.xserver.xkb = {
     layout = "us";
@@ -192,9 +185,6 @@
   # needed by pipewire
   security.rtkit.enable = true;
 
-  # Enable touchpad support (enabled default in most desktopManagers).
-  services.libinput.enable = true;
-
   users.mutableUsers = false;
   users.users.root.initialHashedPassword = "$6$7Sq/gCE9D0uBEAlt$QJJS0FCjeIk0dFyQi7MnZIm7nKZ4wYbubjNmCvFA5JqJa8Mzmgv2gCGY7UXDXSoEJPwBTL9cQNBkwrz2LzquJ.";
 
@@ -238,6 +228,8 @@
     cdburning.enable = true;
 
     font-config.enable = true;
+
+    desktop.enable = true;
   };
 
   # List packages installed in system profile. To search, run:
@@ -340,8 +332,6 @@
     # useless on laptop, leads to no backlight in dm after suspend
     devicesOffOnScreensaver = false;
   };
-
-  services.speechd.enable = true;
 
   # Open ports in the firewall.
   # networking.firewall.allowedTCPPorts = [ ... ];
