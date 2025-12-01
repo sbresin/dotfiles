@@ -9,7 +9,6 @@
     ./swapfile.nix
     ./graphics.nix
     ./powersaving.nix
-    ./greetd.nix
     ./private-dns.nix
     ./kanata.nix
     ./flatpak.nix
@@ -229,6 +228,7 @@
 
     font-config.enable = true;
 
+    greeter.enable = true;
     desktop.enable = true;
   };
 
