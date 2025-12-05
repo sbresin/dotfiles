@@ -85,6 +85,10 @@
         nix-flatpak.nixosModules.nix-flatpak
       ];
 
+      systems.hosts.MONDO-1504.modules = with inputs; [
+        disko.nixosModules.default
+      ];
+
       systems.hosts.pi-server.modules = with inputs; [
         disko.nixosModules.default
       ];
