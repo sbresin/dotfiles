@@ -3,6 +3,7 @@
   lib,
   pkgs,
   namespace,
+  inputs,
   ...
 }: let
   cfg = config.${namespace}.desktop;

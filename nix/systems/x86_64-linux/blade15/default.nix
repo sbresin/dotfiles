@@ -9,8 +9,6 @@
     ./swapfile.nix
     ./graphics.nix
     ./powersaving.nix
-    ./private-dns.nix
-    ./kanata.nix
     ./flatpak.nix
     ./backups.nix
   ];
@@ -31,32 +29,6 @@
 
   # for TPM based LUKS decryption we need systemd
   boot.initrd.systemd.enable = true;
-
-  environment.persistence."/persistent" = {
-    enable = true; # NB: Defaults to true, not needed
-    hideMounts = true;
-    directories = [
-      "/var/log"
-      "/var/lib/bluetooth"
-      "/var/lib/flatpak"
-      "/var/lib/nixos"
-      "/var/lib/sbctl"
-      "/var/lib/systemd/backlight"
-      "/var/lib/systemd/coredump"
-      "/var/cache/tuigreet"
-      "/var/lib/private/dnscrypt-proxy"
-      "/etc/NetworkManager/system-connections"
-      {
-        directory = "/var/lib/colord";
-        user = "colord";
-        group = "colord";
-        mode = "u=rwx,g=rx,o=";
-      }
-    ];
-    files = [
-      "/etc/machine-id"
-    ];
-  };
 
   # Use Linux_zen kernel
   boot.kernelPackages = pkgs.linuxPackages_cachyos-gcc.extend (self: super: {
@@ -125,65 +97,6 @@
   #   '';
   # };
 
-  # needed for cross compiling aarch64 system configs
-  boot.binfmt.emulatedSystems = ["aarch64-linux"];
-
-  # Configure keymap in X11
-  services.xserver.xkb = {
-    layout = "us";
-    variant = "altgr-weur";
-    options = "eurosign:e,caps:escape_shifted_capslock";
-  };
-
-  # Enable CUPS to print documents.
-  services.printing = {
-    enable = true;
-    # add hp printer drivers
-    drivers = with pkgs; [hplip];
-    # enable virtual pdf printer
-    cups-pdf.enable = true;
-  };
-  # Enable Scanner support
-  hardware.sane.enable = true;
-
-  # Enable Avahi for IPP network printing
-  services.avahi = {
-    enable = true;
-    nssmdns4 = true;
-    openFirewall = true;
-  };
-
-  # Enable sound through pipewire
-  services.pulseaudio.enable = false;
-  services.pipewire = {
-    enable = true;
-    pulse.enable = true;
-    alsa.enable = true;
-    wireplumber = {
-      enable = true;
-      configPackages = [
-        (pkgs.writeTextDir "share/wireplumber/wireplumber.conf.d/10-bluez.conf" ''
-          monitor.bluez.properties = {
-            bluez5.enable-sbc-xq = true
-          }
-        '')
-      ];
-    };
-  };
-
-  hardware.bluetooth = {
-    enable = true;
-    settings = {
-      General = {
-        # Enable Bluetooth battery reporting
-        Experimental = true;
-      };
-    };
-  };
-
-  # needed by pipewire
-  security.rtkit.enable = true;
-
   users.mutableUsers = false;
   users.users.root.initialHashedPassword = "$6$7Sq/gCE9D0uBEAlt$QJJS0FCjeIk0dFyQi7MnZIm7nKZ4wYbubjNmCvFA5JqJa8Mzmgv2gCGY7UXDXSoEJPwBTL9cQNBkwrz2LzquJ.";
 
@@ -200,12 +113,6 @@
   # enable adb
   programs.adb.enable = true;
 
-  # allow to directly execute Appimages
-  programs.appimage = {
-    enable = true;
-    binfmt = true;
-  };
-
   # enable wireshark
   programs.wireshark = {
     enable = true;
@@ -220,16 +127,17 @@
     # addNetworkInterface = false;
   };
 
-  # gaming stuff
+  # my own modules
   ${namespace} = {
-    gaming.enable = true;
-
     cdburning.enable = true;
-
-    font-config.enable = true;
-
-    greeter.enable = true;
     desktop.enable = true;
+    desktop-essentials.enable = true;
+    font-config.enable = true;
+    gaming.enable = true;
+    greeter.enable = true;
+    impermanence.enable = true;
+    kanata.enable = true;
+    private-dns.enable = true;
   };
 
   # List packages installed in system profile. To search, run:
@@ -299,19 +207,6 @@
   # Enable the OpenSSH daemon.
   services.openssh = {
     enable = true;
-    # store hostkeys in persistent storage
-    # https://github.com/nix-community/impermanence/issues/192#issuecomment-2425296799
-    hostKeys = [
-      {
-        type = "ed25519";
-        path = "/persistent/etc/ssh/ssh_host_ed25519_key";
-      }
-      {
-        type = "rsa";
-        bits = 4096;
-        path = "/persistent/etc/ssh/ssh_host_rsa_key";
-      }
-    ];
   };
 
   # TODO: does not work yet
@@ -322,9 +217,6 @@
     #   enable = true;
     #   setSocketVariable = true;
     # };
-    daemon.settings = {
-      data-root = "/persistent/docker-data";
-    };
   };
 
   hardware.openrazer = {
