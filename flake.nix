@@ -15,7 +15,7 @@
   };
 
   inputs = {
-    nixpkgs.url = "github:nixos/nixpkgs?ref=nixos-25.05";
+    nixpkgs.url = "github:nixos/nixpkgs?ref=nixos-25.11";
     nixpkgs-unstable.url = "github:nixos/nixpkgs?ref=nixos-unstable";
     # nixpkgs-d3b2661f7.url = "github:nixos/nixpkgs/d3b2661f728ad6d24b1f4b0fa74394a24d6b1dc4";
 
@@ -27,7 +27,7 @@
 
     # use home-manager
     home-manager = {
-      url = "github:nix-community/home-manager?ref=release-25.05";
+      url = "github:nix-community/home-manager?ref=release-25.11";
     };
 
     # manages bind mounts to persistent storage
@@ -35,7 +35,7 @@
 
     # secureboot for nixOS
     lanzaboote = {
-      url = "github:nix-community/lanzaboote/v0.4.2";
+      url = "github:nix-community/lanzaboote/v0.4.3";
     };
 
     # patched kernel
