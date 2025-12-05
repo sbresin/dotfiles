@@ -4,7 +4,7 @@
   npmHooks,
   buildNpmPackage,
   nodejs_22,
-  apple-sdk_11,
+  apple-sdk,
   stdenv,
 }: let
   version = "39.4.1";
@@ -28,7 +28,7 @@ in
 
     nodejs = nodejs_22;
 
-    buildInputs = lib.optionals stdenv.hostPlatform.isDarwin [apple-sdk_11];
+    buildInputs = lib.optionals stdenv.hostPlatform.isDarwin [apple-sdk];
 
     # workaround to use the same nodejs version in the wrapper as the one used in the install script
     npmInstallHook =

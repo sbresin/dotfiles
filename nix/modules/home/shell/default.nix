@@ -1,6 +1,7 @@
 {
   pkgs,
   lib,
+  config,
   namespace,
   ...
 }: let
@@ -36,7 +37,7 @@ in {
   programs.zsh = {
     enable = true;
     package = pkgs.unstable.zsh;
-    dotDir = ".config/zsh";
+    dotDir = "${config.xdg.configHome}/zsh";
     defaultKeymap = "viins";
     enableCompletion = true;
     history = {
@@ -181,6 +182,19 @@ in {
     enableZshIntegration = true;
   };
 
+  programs.delta = {
+    enable = true;
+    package = pkgs.unstable.delta;
+    enableGitIntegration = true;
+    options = {
+      line-numbers = true;
+      navigate = true;
+      dark = true;
+      tabs = 4;
+      syntax-theme = "rose-pine";
+    };
+  };
+
   programs.direnv = {
     enable = true;
     package = pkgs.unstable.direnv;
@@ -208,7 +222,7 @@ in {
 
   programs.git = {
     enable = true;
-    extraConfig = {
+    settings = {
       user = {
         # signingkey = "B24A1D10508180D8";
         email = "sebastian.bresin@gmail.com";
@@ -219,14 +233,6 @@ in {
       pull.rebase = false;
       # rebase.autosquash = true;
       dir.workspace = "$HOME/workspace";
-    };
-    delta.enable = true;
-    delta.options = {
-      line-numbers = true;
-      navigate = true;
-      dark = true;
-      tabs = 4;
-      syntax-theme = "rose-pine";
     };
   };
 
@@ -331,7 +337,7 @@ in {
       # languageservers
       nil
       lua-language-server
-      pkgs.luaformatter
+      luaformatter
       efm-langserver
       marksman
       # stacks
@@ -346,7 +352,7 @@ in {
       sqruff
       buf
       protobuf
-      pkgs.actionlint
+      actionlint
       # wasm
       # TODO: create a devshell with these
       # binaryen
@@ -358,7 +364,7 @@ in {
       bkt
       btop
       chafa
-      fx
+      pkgs.fx
       gh-dash
       glow
       go-grip
