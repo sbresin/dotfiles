@@ -16,6 +16,9 @@
 
   hardware.enableRedistributableFirmware = true;
 
+  # early KMS
+  boot.initrd.kernelModules = ["amdgpu"];
+
   # Use the lanzaboote EFI boot loader.
   boot.loader.efi = {
     efiSysMountPoint = "/boot";
