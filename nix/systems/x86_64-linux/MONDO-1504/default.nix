@@ -100,16 +100,12 @@
 
   # List packages installed in system profile. To search, run:
   environment.systemPackages = with pkgs.unstable; [
-    nvd
-    gcc
     vim
     neovim
     git
     git-crypt
-    usbutils
     # os setup/debug
-    sbctl
-    sbsigntool
+    usbutils
     gparted
     exfatprogs
     # Terminal setup
