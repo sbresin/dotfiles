@@ -134,12 +134,9 @@
   # List packages installed in system profile. To search, run:
   environment.systemPackages = with pkgs;
     [
-      streamrip
       tectonic
     ]
     ++ (with pkgs.unstable; [
-      nvd
-      gcc
       vim
       neovim
       git
@@ -159,7 +156,6 @@
       hunspell
       hunspellDicts.en_US
       hunspellDicts.de_DE
-      piper-tts
       # media / document tools
       imagemagick
       ffmpeg-full
