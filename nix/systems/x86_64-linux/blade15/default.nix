@@ -18,17 +18,7 @@
     efiSysMountPoint = "/efi";
     canTouchEfiVariables = true;
   };
-
-  # lanzaboote replaces systemd-boot
-  boot.loader.systemd-boot.enable = lib.mkForce false;
-
-  boot.lanzaboote = {
-    enable = true;
-    pkiBundle = "/var/lib/sbctl";
-  };
-
-  # for TPM based LUKS decryption we need systemd
-  boot.initrd.systemd.enable = true;
+  boot.loader.systemd-boot.enable = lib.mkDefault true;
 
   # Use Linux_zen kernel
   boot.kernelPackages = pkgs.linuxPackages_cachyos-gcc.extend (self: super: {
@@ -138,6 +128,7 @@
     impermanence.enable = true;
     kanata.enable = true;
     private-dns.enable = true;
+    secureboot.enable = true;
   };
 
   # List packages installed in system profile. To search, run:
@@ -155,8 +146,6 @@
       git-crypt
       usbutils
       # os setup/debug
-      sbctl
-      sbsigntool
       ntfs3g
       gparted
       exfatprogs
