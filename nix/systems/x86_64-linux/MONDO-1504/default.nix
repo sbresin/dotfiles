@@ -10,7 +10,7 @@
     # ./swapfile.nix
     # ./graphics.nix
     # ./powersaving.nix
-    # ./flatpak.nix
+    ./flatpak.nix
     # ./backups.nix
   ];
 
