@@ -23,12 +23,7 @@
   };
 
   # lanzaboote replaces systemd-boot
-  boot.loader.systemd-boot.enable = lib.mkForce false;
-
-  boot.lanzaboote = {
-    enable = true;
-    pkiBundle = "/var/lib/sbctl";
-  };
+  boot.loader.systemd-boot.enable = lib.mkDefault true;
 
   # for TPM based LUKS decryption we need systemd
   boot.initrd.systemd.enable = true;
@@ -97,6 +92,7 @@
     impermanence.enable = true;
     kanata.enable = true;
     private-dns.enable = true;
+    secureboot.enable = true;
   };
 
   # List packages installed in system profile. To search, run:
