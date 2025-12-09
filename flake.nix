@@ -104,6 +104,9 @@
           "steam-unwrapped"
           "zsh-abbr"
           "duckstation"
+          "1password"
+          "1password-cli"
+          "1password-gui"
           # nvtop dependencies
           #   "libnpp"
         ]);
