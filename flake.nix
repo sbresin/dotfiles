@@ -26,17 +26,13 @@
     };
 
     # use home-manager
-    home-manager = {
-      url = "github:nix-community/home-manager?ref=release-25.11";
-    };
+    home-manager.url = "github:nix-community/home-manager?ref=release-25.11";
 
     # manages bind mounts to persistent storage
     impermanence.url = "github:nix-community/impermanence";
 
     # secureboot for nixOS
-    lanzaboote = {
-      url = "github:nix-community/lanzaboote/v0.4.3";
-    };
+    lanzaboote.url = "github:nix-community/lanzaboote/v0.4.3";
 
     # patched kernel
     chaotic.url = "github:chaotic-cx/nyx/nyxpkgs-unstable";
@@ -51,9 +47,10 @@
     nix-flatpak.url = "github:gmodena/nix-flatpak/?ref=latest";
 
     # run unpatched dynamically linked binaries
-    nix-alien = {
-      url = "github:thiagokokada/nix-alien";
-    };
+    nix-alien.url = "github:thiagokokada/nix-alien";
+
+    # nice little emoji picker
+    simplemoji.url = "github:SergioRibera/Simplemoji?ref=v1.2.3";
   };
 
   outputs = inputs:
