@@ -94,6 +94,7 @@
     greeter.enable = true;
     impermanence.enable = true;
     kanata.enable = true;
+    powersaving.enable = true;
     private-dns.enable = true;
     secureboot.enable = true;
   };
