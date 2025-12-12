@@ -78,6 +78,7 @@ in {
     environment.systemPackages = with pkgs.unstable; [
       foot
 
+      app2unit
       ashell
       hyprpaper
       hyprsunset
@@ -125,7 +126,6 @@ in {
       rose-pine-cursor
       rose-pine-hyprcursor
 
-      pkgs.${namespace}.app2unit
       pkgs.${namespace}.hyprpaper-random
     ];
 
