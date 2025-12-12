@@ -66,10 +66,20 @@ in {
 
     hardware.bluetooth = {
       enable = true;
+      powerOnBoot = true;
       settings = {
         General = {
           # Enable Bluetooth battery reporting
           Experimental = true;
+        };
+      };
+      input = {
+        General = {
+          # expose HID devices, should be default but somehow didn't work without
+          UserspaceHID = true;
+          ClassicBondedOnly = true;
+          # auto disconnect after 10 minutes
+          IdleTimeout = 600;
         };
       };
     };
