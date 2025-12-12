@@ -138,6 +138,7 @@
     ocrmypdf
     # GUI Apps
     easyeffects
+    vial
     # this flakes packages
     pkgs.${namespace}.oclif
   ];

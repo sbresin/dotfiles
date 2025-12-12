@@ -76,5 +76,9 @@ in {
 
     # needed by pipewire
     security.rtkit.enable = true;
+
+    services.udev.packages = [
+      pkgs.${namespace}.vial-udev-rules
+    ];
   };
 }
