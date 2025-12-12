@@ -87,6 +87,10 @@ in {
     # needed by pipewire
     security.rtkit.enable = true;
 
+    environment.systemPackages = with pkgs.unstable; [
+      wiremix
+    ];
+
     services.udev.packages = [
       pkgs.${namespace}.vial-udev-rules
     ];
