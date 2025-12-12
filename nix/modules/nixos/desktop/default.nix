@@ -86,6 +86,7 @@ in {
       hyprshot
       walker
       swaynotificationcenter
+      socat # needed to listen to hyprland event socket from bash
       brightnessctl
       playerctl
       bluetui
