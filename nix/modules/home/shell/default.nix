@@ -367,7 +367,7 @@ in {
       bkt
       btop
       chafa
-      pkgs.fx
+      fx
       gh-dash
       glow
       go-grip
