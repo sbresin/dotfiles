@@ -91,6 +91,10 @@ in {
       wiremix
     ];
 
+    boot.extraModprobeConfig = ''
+      options hid_apple swap_opt_cmd=1
+    '';
+
     services.udev.packages = [
       pkgs.${namespace}.vial-udev-rules
     ];
