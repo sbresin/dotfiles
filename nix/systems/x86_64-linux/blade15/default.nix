@@ -61,6 +61,9 @@
   networking.networkmanager = {
     enable = true;
     wifi.powersave = true;
+    plugins = with pkgs; [
+      networkmanager-openvpn
+    ];
   };
 
   # open static port for packet (Android quickshare)
