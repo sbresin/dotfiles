@@ -367,6 +367,7 @@ in {
       bkt
       btop
       chafa
+      crush
       fx
       gh-dash
       glow
