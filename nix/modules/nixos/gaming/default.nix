@@ -76,15 +76,15 @@ in {
     # services.seatd.enable = true;
 
     # friidump needs setuid bit
-    security.wrappers = {
-      friidump = {
-        setuid = true;
-        owner = "root";
-        group = "cdrom";
-        permissions = "u+wrx,g+x";
-        source = "${pkgs.${namespace}.friidump}/bin/friidump";
-      };
-    };
+    # security.wrappers = {
+    #   friidump = {
+    #     setuid = true;
+    #     owner = "root";
+    #     group = "cdrom";
+    #     permissions = "u+wrx,g+x";
+    #     source = "${pkgs.${namespace}.friidump}/bin/friidump";
+    #   };
+    # };
 
     environment.systemPackages = with pkgs.unstable; [
       # Emulators
@@ -102,7 +102,7 @@ in {
       # rom tools
       mame.tools
       # pkgs.${namespace}.rusty-psn
-      pkgs.${namespace}.threedstool
+      # pkgs.${namespace}.threedstool
     ];
 
     services.flatpak = {
