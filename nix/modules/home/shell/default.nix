@@ -346,7 +346,10 @@ in {
       temurin-bin
       go
       rustup
-      python313
+      (pkgs.writeShellScriptBin "python" ''
+        export LD_LIBRARY_PATH="$NIX_LD_LIBRARY_PATH:$LD_LIBRARY_PATH"
+        exec ${pkgs.unstable.python3}/bin/python "$@"
+      '')
       uv
       ruff
       sqruff
