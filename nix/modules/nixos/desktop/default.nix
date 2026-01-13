@@ -79,7 +79,7 @@ in {
       foot
 
       app2unit
-      ashell
+      ashell # TODO: add systemd user unit to keep this one alive (it crashes when no monitor is enabled)
       hyprpaper
       hyprsunset
       hyprpolkitagent
