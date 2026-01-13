@@ -1,4 +1,5 @@
 {
+  config,
   lib,
   pkgs,
   namespace,
@@ -35,18 +36,7 @@
 
   # Use Linux_cachyos kernel
   boot.kernelPackages = pkgs.linuxPackages_cachyos-gcc;
-  #   .extend (self: super: {
-  #   apfs = super.apfs.overrideAttrs (o: {
-  #     version = "0.3.16-6.17";
-  #     src = pkgs.fetchFromGitHub {
-  #       owner = "linux-apfs";
-  #       repo = "linux-apfs-rw";
-  #       rev = "v0.3.16";
-  #       hash = "sha256-11ypevJwxNKAmJbl2t+nGXq40hjWbLIdltLqSeTVdHc=";
-  #     };
-  #   });
-  # });
-  # system.modulesTree = [(lib.getOutput "modules" pkgs.linuxPackages_cachyos-gcc.kernel)];
+  boot.extraModulePackages = with config.boot.kernelPackages; [ddcci-driver];
 
   # use sched_ext
   services.scx = {
@@ -62,6 +52,11 @@
     enable = true;
     wifi.powersave = true;
   };
+
+  # services.ddccontrol = {
+  #   enable = true;
+  #   package = pkgs.ddcutil-service;
+  # };
 
   # Set your time zone.
   time.timeZone = "Europe/Berlin";
@@ -81,7 +76,20 @@
   };
   users.users.sebe = {
     isNormalUser = true;
-    extraGroups = ["wheel" "input" "uinput" "networkmanager" "lp" "scanner" "plugdev" "adbusers" "storage" "dialout"];
+    extraGroups = [
+      "adbusers"
+      "dialout"
+      "docker"
+      "input"
+      "lp"
+      "networkmanager"
+      "plugdev"
+      "scanner"
+      "storage"
+      "uinput"
+      "wheel"
+      config.hardware.i2c.group
+    ];
     initialHashedPassword = "$6$.7TC31zU0p1OfOH2$b7.CZMpPB.X6YFZMR5akKaEhDTlUPnUJc.gXmv1GqnVV528RuQKvqCp0sRTUk/ZXo.eofNBD9QUup6s9adyXI/";
   };
 
@@ -142,6 +150,7 @@
     # GUI Apps
     easyeffects
     vial
+    vdu_controls
     # this flakes packages
     pkgs.${namespace}.oclif
   ];
