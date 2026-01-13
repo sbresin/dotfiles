@@ -341,6 +341,7 @@ in {
       efm-langserver
       marksman
       # stacks
+      gcc
       nodejs
       pnpm
       temurin-bin
@@ -367,6 +368,7 @@ in {
       bkt
       btop
       chafa
+      copier
       crush
       fx
       gh-dash
