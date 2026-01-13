@@ -201,6 +201,25 @@ in {
     enableZshIntegration = true;
   };
 
+  programs.ondir = {
+    enable = true;
+    package = pkgs.unstable.ondir;
+    enableZshIntegration = true;
+    config =
+      #bash
+      ''
+        enter ~/workspace/([^/]+)
+          # Check if this is a git repo with pre-commit config but no hooks installed
+          if [ -d .git ] && [ -f .pre-commit-config.yaml ] && [ ! -f .git/hooks/pre-commit ]; then
+            echo "📦 Installing pre-commit hooks..."
+            pre-commit install
+            # Future: Uncomment to install other hook types
+            # pre-commit install --hook-type pre-push
+            # pre-commit install --hook-type commit-msg
+          fi
+      '';
+  };
+
   programs.eza = {
     enable = true;
     package = pkgs.unstable.eza;
