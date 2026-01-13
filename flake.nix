@@ -29,7 +29,11 @@
     home-manager.url = "github:nix-community/home-manager?ref=release-25.11";
 
     # manages bind mounts to persistent storage
-    impermanence.url = "github:nix-community/impermanence";
+    impermanence = {
+      url = "github:nix-community/impermanence";
+      inputs.nixpkgs.follows = "nixpkgs";
+      inputs.home-manager.follows = "home-manager";
+    };
 
     # secureboot for nixOS
     lanzaboote.url = "github:nix-community/lanzaboote/v0.4.3";
