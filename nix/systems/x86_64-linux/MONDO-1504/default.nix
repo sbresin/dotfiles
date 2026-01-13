@@ -27,6 +27,8 @@
 
   # lanzaboote replaces systemd-boot
   boot.loader.systemd-boot.enable = lib.mkDefault true;
+  # lanzaboote uses this, 5 is big enough for the framework
+  boot.loader.systemd-boot.consoleMode = "5";
 
   # for TPM based LUKS decryption we need systemd
   boot.initrd.systemd.enable = true;
