@@ -59,13 +59,45 @@ config.window_background_opacity = 0.90
 
 -- font config
 config.font = wezterm.font_with_fallback {
-    'Dank Mono', 'Apple Color Emoji', 'Symbols Nerd Font Regular' -- no fake-bold icons
+    'Dank Mono',
+    {family = 'Symbols Nerd Font Mono', weight = 'Regular'},
+    {family = 'Apple Color Emoji', weight = 'Regular'}
 }
 config.use_cap_height_to_scale_fallback_fonts = true
 config.font_size = 13
 if is_darwin() then
     config.font_size = 18.0 -- default font size on darwin is just too small
 end
+
+config.font_rules = {
+    {
+        intensity = 'Bold',
+        italic = false,
+        font = wezterm.font_with_fallback {
+            {family = 'Dank Mono', weight = 'Bold'},
+            {family = 'Symbols Nerd Font Mono', weight = 'Regular'},
+            {family = 'Apple Color Emoji', weight = 'Regular'}
+        }
+    },
+    {
+        intensity = 'Normal',
+        italic = true,
+        font = wezterm.font_with_fallback {
+            {family = 'Dank Mono', style = 'Italic'},
+            {family = 'Symbols Nerd Font Mono', weight = 'Regular'},
+            {family = 'Apple Color Emoji', weight = 'Regular'}
+        }
+    },
+    {
+        intensity = 'Bold',
+        italic = true,
+        font = wezterm.font_with_fallback {
+            {family = 'Dank Mono', weight = 'Bold', style = 'Italic'},
+            {family = 'Symbols Nerd Font Mono', weight = 'Regular'},
+            {family = 'Apple Color Emoji', weight = 'Regular'}
+        }
+    },
+}
 
 -- tabbar settings
 config.use_fancy_tab_bar = false
