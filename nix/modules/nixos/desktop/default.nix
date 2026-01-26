@@ -119,9 +119,12 @@ in {
       gimp3-with-plugins # image editing
       weather
       dconf-editor # GTK settings
-      inputs.nix-alien.packages.${stdenv.hostPlatform.system}.nix-alien
+      # inputs.nix-alien.packages.${stdenv.hostPlatform.system}.nix-alien
       pkgs.${namespace}.gnome-control-center-patched
       inputs.simplemoji.packages.${stdenv.hostPlatform.system}.default
+      termusic
+      bottles
+      rsgain
 
       hyprpicker
       rose-pine-cursor
@@ -131,8 +134,5 @@ in {
     ];
 
     services.speechd.enable = true;
-
-    # run dynamically linked binary
-    programs.nix-ld.enable = true;
   };
 }
