@@ -313,7 +313,7 @@ in {
   # STACKS
   programs.poetry = {
     enable = true;
-    package = pkgs.unstable.poetry;
+    package = pkgs.poetry;
   };
 
   # ************************************************************************************************
