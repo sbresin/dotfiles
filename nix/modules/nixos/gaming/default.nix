@@ -93,7 +93,13 @@ in {
       ryubing
       # games
       solarus-launcher
-      duckstation
+      # Upstream duckstation maintainer does not treat tags as immutable,
+      # so the hash changes after nixpkgs has already pinned it.
+      (duckstation.overrideAttrs (old: {
+        src = old.src.overrideAttrs {
+          outputHash = "sha256-ksmxdYLFWYIA3Kp8dztyN4UxeJFvpNRmN79TspwZHuw=";
+        };
+      }))
       # os tools
       mangohud
       evtest-qt
