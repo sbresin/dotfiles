@@ -105,6 +105,9 @@ in {
     initContent =
       # bash
       ''
+        # Source ~/.env if it exists
+        [[ -f ~/.env ]] && source ~/.env
+
         # home-manager home.sessionPath always appends vars, but we need prepending
         export PATH=$HOME/.local/bin:$PATH:/usr/local/bin
 
