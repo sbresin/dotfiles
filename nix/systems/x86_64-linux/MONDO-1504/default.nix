@@ -17,9 +17,6 @@
 
   hardware.enableRedistributableFirmware = true;
 
-  # early KMS
-  boot.initrd.kernelModules = ["amdgpu"];
-
   # Use the lanzaboote EFI boot loader.
   boot.loader.efi = {
     efiSysMountPoint = "/boot";
@@ -51,6 +48,11 @@
   networking.networkmanager = {
     enable = true;
     wifi.powersave = true;
+  };
+
+  hardware.amdgpu = {
+    opencl.enable = true; # enable rocm
+    initrd.enable = true; # early KMS
   };
 
   # services.ddccontrol = {
