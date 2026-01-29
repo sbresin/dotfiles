@@ -391,7 +391,6 @@ in {
       btop
       chafa
       copier
-      crush
       fx
       gh-dash
       glow
@@ -402,7 +401,6 @@ in {
       jwt-cli
       miller
       ngrok
-      opencode
       pinact
       pre-commit
       sad
@@ -413,6 +411,11 @@ in {
       wget
       yq
       # pkgs.${namespace}.git-amnesia
+      # LLM stuff
+      opencode
+      github-mcp-server
+      terraform-mcp-server
+      mcp-nixos
       # platform tools
       act
       caddy
