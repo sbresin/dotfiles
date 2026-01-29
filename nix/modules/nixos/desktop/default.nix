@@ -24,10 +24,21 @@ in {
 
     programs.hyprland = {
       enable = true;
-      withUWSM = true;
+      # TODO: withUWSM should use start-hyprland, not Hyprland directly
+      # waiting for upstream fix, using programs.uwsm directly instead
+      # withUWSM = true;
       xwayland.enable = true;
       package = pkgs.unstable.hyprland;
       portalPackage = pkgs.unstable.xdg-desktop-portal-hyprland;
+    };
+
+    programs.uwsm = {
+      enable = true;
+      waylandCompositors.hyprland = {
+        prettyName = "Hyprland";
+        comment = "Hyprland compositor managed by UWSM";
+        binPath = "${pkgs.unstable.hyprland}/bin/start-hyprland";
+      };
     };
 
     programs.xwayland = {

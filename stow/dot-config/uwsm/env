@@ -1,5 +1,8 @@
 #!/usr/bin/env sh
 
+# UWSM sets XDG_CURRENT_DESKTOP from the binary name (start-hyprland), override it
+export XDG_CURRENT_DESKTOP='Hyprland'
+
 # use internal gpu by default
 export AQ_DRM_DEVICES='/dev/dri/card1'
 export AQ_TRACE=1
