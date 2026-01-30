@@ -13,6 +13,12 @@ in {
   config = lib.mkIf cfg.enable {
     fileSystems."/persistent".neededForBoot = true;
 
+    # Fix permissions for /var/lib/private which is required by systemd's DynamicUser feature.
+    # Impermanence creates parent directories with mode 0755, but DynamicUser requires 0700.
+    systemd.tmpfiles.rules = [
+      "z /var/lib/private 0700 root root -"
+    ];
+
     environment.persistence."/persistent" = {
       enable = true; # NB: Defaults to true, not needed
       hideMounts = true;
