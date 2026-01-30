@@ -95,6 +95,7 @@
       ];
 
       channels-config = {
+        rocmSupport = true; # Enable ROCm GPU support for AMD GPUs
         allowUnfreePredicate = pkg: let
           pkgName = inputs.nixpkgs.lib.getName pkg;
         in (builtins.elem pkgName [

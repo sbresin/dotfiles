@@ -109,6 +109,15 @@
     powersaving.enable = true;
     private-dns.enable = true;
     secureboot.enable = true;
+    ollama = {
+      enable = true;
+      backend = "rocm";
+      rocmOverrideGfx = "11.5.1"; # AMD Radeon 890M (gfx1150)
+    };
+    caddy = {
+      enable = true;
+      services.ollama.port = 11434;
+    };
   };
 
   programs._1password = {
@@ -155,6 +164,9 @@
     vdu_controls
     # this flakes packages
     pkgs.${namespace}.oclif
+    # ROCm tools for GPU monitoring
+    pkgs.rocmPackages.rocm-smi
+    pkgs.rocmPackages.rocminfo
   ];
 
   # link zsh completions, so they are available globally TODO: same for fish/bash?

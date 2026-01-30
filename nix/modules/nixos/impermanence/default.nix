@@ -30,6 +30,8 @@ in {
         "/var/lib/sbctl"
         "/var/lib/systemd/backlight"
         "/var/lib/systemd/coredump"
+        "/var/lib/caddy"
+        "/var/lib/private/ollama"
         "/var/cache/tuigreet"
         "/var/lib/private/dnscrypt-proxy"
         "/etc/NetworkManager/system-connections"
