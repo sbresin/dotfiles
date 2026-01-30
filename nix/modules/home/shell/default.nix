@@ -416,6 +416,8 @@ in {
       github-mcp-server
       terraform-mcp-server
       mcp-nixos
+      pkgs.${namespace}.docs-mcp-server
+      pkgs.${namespace}.chrome-devtools-mcp
       # platform tools
       act
       caddy

@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+# Launch Ungoogled Chromium with remote debugging enabled for chrome-devtools-mcp
+
+PORT="${1:-9222}"
+
+echo "Starting Ungoogled Chromium with remote debugging on port ${PORT}..."
+
+exec flatpak run io.github.ungoogled_software.ungoogled_chromium \
+  --remote-debugging-port="${PORT}" \
+  "${@:2}"

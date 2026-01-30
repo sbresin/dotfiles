@@ -1,0 +1,43 @@
+{
+	"$schema": "https://opencode.ai/config.json",
+	"theme": "rose-pine",
+	"plugin": ["opencode-anthropic-auth@0.0.12"],
+	"mode": {
+		"build": {
+			"prompt": "You are Claude Code, Anthropic's official CLI for Claude.",
+		},
+		"plan": {
+			"prompt": "You are Claude Code, Anthropic's official CLI for Claude.",
+		},
+	},
+	"mcp": {
+		"github": {
+			"type": "local",
+			"command": ["github-mcp-server", "stdio", "--dynamic-toolsets"],
+			"enabled": true,
+			"environment": {
+				"GITHUB_PERSONAL_ACCESS_TOKEN": "{env:GITHUB_MCP_PAT}",
+			},
+		},
+		"terraform": {
+			"type": "local",
+			"command": ["terraform-mcp-server"],
+			"enabled": true,
+		},
+		"nixos": {
+			"type": "local",
+			"command": ["mcp-nixos"],
+			"enabled": true,
+		},
+		"chrome-devtools": {
+			"type": "local",
+			"command": ["chrome-devtools-mcp", "--browser-url=http://127.0.0.1:9222"],
+			"enabled": false,
+		},
+		// "jira": {
+		// 	"type": "remote",
+		// 	"url": "https://jira.example.com/mcp",
+		// 	"enabled": true
+		// }
+	},
+}
