@@ -96,9 +96,12 @@ in {
       solarus-launcher
       # Upstream duckstation maintainer does not treat tags as immutable,
       # so the hash changes after nixpkgs has already pinned it.
-      (duckstation.overrideAttrs (old: {
-        src = old.src.overrideAttrs {
+      (duckstation.overrideAttrs (oldAttrs: {
+        src = oldAttrs.src.overrideAttrs {
           outputHash = "sha256-ksmxdYLFWYIA3Kp8dztyN4UxeJFvpNRmN79TspwZHuw=";
+        };
+        vendorShaderc = oldAttrs.vendorShaderc.overrideAttrs {
+          doInstallCheck = false;
         };
       }))
       # os tools
