@@ -57,10 +57,7 @@ in {
       package = pkgs.unstable.hyprlock;
     };
 
-    services.hypridle = {
-      enable = true;
-      package = pkgs.unstable.hypridle;
-    };
+
 
     # bluetooth gui and applet
     services.blueman.enable = true;
@@ -86,14 +83,78 @@ in {
 
     services.gnome.sushi.enable = true;
 
+    # hyprland ecosystem services and status bar managed via home-manager
+    home-manager.sharedModules = [
+      {
+        programs.ashell = {
+          enable = true;
+          package = pkgs.unstable.ashell;
+          systemd.enable = true;
+        };
+
+        services.hypridle = {
+          enable = true;
+          package = pkgs.unstable.hypridle;
+          settings = {
+            general = {
+              lock_cmd = "pidof hyprlock || hyprlock";
+              before_sleep_cmd = "loginctl lock-session";
+              after_sleep_cmd = "~/.config/hypr/scripts/monitor_toggle.sh && hyprctl dispatch dpms on";
+            };
+            listener = [
+              {
+                timeout = 150; # 2.5min
+                on-timeout = "brightnessctl -s set 10";
+                on-resume = "brightnessctl -r";
+              }
+              {
+                timeout = 300; # 5min
+                on-timeout = "loginctl lock-session";
+              }
+              {
+                timeout = 330; # 5.5min
+                on-timeout = "hyprctl dispatch dpms off";
+                on-resume = "hyprctl dispatch dpms on && brightnessctl -r";
+              }
+              {
+                timeout = 450; # 7.5min
+                on-timeout = "systemctl suspend";
+              }
+            ];
+          };
+        };
+
+        services.hyprpaper = {
+          enable = true;
+          package = pkgs.unstable.hyprpaper;
+          settings = {
+            ipc = true;
+            splash = false;
+            wallpaper = [
+              {
+                monitor = "";
+                path = "~/current_wallpaper.jpg";
+              }
+            ];
+          };
+        };
+
+        services.hyprsunset = {
+          enable = true;
+          package = pkgs.unstable.hyprsunset;
+        };
+
+        services.hyprpolkitagent = {
+          enable = true;
+          package = pkgs.unstable.hyprpolkitagent;
+        };
+      }
+    ];
+
     environment.systemPackages = with pkgs.unstable; [
       foot
 
       app2unit
-      ashell # TODO: add systemd user unit to keep this one alive (it crashes when no monitor is enabled)
-      hyprpaper
-      hyprsunset
-      hyprpolkitagent
       hyprshot
       walker
       swaynotificationcenter
