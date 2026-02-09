@@ -106,7 +106,10 @@
     greeter.enable = true;
     impermanence.enable = true;
     kanata.enable = true;
-    powersaving.enable = true;
+    powersaving = {
+      enable = true;
+      diskDevices = "nvme-WD_BLACK_SN7100_1TB_25235H806572";
+    };
     private-dns.enable = true;
     secureboot.enable = true;
     ollama = {

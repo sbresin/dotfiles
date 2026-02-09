@@ -8,7 +8,6 @@
     ./hardware-configuration.nix
     ./swapfile.nix
     ./graphics.nix
-    ./powersaving.nix
     ./flatpak.nix
     ./backups.nix
   ];
@@ -130,6 +129,10 @@
     greeter.enable = true;
     impermanence.enable = true;
     kanata.enable = true;
+    powersaving = {
+      enable = true;
+      diskDevices = "nvme-NVMe_CA5-8D512_0021044000VT nvme-Samsung_SSD_970_EVO_Plus_2TB_S4J4NM0R801122Z";
+    };
     private-dns.enable = true;
     secureboot.enable = true;
   };
