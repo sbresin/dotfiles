@@ -44,6 +44,14 @@
     extraArgs = ["--autopilot"];
   };
 
+  # Custom fan control for Framework laptop - quieter fan curves
+  hardware.fw-fanctrl = {
+    enable = true;
+    config = {
+      defaultStrategy = "lazy";
+    };
+  };
+
   # SSD needs TRIM
   services.fstrim.enable = true;
 
