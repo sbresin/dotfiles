@@ -65,6 +65,25 @@ in {
     # network gui and applet
     programs.nm-applet.enable = true;
 
+    # backend for walker application launcher
+    # Wrapper script reads the full user session PATH (set up by UWSM) before
+    # starting elephant, so it can find and launch all apps (system, home-manager,
+    # flatpak). NixOS's auto-generated PATH in the unit file is too minimal.
+    systemd.user.services.elephant = {
+      description = "Elephant application launcher backend";
+      wantedBy = ["graphical-session.target"];
+      partOf = ["graphical-session.target"];
+      after = ["graphical-session.target"];
+      serviceConfig = {
+        Restart = "always";
+        RestartSec = 10;
+        ExecStart = toString (pkgs.writeShellScript "elephant-wrapper" ''
+          eval "$(${pkgs.systemd}/bin/systemctl --user show-environment | ${pkgs.gnugrep}/bin/grep ^PATH=)"
+          exec ${pkgs.unstable.elephant}/bin/elephant "$@"
+        '');
+      };
+    };
+
     # TODO: nerdshade, lule,
     services.upower.enable = true;
     programs.dconf.enable = true;
@@ -154,6 +173,7 @@ in {
     environment.systemPackages = with pkgs.unstable; [
       foot
 
+      elephant
       app2unit
       hyprshot
       walker
