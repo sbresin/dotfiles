@@ -2,9 +2,6 @@
 
 # --- Configuration ---
 INTERNAL_MONITOR="eDP-1"
-# We specifically look for DP-[number] as requested, but you can change
-# this regex to "DP-[0-9]+|HDMI-[A-Z0-9]+" to catch HDMI too.
-EXTERNAL_MONITOR_REGEX="\sDP-[0-9]+"
 
 # --- Check States ---
 
@@ -17,12 +14,14 @@ else
 fi
 
 # 2. Check External Monitor
-# We use the regex against the output of hyprctl monitors
-if [[ "$(hyprctl monitors)" =~ $EXTERNAL_MONITOR_REGEX ]]; then
-	EXTERNAL_PRESENT=true
-else
-	EXTERNAL_PRESENT=false
-fi
+# Any monitor that is not the internal eDP panel counts as external.
+# This catches DP-*, HDMI-*, etc.
+EXTERNAL_PRESENT=false
+while IFS= read -r line; do
+	if [[ "$line" =~ ^Monitor\ (.+)\ \(ID ]]; then
+		[[ "${BASH_REMATCH[1]}" != "$INTERNAL_MONITOR" ]] && EXTERNAL_PRESENT=true && break
+	fi
+done < <(hyprctl monitors)
 
 # --- Logic Implementation ---
 
