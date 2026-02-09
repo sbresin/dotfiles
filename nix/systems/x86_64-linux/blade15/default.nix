@@ -19,6 +19,8 @@
   };
   boot.loader.systemd-boot.enable = lib.mkDefault true;
 
+  boot.plymouth.enable = true;
+
   # Use Linux_zen kernel
   boot.kernelPackages = pkgs.linuxPackages_cachyos-gcc.extend (self: super: {
     apfs = super.apfs.overrideAttrs (o: {

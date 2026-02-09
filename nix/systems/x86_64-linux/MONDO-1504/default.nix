@@ -28,6 +28,8 @@
   # lanzaboote uses this, 5 is big enough for the framework
   boot.loader.systemd-boot.consoleMode = "5";
 
+  boot.plymouth.enable = true;
+
   # for TPM based LUKS decryption we need systemd
   boot.initrd.systemd.enable = true;
 
