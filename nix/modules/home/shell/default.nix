@@ -9,6 +9,34 @@
     url = "https://raw.githubusercontent.com/wezterm/wezterm/refs/heads/main/assets/shell-integration/wezterm.sh";
     hash = "sha256-GQGDcxMHv04TEaFguHXi0dOoOX5VUR2He4XjTxPuuaw=";
   };
+
+  # Fix pre-commit hooks breaking after nix-collect-garbage
+  # Nixpkgs patches the hook template to use hardcoded /nix/store paths,
+  # which breaks when packages are updated and old paths are garbage collected.
+  # This removes that patch to restore upstream behavior (PATH-based resolution).
+  # See: https://github.com/pre-commit/pre-commit/issues/2497
+  pre-commit-fixed = pkgs.unstable.pre-commit.overrideAttrs (oldAttrs: {
+    patches = builtins.filter
+      (p: baseNameOf (toString p) != "hook-tmpl.patch")
+      (oldAttrs.patches or []);
+
+    postPatch = ''
+      substituteInPlace pre_commit/languages/python.py \
+        --subst-var-by virtualenv ${pkgs.unstable.python3Packages.virtualenv}
+      substituteInPlace pre_commit/languages/node.py \
+        --subst-var-by nodeenv ${pkgs.unstable.python3Packages.nodeenv}
+
+      # Don't write hardcoded Python path into generated hooks, so they
+      # always fall through to the PATH-based "command -v pre-commit" lookup.
+      substituteInPlace pre_commit/commands/install_uninstall.py \
+        --replace-fail \
+          "hook_file.write(f'INSTALL_PYTHON={shlex.quote(sys.executable)}\n')" \
+          "hook_file.write('INSTALL_PYTHON=\n')"
+    '';
+
+    doCheck = false;
+    pytestCheckPhase = "true";
+  });
 in {
   # ************************************************************************************************
   # SHELLS
@@ -402,7 +430,7 @@ in {
       miller
       ngrok
       pinact
-      pre-commit
+      pre-commit-fixed
       sad
       stow
       tabiew
