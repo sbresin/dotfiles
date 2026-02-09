@@ -9,7 +9,7 @@
     ./disko-config.nix
     ./hardware-configuration.nix
     # ./swapfile.nix
-    # ./graphics.nix
+    ./graphics.nix
     # ./powersaving.nix
     ./flatpak.nix
     # ./backups.nix
