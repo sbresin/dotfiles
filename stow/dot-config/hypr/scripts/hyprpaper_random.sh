@@ -5,9 +5,13 @@
 
 CURRENT_WALL=$(readlink -f "$HOME/current_wallpaper.jpg" 2>/dev/null)
 
+# Try to find a wallpaper different from the current one
 if [[ -n "$CURRENT_WALL" ]]; then
-	WALLPAPER=$(find "$WALLPAPER_DIR" -type f -name "*.jpg" ! -name "$(basename "$CURRENT_WALL")" | shuf -n 1)
-else
+	WALLPAPER=$(find "$WALLPAPER_DIR" -type f -name "*.jpg" ! -path "$CURRENT_WALL" | shuf -n 1)
+fi
+
+# Fall back to any wallpaper if none found (e.g., only one wallpaper exists)
+if [[ -z "$WALLPAPER" ]]; then
 	WALLPAPER=$(find "$WALLPAPER_DIR" -type f -name "*.jpg" | shuf -n 1)
 fi
 
