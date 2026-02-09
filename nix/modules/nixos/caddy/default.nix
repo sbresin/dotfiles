@@ -47,7 +47,9 @@ in {
           value = {
             extraConfig = ''
               tls internal
-              reverse_proxy ${svc.host}:${toString svc.port}
+              reverse_proxy ${svc.host}:${toString svc.port} {
+                header_up Host {upstream_hostport}
+              }
             '';
           };
         }) cfg.services;
@@ -56,7 +58,9 @@ in {
           name = "http://${name}.localhost";
           value = {
             extraConfig = ''
-              reverse_proxy ${svc.host}:${toString svc.port}
+              reverse_proxy ${svc.host}:${toString svc.port} {
+                header_up Host {upstream_hostport}
+              }
             '';
           };
         }) cfg.services;
