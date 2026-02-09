@@ -34,8 +34,13 @@ in {
           cuda = pkgs.unstable.ollama-cuda;
           vulkan = pkgs.unstable.ollama-vulkan;
         }
-        .${cfg.backend};
+        .${
+          cfg.backend
+        };
       rocmOverrideGfx = cfg.rocmOverrideGfx;
+      environmentVariables = {
+        OLLAMA_CONTEXT_LENGTH = "200000";
+      };
     };
   };
 }
