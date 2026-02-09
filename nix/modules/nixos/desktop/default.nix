@@ -226,5 +226,17 @@ in {
     ];
 
     services.speechd.enable = true;
+
+    # Force DRM connector reprobe on resume from suspend.
+    # USB-C DP alt mode disconnects during sleep are not detected by the kernel,
+    # leaving stale "connected" state in sysfs and Hyprland rendering to a ghost
+    # monitor. The reprobe updates sysfs, and the udevadm trigger fires a uevent
+    # so Hyprland's DRM backend picks up the change.
+    powerManagement.resumeCommands = ''
+      for connector in /sys/class/drm/card*-DP-*/status /sys/class/drm/card*-HDMI-*/status; do
+        echo "detect" > "$connector" 2>/dev/null || true
+      done
+      ${pkgs.systemd}/bin/udevadm trigger --action=change --subsystem-match=drm
+    '';
   };
 }
