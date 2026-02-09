@@ -1,7 +1,7 @@
 local util = require("lspconfig.util")
 
 local prettierd = {
-    formatCommand = '~/.local/share/nvim/mason/bin/prettierd --stdin-filepath "${INPUT}"',
+    formatCommand = vim.fn.stdpath('data') .. '/mason/bin/prettierd --stdin-filepath "${INPUT}"',
     formatStdin = true
     -- env = {
     --   string.format('PRETTIERD_DEFAULT_CONFIG=%s', vim.fn.expand('~/.config/nvim/utils/linter-config/.prettierrc.json')),
@@ -51,6 +51,11 @@ local afmt = {
     formatStdin = true
 }
 
+local prettier_apex = {
+    formatCommand = 'pnpx prettier --stdin-filepath "${INPUT}"',
+    formatStdin = true
+}
+
 local alejandra = {formatCommand = "alejandra - ", formatStdin = true}
 
 local sedTrailingSpace = {
@@ -97,7 +102,7 @@ return {
                         "javascript", "html", "yaml", "nix", "sql", "vue", "css"
                     }, -- , "python"
                     settings = {
-                        rootMarkers = {".git/"},
+                        rootMarkers = {"package.json", ".git/"},
                         lintDebounce = "3s",
                         languages = {
                             lua = {
@@ -107,8 +112,7 @@ return {
                                 }
                             },
                             apexcode = {
-                                prettierd, -- sedTrailingSpace,
-                                -- afmt,
+                                prettier_apex,
                                 pmd
                             },
                             python = {mypy},
