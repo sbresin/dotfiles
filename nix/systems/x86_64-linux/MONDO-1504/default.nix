@@ -162,6 +162,7 @@
     git-crypt
     # os setup/debug
     usbutils
+    lm_sensors
     gparted
     exfatprogs
     # Terminal setup

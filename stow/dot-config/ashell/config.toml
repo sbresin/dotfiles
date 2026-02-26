@@ -47,6 +47,7 @@ center = ["WindowTitle"]
 right = [
 	"Tray",
 	"SystemInfo",
+	"GpuUsage",
 	[
 		"Clock",
 		"Privacy",
@@ -172,6 +173,13 @@ listen_cmd = "swaync-client -swb"
 icons.'dnd.*' = ""
 # Another regex can optionally show a red "alert" dot on the icon
 alert = ".*notification"
+
+[[CustomModule]]
+name = "GpuUsage"
+icon = "󰢮"
+command = "true"
+listen_cmd = "bash ~/.config/ashell/scripts/gpu-usage-listen.sh"
+alert = "^(warn|hot)$"
 
 # Settings module configuration
 [settings]
