@@ -5,6 +5,8 @@
   caps a    s    d    f    g    h    j    k    l    ;    '    ret
   lsft z    x    c    v    b    n    m    ,    .    /    rsft
   lctl lmet lalt           spc            ralt rmet rctl
+  ;; media keys
+  prev pp next
 )
 
 (include ./base.kbd)
@@ -17,4 +19,6 @@
   _    _      _    _    _    _    _    _    _    _    _    _    _
   _    _      _    _    _    _    _    _    _    _    _    _
   _    _      _              _              _    _    _
+  ;; media keys
+  _    _    _
 )
