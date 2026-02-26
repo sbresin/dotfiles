@@ -24,16 +24,17 @@ in {
       hideMounts = true;
       directories = [
         "/var/log"
+        "/var/cache/tuigreet"
         "/var/lib/bluetooth"
+        "/var/lib/caddy"
         "/var/lib/flatpak"
+        "/var/lib/fwupd"
         "/var/lib/nixos"
+        "/var/lib/private/dnscrypt-proxy"
+        "/var/lib/private/ollama"
         "/var/lib/sbctl"
         "/var/lib/systemd/backlight"
         "/var/lib/systemd/coredump"
-        "/var/lib/caddy"
-        "/var/lib/private/ollama"
-        "/var/cache/tuigreet"
-        "/var/lib/private/dnscrypt-proxy"
         "/etc/NetworkManager/system-connections"
         {
           directory = "/var/lib/colord";
