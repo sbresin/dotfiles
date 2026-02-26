@@ -135,6 +135,7 @@
       enable = true;
       diskDevices = "nvme-NVMe_CA5-8D512_0021044000VT nvme-Samsung_SSD_970_EVO_Plus_2TB_S4J4NM0R801122Z";
     };
+    docker.enable = true;
     private-dns.enable = true;
     secureboot.enable = true;
   };
@@ -202,15 +203,7 @@
     enable = true;
   };
 
-  # TODO: does not work yet
-  virtualisation.docker = {
-    enable = true;
-    storageDriver = "btrfs";
-    # rootless = {
-    #   enable = true;
-    #   setSocketVariable = true;
-    # };
-  };
+  virtualisation.docker.storageDriver = "btrfs";
 
   hardware.openrazer = {
     enable = true;

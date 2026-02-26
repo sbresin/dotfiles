@@ -131,6 +131,7 @@
       enable = true;
       services.ollama.port = 11434;
     };
+    docker.enable = true;
   };
 
   programs._1password = {
@@ -196,15 +197,6 @@
   # Enable the OpenSSH daemon.
   services.openssh = {
     enable = true;
-  };
-
-  virtualisation.docker = {
-    enable = true;
-    # TODO: does not work yet
-    # rootless = {
-    #   enable = true;
-    #   setSocketVariable = true;
-    # };
   };
 
   # Open ports in the firewall.
