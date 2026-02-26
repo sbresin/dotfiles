@@ -148,9 +148,11 @@
     [
       tectonic
     ]
+    ++ [
+      pkgs.${namespace}.neovim-patched
+    ]
     ++ (with pkgs.unstable; [
       vim
-      neovim
       git
       git-crypt
       usbutils

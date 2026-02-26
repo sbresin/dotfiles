@@ -154,9 +154,10 @@
   };
 
   # List packages installed in system profile. To search, run:
-  environment.systemPackages = with pkgs.unstable; [
+  environment.systemPackages = [
+    pkgs.${namespace}.neovim-patched
+  ] ++ (with pkgs.unstable; [
     vim
-    neovim
     git
     git-crypt
     # os setup/debug
@@ -187,7 +188,7 @@
     # ROCm tools for GPU monitoring
     pkgs.rocmPackages.rocm-smi
     pkgs.rocmPackages.rocminfo
-  ];
+  ]);
 
   # link zsh completions, so they are available globally TODO: same for fish/bash?
   environment.pathsToLink = ["/share/zsh"];

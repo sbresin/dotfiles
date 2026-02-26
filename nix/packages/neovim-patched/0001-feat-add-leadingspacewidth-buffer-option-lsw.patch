@@ -1,0 +1,580 @@
+From 1b8c67469d3ac55915c50bcf4a53bb870a5b2a98 Mon Sep 17 00:00:00 2001
+From: Sebastian Bresin <sebastian.bresin@gmail.com>
+Date: Tue, 17 Feb 2026 11:53:26 +0100
+Subject: [PATCH 1/2] feat: add 'leadingspacewidth' buffer option (lsw)
+
+Add a new buffer-local option that controls the visual width of leading
+space characters without modifying buffer content. When set to N > 0,
+each leading space renders as N screen columns wide. Default is 0
+(disabled). Abbreviation: lsw.
+
+This is useful when working with codebases that use narrow space
+indentation (e.g. 2-space) but you prefer a wider visual indent.
+With 2-space indentation and lsw=2, each indent level displays as
+4 columns wide.
+
+Implementation:
+- Option definition in options.lua with buffer-local scope
+- Global var p_lsw, buffer field b_p_lsw, get_varp_from/buf_copy/validate
+- CharsizeArg extended with leading_space_end/leading_space_width
+- init_charsize_arg scans leading spaces, forces kCharsizeRegular
+- charsize_regular returns lsw width for leading space characters
+- drawline.c: leadcol computation + n_extra expansion after listchars
+- Listchars composition: checks original buffer byte not substituted mb_c
+- indent_size_ts extended with lsw param for breakindent integration
+- All callers of indent_size_ts updated (indent.c, change.c)
+- Breakindent cache invalidation for prev_lsw
+- 17 functional UI tests covering rendering, listchars, cursor, options
+
+Ref: neovim#15353
+---
+ runtime/optwin.vim                            |   3 +
+ src/nvim/buffer_defs.h                        |   1 +
+ src/nvim/change.c                             |   4 +-
+ src/nvim/drawline.c                           |  28 +++
+ src/nvim/indent.c                             |  27 ++-
+ src/nvim/option.c                             |   5 +
+ src/nvim/option_vars.h                        |   1 +
+ src/nvim/options.lua                          |  23 +++
+ src/nvim/plines.c                             |  18 ++
+ src/nvim/plines.h                             |   4 +
+ test/functional/ui/leadingspacewidth_spec.lua | 195 ++++++++++++++++++
+ 11 files changed, 297 insertions(+), 12 deletions(-)
+ create mode 100644 test/functional/ui/leadingspacewidth_spec.lua
+
+diff --git a/runtime/optwin.vim b/runtime/optwin.vim
+index dff3ce39a4..3d68fc8c15 100644
+--- a/runtime/optwin.vim
++++ b/runtime/optwin.vim
+@@ -800,6 +800,9 @@ call <SID>BinOptionG("sr", &sr)
+ call <SID>AddOption("expandtab", gettext("expand <Tab> to spaces in Insert mode"))
+ call append("$", "\t" .. s:local_to_buffer)
+ call <SID>BinOptionL("et")
++call <SID>AddOption("leadingspacewidth", gettext("visual width of leading space characters"))
++call append("$", "\t" .. s:local_to_buffer)
++call <SID>OptionL("lsw")
+ call <SID>AddOption("autoindent", gettext("automatically set the indent of a new line"))
+ call append("$", "\t" .. s:local_to_buffer)
+ call <SID>BinOptionL("ai")
+diff --git a/src/nvim/buffer_defs.h b/src/nvim/buffer_defs.h
+index bb22c76cae..12952f474f 100644
+--- a/src/nvim/buffer_defs.h
++++ b/src/nvim/buffer_defs.h
+@@ -591,6 +591,7 @@ struct file_buffer {
+   int b_p_pi;                   ///< 'preserveindent'
+   char *b_p_qe;                 ///< 'quoteescape'
+   int b_p_ro;                   ///< 'readonly'
++  OptInt b_p_lsw;               ///< 'leadingspacewidth'
+   OptInt b_p_sw;                ///< 'shiftwidth'
+   OptInt b_p_scbk;              ///< 'scrollback'
+   int b_p_si;                   ///< 'smartindent'
+diff --git a/src/nvim/change.c b/src/nvim/change.c
+index f969bddfd1..f57e602f2d 100644
+--- a/src/nvim/change.c
++++ b/src/nvim/change.c
+@@ -1179,7 +1179,7 @@ bool open_line(int dir, int flags, int second_line_indent, bool *did_do_comment)
+     // If 'autoindent' and/or 'smartindent' is set, try to figure out what
+     // indent to use for the new line.
+     // count white space on current line
+-    newindent = indent_size_ts(saved_line, curbuf->b_p_ts, curbuf->b_p_vts_array);
++    newindent = indent_size_ts(saved_line, curbuf->b_p_ts, curbuf->b_p_vts_array, 0);
+     if (newindent == 0 && !(flags & OPENLINE_COM_LIST)) {
+       newindent = second_line_indent;  // for ^^D command in insert mode
+     }
+@@ -1622,7 +1622,7 @@ bool open_line(int dir, int flags, int second_line_indent, bool *did_do_comment)
+ 
+         // Recompute the indent, it may have changed.
+         if (curbuf->b_p_ai || do_si) {
+-          newindent = indent_size_ts(leader, curbuf->b_p_ts, curbuf->b_p_vts_array);
++          newindent = indent_size_ts(leader, curbuf->b_p_ts, curbuf->b_p_vts_array, 0);
+         }
+ 
+         // Add the indent offset
+diff --git a/src/nvim/drawline.c b/src/nvim/drawline.c
+index e1f13331df..00a51b8c91 100644
+--- a/src/nvim/drawline.c
++++ b/src/nvim/drawline.c
+@@ -1456,6 +1456,20 @@ int win_line(win_T *wp, linenr_T lnum, int startrow, int endrow, int col_rows, b
+     }
+   }
+ 
++  // 'leadingspacewidth': also compute leadcol for leading space expansion
++  if (wp->w_buffer->b_p_lsw > 0 && !has_foldtext && draw_text) {
++    if (leadcol == 0) {
++      colnr_T lc = 0;
++      while (ptr[lc] == ' ') {
++        lc++;
++      }
++      if (ptr[lc] != NUL) {
++        // keep track of the first column not filled with spaces
++        leadcol = lc + (colnr_T)(ptr - line + 1);
++      }
++    }
++  }
++
+   // 'nowrap' or 'wrap' and a single line that doesn't fit: Advance to the
+   // first character to be displayed.
+   const int start_col = wp->w_p_wrap
+@@ -2355,6 +2369,20 @@ int win_line(win_T *wp, linenr_T lnum, int startrow, int endrow, int col_rows, b
+         }
+       }
+ 
++      // 'leadingspacewidth': expand leading spaces to multiple screen columns.
++      // Placed after listchars processing so both effects compose:
++      // listchars substitutes the glyph, lsw widens it.
++      // Check the original buffer byte (*(ptr-1)) because listchars may have
++      // changed mb_c to the lead/space substitute character.
++      if (wp->w_buffer->b_p_lsw > 0
++          && leadcol != 0
++          && ptr - line < leadcol
++          && ptr > line && *(ptr - 1) == ' ') {
++        wlv.n_extra = (int)wp->w_buffer->b_p_lsw - 1;
++        wlv.sc_extra = mb_schar;  // use the (possibly listchar-substituted) glyph
++        wlv.sc_final = NUL;
++      }
++
+       // Handling of non-printable characters.
+       if (!vim_isprintc(mb_c)) {
+         // when getting a character from the file, we may have to
+diff --git a/src/nvim/indent.c b/src/nvim/indent.c
+index 0d06199bde..0c6f17bb03 100644
+--- a/src/nvim/indent.c
++++ b/src/nvim/indent.c
+@@ -370,19 +370,19 @@ int get_sts_value(void)
+ /// Count the size (in window cells) of the indent in the current line.
+ int get_indent(void)
+ {
+-  return indent_size_ts(get_cursor_line_ptr(), curbuf->b_p_ts, curbuf->b_p_vts_array);
++  return indent_size_ts(get_cursor_line_ptr(), curbuf->b_p_ts, curbuf->b_p_vts_array, 0);
+ }
+ 
+ /// Count the size (in window cells) of the indent in line "lnum".
+ int get_indent_lnum(linenr_T lnum)
+ {
+-  return indent_size_ts(ml_get(lnum), curbuf->b_p_ts, curbuf->b_p_vts_array);
++  return indent_size_ts(ml_get(lnum), curbuf->b_p_ts, curbuf->b_p_vts_array, 0);
+ }
+ 
+ /// Count the size (in window cells) of the indent in line "lnum" of buffer "buf".
+ int get_indent_buf(buf_T *buf, linenr_T lnum)
+ {
+-  return indent_size_ts(ml_get_buf(buf, lnum), buf->b_p_ts, buf->b_p_vts_array);
++  return indent_size_ts(ml_get_buf(buf, lnum), buf->b_p_ts, buf->b_p_vts_array, 0);
+ }
+ 
+ /// Compute the size of the indent (in window cells) in line "ptr",
+@@ -406,12 +406,15 @@ int indent_size_no_ts(char const *ptr)
+ }
+ 
+ /// Compute the size of the indent (in window cells) in line "ptr",
+-/// using tabstops
+-int indent_size_ts(char const *ptr, OptInt ts, colnr_T *vts)
++/// using tabstops.  When "lsw" > 0, each leading space counts as
++/// "lsw" cells instead of 1 (for 'leadingspacewidth').
++int indent_size_ts(char const *ptr, OptInt ts, colnr_T *vts, int lsw)
+   FUNC_ATTR_NONNULL_ARG(1) FUNC_ATTR_PURE
+ {
+   assert(char2cells(' ') == 1);
+ 
++  int const space_width = (lsw > 0) ? lsw : 1;
++
+   int vcol = 0;
+   int tabstop_width, next_tab_vcol;
+ 
+@@ -431,13 +434,13 @@ int indent_size_ts(char const *ptr, OptInt ts, colnr_T *vts)
+       do {
+         char const c = *ptr++;
+         if (c == ' ') {
+-          cur_vcol++;
++          cur_vcol += space_width;
+         } else if (c == TAB) {
+           break;
+         } else {
+           return cur_vcol;
+         }
+-      } while (cur_vcol != vcol);
++      } while (cur_vcol < vcol);
+     }
+ 
+     tabstop_width = *last_tabstop;
+@@ -448,8 +451,8 @@ int indent_size_ts(char const *ptr, OptInt ts, colnr_T *vts)
+   while (true) {
+     char const c = *ptr++;
+     if (c == ' ') {
+-      vcol++;
+-      next_tab_vcol += (vcol == next_tab_vcol) ? tabstop_width : 0;
++      vcol += space_width;
++      next_tab_vcol += (vcol >= next_tab_vcol) ? tabstop_width : 0;
+     } else if (c == TAB) {
+       vcol = next_tab_vcol;
+       next_tab_vcol += tabstop_width;
+@@ -848,6 +851,7 @@ int get_breakindent_win(win_T *wp, char *line)
+   static bool prev_no_ts = false;  // cached no_ts value
+   static unsigned prev_dy_uhex = 0;   // cached 'display' "uhex" value
+   static char *prev_flp = NULL;  // cached formatlistpat value
++  static int prev_lsw = 0;  // cached 'leadingspacewidth' value
+   int bri = 0;
+   // window width minus window margin space, i.e. what rests for text
+   const int eff_wwidth = wp->w_width_inner - win_col_off(wp) + win_col_off2(wp);
+@@ -868,6 +872,7 @@ int get_breakindent_win(win_T *wp, char *line)
+   if (prev_fnum != wp->w_buffer->b_fnum
+       || prev_ts != wp->w_buffer->b_p_ts
+       || prev_vts != wp->w_buffer->b_p_vts_array
++      || prev_lsw != (int)wp->w_buffer->b_p_lsw
+       || prev_tick != buf_get_changedtick(wp->w_buffer)
+       || prev_listopt != wp->w_briopt_list
+       || prev_no_ts != no_ts
+@@ -880,12 +885,14 @@ int get_breakindent_win(win_T *wp, char *line)
+     prev_line = xstrdup(line);
+     prev_ts = wp->w_buffer->b_p_ts;
+     prev_vts = wp->w_buffer->b_p_vts_array;
++    prev_lsw = (int)wp->w_buffer->b_p_lsw;
+     if (wp->w_briopt_vcol == 0) {
+       if (no_ts) {
+         prev_indent = indent_size_no_ts(line);
+       } else {
+         prev_indent = indent_size_ts(line, wp->w_buffer->b_p_ts,
+-                                     wp->w_buffer->b_p_vts_array);
++                                     wp->w_buffer->b_p_vts_array,
++                                     (int)wp->w_buffer->b_p_lsw);
+       }
+     }
+     prev_tick = buf_get_changedtick(wp->w_buffer);
+diff --git a/src/nvim/option.c b/src/nvim/option.c
+index 4bf2d59f8b..9598d6a180 100644
+--- a/src/nvim/option.c
++++ b/src/nvim/option.c
+@@ -2845,6 +2845,7 @@ static const char *validate_num_option(OptIndex opt_idx, OptInt *newval, char *e
+   case kOptUpdatetime:
+   case kOptSidescroll:
+   case kOptFoldlevel:
++  case kOptLeadingspacewidth:
+   case kOptShiftwidth:
+   case kOptTextwidth:
+   case kOptWritedelay:
+@@ -4769,6 +4770,8 @@ void *get_varp_from(vimoption_T *p, buf_T *buf, win_T *win)
+     return &(win->w_s->b_p_spl);
+   case kOptSpelloptions:
+     return &(win->w_s->b_p_spo);
++  case kOptLeadingspacewidth:
++    return &(buf->b_p_lsw);
+   case kOptShiftwidth:
+     return &(buf->b_p_sw);
+   case kOptTagfunc:
+@@ -5258,6 +5261,8 @@ void buf_copy_options(buf_T *buf, int flags)
+         buf->b_p_isk = xstrdup(p_isk);
+         COPY_OPT_SCTX(buf, kBufOptIskeyword);
+         did_isk = true;
++        buf->b_p_lsw = p_lsw;
++        COPY_OPT_SCTX(buf, kBufOptLeadingspacewidth);
+         buf->b_p_ts = p_ts;
+         COPY_OPT_SCTX(buf, kBufOptTabstop);
+         buf->b_p_vts = xstrdup(p_vts);
+diff --git a/src/nvim/option_vars.h b/src/nvim/option_vars.h
+index 3f0445675d..575159913d 100644
+--- a/src/nvim/option_vars.h
++++ b/src/nvim/option_vars.h
+@@ -394,6 +394,7 @@ EXTERN OptInt p_ls;             ///< 'laststatus'
+ EXTERN OptInt p_stal;           ///< 'showtabline'
+ EXTERN char *p_lcs;             ///< 'listchars'
+ EXTERN int p_lz;                ///< 'lazyredraw'
++EXTERN OptInt p_lsw;            ///< 'leadingspacewidth'
+ EXTERN int p_lpl;               ///< 'loadplugins'
+ EXTERN int p_magic;             ///< 'magic'
+ EXTERN char *p_menc;            ///< 'makeencoding'
+diff --git a/src/nvim/options.lua b/src/nvim/options.lua
+index e04e492162..223c4679a4 100644
+--- a/src/nvim/options.lua
++++ b/src/nvim/options.lua
+@@ -4975,6 +4975,29 @@ local options = {
+       type = 'boolean',
+       varname = 'p_lz',
+     },
++    {
++      abbreviation = 'lsw',
++      defaults = 0,
++      desc = [=[
++        Visual width (in screen columns) to use when rendering each leading
++        space character.  When set to 0 (the default), leading spaces render
++        at their normal width of 1 column.  When set to a value > 0, each
++        leading space occupies that many columns on screen, without changing
++        the buffer content.  Tab characters in leading whitespace are not
++        affected (use 'tabstop' for those).
++
++        This is useful when working with codebases that use narrow space
++        indentation (e.g., 2-space) but you prefer a wider visual indent.
++        Example: with 2-space indentation and 'leadingspacewidth' set to 2,
++        each indent level displays as 4 columns wide.
++      ]=],
++      full_name = 'leadingspacewidth',
++      redraw = { 'current_buffer' },
++      scope = { 'buf' },
++      short_desc = N_('visual width of leading space characters'),
++      type = 'number',
++      varname = 'p_lsw',
++    },
+     {
+       abbreviation = 'lbr',
+       defaults = false,
+diff --git a/src/nvim/plines.c b/src/nvim/plines.c
+index d8ae64fb16..833ae7624f 100644
+--- a/src/nvim/plines.c
++++ b/src/nvim/plines.c
+@@ -105,6 +105,18 @@ CSType init_charsize_arg(CharsizeArg *csarg, win_T *wp, linenr_T lnum, char *lin
+   csarg->indent_width = INT_MIN;
+   csarg->use_tabstop = !wp->w_p_list || wp->w_p_lcs_chars.tab1;
+ 
++  csarg->leading_space_width = (int)wp->w_buffer->b_p_lsw;
++  csarg->leading_space_end = 0;
++  if (csarg->leading_space_width > 0) {
++    char *p = line;
++    while (*p == ' ') {
++      p++;
++    }
++    if (*p != NUL) {  // don't apply to all-whitespace lines
++      csarg->leading_space_end = (colnr_T)(p - line);
++    }
++  }
++
+   if (lnum > 0) {
+     if (marktree_itr_get_filter(wp->w_buffer->b_marktree, lnum - 1, 0, lnum, 0,
+                                 inline_filter, csarg->iter)) {
+@@ -113,6 +125,7 @@ CSType init_charsize_arg(CharsizeArg *csarg, win_T *wp, linenr_T lnum, char *lin
+   }
+ 
+   if (csarg->virt_row >= 0
++      || csarg->leading_space_end > 0
+       || (wp->w_p_wrap && (wp->w_p_lbr || wp->w_p_bri || *get_showbreak_value(wp) != NUL))) {
+     return kCharsizeRegular;
+   } else {
+@@ -155,6 +168,11 @@ CharSize charsize_regular(CharsizeArg *csarg, char *const cur, colnr_T const vco
+     size = kInvalidByteCells;
+   } else {
+     size = ptr2cells(cur);
++    // 'leadingspacewidth': widen leading spaces
++    if (cur_char == ' ' && csarg->leading_space_width > 0
++        && cur >= line && cur < line + csarg->leading_space_end) {
++      size = csarg->leading_space_width;
++    }
+     is_doublewidth = size == 2 && cur_char >= 0x80;
+   }
+ 
+diff --git a/src/nvim/plines.h b/src/nvim/plines.h
+index 5e7f485284..3b6e88c8aa 100644
+--- a/src/nvim/plines.h
++++ b/src/nvim/plines.h
+@@ -28,6 +28,10 @@ typedef struct {
+   int cur_text_width_right;  ///< Width of virtual text right of cursor.
+ 
+   int max_head_vcol;         ///< See charsize_regular().
++
++  colnr_T leading_space_end; ///< Byte offset where leading spaces end (0 if disabled).
++  int leading_space_width;   ///< Value of 'leadingspacewidth' (0 = disabled).
++
+   MarkTreeIter iter[1];
+ } CharsizeArg;
+ 
+diff --git a/test/functional/ui/leadingspacewidth_spec.lua b/test/functional/ui/leadingspacewidth_spec.lua
+new file mode 100644
+index 0000000000..6f46c53295
+--- /dev/null
++++ b/test/functional/ui/leadingspacewidth_spec.lua
+@@ -0,0 +1,195 @@
++local t = require('test.testutil')
++local n = require('test.functional.testnvim')()
++local Screen = require('test.functional.ui.screen')
++
++local clear = n.clear
++local feed = n.feed
++local command = n.command
++local api = n.api
++local eq = t.eq
++local fn = n.fn
++
++--- Set buffer lines directly, avoiding insert()'s dedent behavior.
++--- @param lines string[]
++local function set_lines(lines)
++  api.nvim_buf_set_lines(0, 0, -1, true, lines)
++end
++
++describe("'leadingspacewidth'", function()
++  local screen
++
++  before_each(function()
++    clear()
++    screen = Screen.new(40, 8)
++  end)
++
++  describe('option', function()
++    it('defaults to 0', function()
++      eq(0, api.nvim_get_option_value('leadingspacewidth', { buf = 0 }))
++    end)
++
++    it('can be set and get via abbreviation', function()
++      command('set lsw=3')
++      eq(3, api.nvim_get_option_value('leadingspacewidth', { buf = 0 }))
++    end)
++
++    it('rejects negative values', function()
++      local ok = pcall(command, 'set lsw=-1')
++      eq(false, ok)
++      eq(0, api.nvim_get_option_value('leadingspacewidth', { buf = 0 }))
++    end)
++
++    it('is buffer-local', function()
++      command('setlocal lsw=2')
++      command('new')
++      eq(0, api.nvim_get_option_value('leadingspacewidth', { buf = 0 }))
++    end)
++  end)
++
++  describe('display', function()
++    it('expands leading spaces when lsw=2', function()
++      -- 2 leading spaces → 4 screen cols; 4 leading spaces → 8 screen cols
++      set_lines({ '  hello', '    world' })
++      command('set lsw=2')
++      screen:expect([[
++        ^    hello                               |
++                world                           |
++        {1:~                                       }|*5
++                                                |
++      ]])
++    end)
++
++    it('expands leading spaces when lsw=3', function()
++      -- 2 leading spaces → 6 screen cols; 4 leading spaces → 12 screen cols
++      set_lines({ '  hello', '    world' })
++      command('set lsw=3')
++      screen:expect([[
++        ^      hello                             |
++                    world                       |
++        {1:~                                       }|*5
++                                                |
++      ]])
++    end)
++
++    it('does not affect non-leading spaces', function()
++      -- 2 leading spaces → 4 screen cols; interior space stays 1 col wide
++      set_lines({ '  hello world' })
++      command('set lsw=2')
++      screen:expect([[
++        ^    hello world                         |
++        {1:~                                       }|*6
++                                                |
++      ]])
++    end)
++
++    it('does not affect all-whitespace lines', function()
++      -- line 1: "  hello" → 4 screen cols of indent
++      -- line 2: "   " (all whitespace) → NOT expanded (stays 3 spaces)
++      -- line 3: "  world" → 4 screen cols of indent
++      set_lines({ '  hello', '   ', '  world' })
++      command('set lsw=2')
++      screen:expect([[
++        ^    hello                               |
++                                                |
++            world                               |
++        {1:~                                       }|*4
++                                                |
++      ]])
++    end)
++
++    it('does not affect tab characters', function()
++      -- Tab should use tabstop, not lsw
++      set_lines({ '\thello' })
++      command('set tabstop=4 lsw=2')
++      screen:expect([[
++           ^ hello                               |
++        {1:~                                       }|*6
++                                                |
++      ]])
++    end)
++
++    it('lsw=0 disables expansion (default)', function()
++      set_lines({ '  hello' })
++      command('set lsw=0')
++      screen:expect([[
++        ^  hello                                 |
++        {1:~                                       }|*6
++                                                |
++      ]])
++    end)
++
++    it('lsw=1 renders at normal width', function()
++      set_lines({ '  hello' })
++      command('set lsw=1')
++      screen:expect([[
++        ^  hello                                 |
++        {1:~                                       }|*6
++                                                |
++      ]])
++    end)
++
++    it('cursor position is correct on leading spaces', function()
++      set_lines({ '  hello' })
++      command('set lsw=2')
++      feed('0')
++      -- col('.') is 1-indexed byte column; cursor at column 1
++      eq(1, fn.col('.'))
++    end)
++
++    it('works with multiple indent levels', function()
++      set_lines({ 'no indent', '  level 1', '    level 2', '      level 3' })
++      command('set lsw=2')
++      screen:expect([[
++        ^no indent                               |
++            level 1                             |
++                level 2                         |
++                    level 3                     |
++        {1:~                                       }|*3
++                                                |
++      ]])
++    end)
++  end)
++
++  describe('with listchars', function()
++    it('composes with lead listchar', function()
++      -- 2 leading spaces × lsw=2 → 4 screen cols, each showing lead char
++      set_lines({ '  hello' })
++      command('set lsw=2 list listchars=lead:.')
++      screen:expect([[
++        {1:^.}.{1:.}.hello                               |
++        {1:~                                       }|*6
++                                                |
++      ]])
++    end)
++
++    it('composes with leadmultispace listchar', function()
++      -- 4 leading spaces × lsw=2 → 8 screen cols with pattern ".-" repeating
++      set_lines({ '    hello' })
++      command('set lsw=2 list listchars=leadmultispace:.-')
++      screen:expect([[
++        {1:^.}.{1:-}-{1:.}.{1:-}-hello                           |
++        {1:~                                       }|*6
++                                                |
++      ]])
++    end)
++  end)
++
++  describe('cursor navigation', function()
++    it('virtcol returns correct virtual column', function()
++      set_lines({ '  hello' })
++      command('set lsw=2')
++      feed('0')
++      -- virtcol('.') returns the last screen column of the char under cursor.
++      -- With lsw=2, first space occupies vcols 1-2, so virtcol returns 2.
++      eq(2, fn.virtcol('.'))
++    end)
++
++    it('virtcol of text after indent is correct', function()
++      set_lines({ '  hello' })
++      command('set lsw=2')
++      feed('0w')
++      -- 2 spaces * 2 cols each = 4 cols of indent; 'h' is at virtual column 5
++      eq(5, fn.virtcol('.'))
++    end)
++  end)
++end)
+-- 
+2.51.2
+
