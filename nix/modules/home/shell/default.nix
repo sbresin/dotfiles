@@ -121,6 +121,7 @@ in {
         gpu = "git pull";
         l = "less";
         grep = "grep --color";
+        oc = "opencode";
         "sf pds" = "sf project deploy start";
       };
     };
