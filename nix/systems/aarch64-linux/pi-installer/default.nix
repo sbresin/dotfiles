@@ -21,11 +21,14 @@
   security.sudo.wheelNeedsPassword = false;
   users.users.sebe = {
     isNormalUser = true;
+    shell = pkgs.zsh;
     extraGroups = ["wheel"];
     openssh.authorizedKeys.keys = [
       "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIARDUSJe+7l/6PKYcXQyFyoMYeZE7s/zGIbtoXmZfB7y sebe@blade15"
     ];
   };
+
+  programs.zsh.enable = true;
 
   environment.systemPackages = with pkgs; [git neovim disko ethtool];
 

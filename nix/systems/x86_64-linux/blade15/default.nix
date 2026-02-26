@@ -100,9 +100,12 @@
   };
   users.users.sebe = {
     isNormalUser = true;
+    shell = pkgs.zsh;
     extraGroups = ["wheel" "input" "uinput" "networkmanager" "lp" "scanner" "plugdev" "cdrom" "adbusers" "openrazer" "storage" "gamemode" "vboxusers" "wireshark" "dialout"];
     initialHashedPassword = "$6$.7TC31zU0p1OfOH2$b7.CZMpPB.X6YFZMR5akKaEhDTlUPnUJc.gXmv1GqnVV528RuQKvqCp0sRTUk/ZXo.eofNBD9QUup6s9adyXI/";
   };
+
+  programs.zsh.enable = true;
 
   # enable adb
   programs.adb.enable = true;
