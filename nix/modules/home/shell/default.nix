@@ -16,7 +16,8 @@
   # This removes that patch to restore upstream behavior (PATH-based resolution).
   # See: https://github.com/pre-commit/pre-commit/issues/2497
   pre-commit-fixed = pkgs.unstable.pre-commit.overrideAttrs (oldAttrs: {
-    patches = builtins.filter
+    patches =
+      builtins.filter
       (p: baseNameOf (toString p) != "hook-tmpl.patch")
       (oldAttrs.patches or []);
 
