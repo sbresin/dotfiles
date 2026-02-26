@@ -55,6 +55,12 @@
   # SSD needs TRIM
   services.fstrim.enable = true;
 
+  # Firmware updates via fwupd (BIOS, EC, PD controllers, etc.)
+  services.fwupd = {
+    enable = true;
+    package = pkgs.unstable.fwupd;
+  };
+
   networking.networkmanager = {
     enable = true;
     wifi.powersave = true;
@@ -161,6 +167,7 @@
     git
     git-crypt
     # os setup/debug
+    fwupd
     usbutils
     lm_sensors
     gparted
