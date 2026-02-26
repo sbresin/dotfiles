@@ -35,7 +35,7 @@
 
   # Use Linux_cachyos kernel
   boot.kernelPackages = pkgs.linuxPackages_cachyos-gcc;
-  boot.extraModulePackages = with config.boot.kernelPackages; [ddcci-driver];
+  boot.extraModulePackages = [];
 
   # use sched_ext
   services.scx = {
@@ -65,10 +65,13 @@
     initrd.enable = true; # early KMS
   };
 
-  # services.ddccontrol = {
-  #   enable = true;
-  #   package = pkgs.ddcutil-service;
-  # };
+  # DDC/CI monitor control via D-Bus (brightness, contrast for external monitors).
+  # Enables hardware.i2c, registers ddcutil-service on D-Bus for auto-start,
+  # and provides ddcutil CLI as a dependency.
+  services.ddccontrol = {
+    enable = true;
+    package = pkgs.unstable.ddcutil-service;
+  };
 
   # Set your time zone.
   time.timeZone = "Europe/Berlin";
