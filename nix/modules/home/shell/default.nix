@@ -419,6 +419,10 @@ in {
         export LD_LIBRARY_PATH="$NIX_LD_LIBRARY_PATH:$LD_LIBRARY_PATH"
         exec ${pkgs.unstable.python3}/bin/python "$@"
       '')
+      (pkgs.writeShellScriptBin "python3" ''
+        export LD_LIBRARY_PATH="$NIX_LD_LIBRARY_PATH:$LD_LIBRARY_PATH"
+        exec ${pkgs.unstable.python3}/bin/python "$@"
+      '')
       uv
       ruff
       sqruff
@@ -434,6 +438,7 @@ in {
       # twiggy
       # CLI tools
       bkt
+      file
       btop
       chafa
       copier
@@ -454,6 +459,7 @@ in {
       tabiew
       unar
       unzip
+      zip
       wget
       yq
       # pkgs.${namespace}.git-amnesia
