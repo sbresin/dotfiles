@@ -1,0 +1,5 @@
+theme = "rose-pine"
+
+[[providers.prefixes]]
+prefix = "gh "
+provider = "menus:github"
