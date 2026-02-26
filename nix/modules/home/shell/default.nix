@@ -148,6 +148,7 @@ in {
       ZVM_INIT_MODE = "sourcing";
       ZVM_TERM = "xterm-256color";
       ZVM_VI_HIGHLIGHT_BACKGROUND = "#524f67";
+      KEYTIMEOUT = 1;
     };
     initContent =
       # bash
