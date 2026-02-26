@@ -288,6 +288,7 @@ in {
     package = pkgs.unstable.fzf;
     enableFishIntegration = true;
     enableZshIntegration = true;
+    tmux.enableShellIntegration = true;
   };
 
   programs.git = {
@@ -359,6 +360,31 @@ in {
     enableFishIntegration = true;
     enableZshIntegration = true;
   };
+
+  programs.tmux = {
+    enable = true;
+    package = pkgs.unstable.tmux;
+    sensibleOnTop = true;
+    terminal = "tmux-256color";
+    extraConfig = lib.mkOrder 2000 ''
+      source-file ~/.config/tmux/tmux.local.conf
+    '';
+  };
+
+  programs.sesh = {
+    enable = true;
+    package = pkgs.unstable.sesh;
+    fzfPackage = pkgs.unstable.fzf;
+    zoxidePackage = pkgs.unstable.zoxide;
+    enableAlias = true;
+    enableTmuxIntegration = true;
+    tmuxKey = "s";
+    icons = true;
+    settings = {};
+  };
+
+  # Prevent home-manager from managing sesh.toml (we stow it instead)
+  home.file.".config/sesh/sesh.toml".enable = false;
 
   # ************************************************************************************************
   # STACKS

@@ -1,0 +1,9 @@
+config:
+  show-name: true
+  multi-pane-icon: ""
+  fallback-icon: "󰂮"
+  icon-position: "left"
+
+icons:
+  opencode: "󱜙"
+  nh: "󱄅"
