@@ -1,0 +1,416 @@
+#!/usr/bin/env python3
+"""Show computer uptime phases for a specific day.
+
+Parses the systemd journal for boot, shutdown, suspend and wake events,
+reconstructs chronological phases, and prints a coloured summary table
+with a running uptime total.
+
+Events used:
+    BOOT (awake starts)  — systemd[1]: "Startup finished in …"
+    SHUTDOWN (awake ends) — systemd[1]: "Shutting down."
+    SUSPEND (awake ends)  — kernel: "PM: suspend entry"
+    WAKE (awake starts)   — kernel: "PM: suspend exit"
+
+Cross-midnight handling: the script looks back into the previous day to
+determine whether the system was awake or asleep at 00:00.  If the day
+is today, the final phase is clamped to *now* instead of 23:59:59.
+"""
+
+from __future__ import annotations
+
+import argparse
+import re
+import subprocess
+import sys
+from datetime import datetime, timedelta
+from enum import Enum, auto
+from typing import List, NamedTuple, Optional, Tuple
+
+
+# ── Constants ────────────────────────────────────────────────────────
+
+LOOKBACK_HOURS = 12
+TIMESTAMP_RE = re.compile(r"^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\+\d{2}:\d{2})\s")
+
+PATTERNS: List[Tuple[str, re.Pattern[str]]] = [
+    ("boot", re.compile(r"systemd\[1\]: Startup finished in ")),
+    ("shutdown", re.compile(r"systemd\[1\]: Shutting down\.")),
+    ("suspend", re.compile(r"kernel: PM: suspend entry")),
+    ("wake", re.compile(r"kernel: PM: suspend exit")),
+]
+
+
+# ── Types ────────────────────────────────────────────────────────────
+
+class EventType(Enum):
+    BOOT = auto()
+    SHUTDOWN = auto()
+    SUSPEND = auto()
+    WAKE = auto()
+
+
+class Event(NamedTuple):
+    timestamp: datetime
+    kind: EventType
+
+
+class PhaseType(Enum):
+    AWAKE = "awake"
+    SUSPENDED = "suspended"
+    OFF = "off"
+
+
+class Phase(NamedTuple):
+    start: datetime
+    end: datetime
+    kind: PhaseType
+
+
+EVENT_MAP = {
+    "boot": EventType.BOOT,
+    "shutdown": EventType.SHUTDOWN,
+    "suspend": EventType.SUSPEND,
+    "wake": EventType.WAKE,
+}
+
+# Events that mark the system as awake
+AWAKE_EVENTS = {EventType.BOOT, EventType.WAKE}
+
+
+# ── Colour helpers ───────────────────────────────────────────────────
+
+class _Colours:
+    """ANSI colour codes that degrade to empty strings when colour is off."""
+
+    def __init__(self, enabled: bool) -> None:
+        self._on = enabled
+
+    def _esc(self, code: str) -> str:
+        return f"\033[{code}m" if self._on else ""
+
+    @property
+    def reset(self) -> str:
+        return self._esc("0")
+
+    @property
+    def bold(self) -> str:
+        return self._esc("1")
+
+    @property
+    def dim(self) -> str:
+        return self._esc("2")
+
+    @property
+    def green(self) -> str:
+        return self._esc("32")
+
+    @property
+    def cyan(self) -> str:
+        return self._esc("36")
+
+    @property
+    def yellow(self) -> str:
+        return self._esc("33")
+
+
+# ── Journal query ────────────────────────────────────────────────────
+
+def query_journal(since: datetime, until: datetime) -> str:
+    """Run journalctl and return raw output."""
+    result = subprocess.run(
+        [
+            "journalctl",
+            "--output=short-iso",
+            "--no-pager",
+            f"--since={since.strftime('%Y-%m-%d %H:%M:%S')}",
+            f"--until={until.strftime('%Y-%m-%d %H:%M:%S')}",
+        ],
+        capture_output=True,
+        text=True,
+    )
+    return result.stdout
+
+
+def parse_events(raw: str) -> List[Event]:
+    """Extract boot/shutdown/suspend/wake events from journal output."""
+    events: List[Event] = []
+    for line in raw.splitlines():
+        ts_match = TIMESTAMP_RE.match(line)
+        if not ts_match:
+            continue
+        for label, pattern in PATTERNS:
+            if pattern.search(line):
+                timestamp = datetime.fromisoformat(ts_match.group(1))
+                events.append(Event(timestamp, EVENT_MAP[label]))
+                break
+    events.sort(key=lambda e: e.timestamp)
+    return events
+
+
+# ── Phase reconstruction ─────────────────────────────────────────────
+
+def determine_initial_state(
+    events: List[Event], day_start: datetime
+) -> Optional[EventType]:
+    """Find the last event before day_start to infer the system state at midnight."""
+    last_before: Optional[EventType] = None
+    for event in events:
+        if event.timestamp >= day_start:
+            break
+        last_before = event.kind
+    return last_before
+
+
+def phase_type_for_state(state: EventType) -> PhaseType:
+    """Map an event (the cause of a state) to the phase type it produces."""
+    if state in AWAKE_EVENTS:
+        return PhaseType.AWAKE
+    if state == EventType.SUSPEND:
+        return PhaseType.SUSPENDED
+    return PhaseType.OFF
+
+
+def build_phases(
+    events: List[Event],
+    day_start: datetime,
+    day_end: datetime,
+) -> List[Phase]:
+    """Walk events chronologically and build a list of phases for the day.
+
+    Each event marks a state *transition*.  The phase between event N and
+    event N+1 has the type that event N transitions the system *into*:
+
+        wake  → awake       (until the next suspend/shutdown)
+        boot  → awake       (until the next suspend/shutdown)
+        suspend → suspended (until the next wake/boot)
+        shutdown → off      (until the next boot)
+    """
+    initial_state = determine_initial_state(events, day_start)
+
+    # Filter to events within the day
+    day_events = [e for e in events if day_start <= e.timestamp <= day_end]
+
+    if not day_events and initial_state is None:
+        return []
+
+    # Build a list of (timestamp, phase_type) boundaries.
+    # Each boundary says: "from this moment, the system is in <phase_type>".
+    boundaries: List[Tuple[datetime, PhaseType]] = []
+
+    # Seed with the state at midnight (from lookback)
+    if initial_state is not None:
+        boundaries.append((day_start, phase_type_for_state(initial_state)))
+    elif day_events:
+        # No prior state known — system was off until the first event
+        first = day_events[0]
+        if first.timestamp > day_start:
+            boundaries.append((day_start, PhaseType.OFF))
+
+    # Each day-event creates a new boundary
+    for event in day_events:
+        boundaries.append((event.timestamp, phase_type_for_state(event.kind)))
+
+    if not boundaries:
+        return []
+
+    # Convert consecutive boundaries into phases, merging adjacent same-type
+    phases: List[Phase] = []
+    for i in range(len(boundaries)):
+        start = boundaries[i][0]
+        kind = boundaries[i][1]
+        end = boundaries[i + 1][0] if i + 1 < len(boundaries) else day_end
+        if end <= start:
+            continue
+        # Merge with previous phase if same type (e.g. wake→boot = awake→awake)
+        if phases and phases[-1].kind == kind:
+            phases[-1] = Phase(phases[-1].start, end, kind)
+        else:
+            phases.append(Phase(start, end, kind))
+
+    return phases
+
+
+# ── Formatting ───────────────────────────────────────────────────────
+
+def format_duration(td: timedelta) -> str:
+    """Format a timedelta as a compact human-readable string."""
+    total_seconds = int(td.total_seconds())
+    if total_seconds < 0:
+        return "0s"
+
+    hours, remainder = divmod(total_seconds, 3600)
+    minutes, seconds = divmod(remainder, 60)
+
+    parts: List[str] = []
+    if hours:
+        parts.append(f"{hours}h")
+    if minutes:
+        parts.append(f"{minutes:02d}m" if hours else f"{minutes}m")
+    if seconds or not parts:
+        parts.append(f"{seconds:02d}s" if parts else f"{seconds}s")
+    return " ".join(parts)
+
+
+PHASE_SYMBOLS = {
+    PhaseType.AWAKE: "↑",
+    PhaseType.SUSPENDED: "⏸",
+    PhaseType.OFF: "⏼",
+}
+
+
+def print_report(
+    target_date: datetime,
+    phases: List[Phase],
+    day_end: datetime,
+    c: _Colours,
+) -> None:
+    """Print the formatted uptime report."""
+    day_name = target_date.strftime("%A")
+    date_str = target_date.strftime("%Y-%m-%d")
+    print(f"\n{c.bold}Daily uptime for {date_str} ({day_name}){c.reset}\n")
+
+    if not phases:
+        print(f"  {c.dim}No activity recorded for this day.{c.reset}\n")
+        return
+
+    # Column headers
+    hdr = (
+        f"  {c.bold}{'#':>2}  {'Phase':<14}  {'Start':>8}  {'End':>8}"
+        f"  {'Duration':>11}  {'Uptime':>11}{c.reset}"
+    )
+    sep_line = f"  {'─' * 2}  {'─' * 14}  {'─' * 8}  {'─' * 8}  {'─' * 11}  {'─' * 11}"
+    print(hdr)
+    print(f"  {c.dim}{sep_line.strip()}{c.reset}")
+
+    total_uptime = timedelta()
+
+    for i, phase in enumerate(phases, 1):
+        duration = phase.end - phase.start
+        symbol = PHASE_SYMBOLS[phase.kind]
+        label = phase.kind.value
+        start_str = phase.start.strftime("%H:%M:%S")
+        end_str = phase.end.strftime("%H:%M:%S")
+        dur_str = format_duration(duration)
+
+        is_awake = phase.kind == PhaseType.AWAKE
+        if is_awake:
+            total_uptime += duration
+            uptime_str = format_duration(total_uptime)
+            colour = c.green
+        else:
+            uptime_str = "·"
+            colour = c.dim
+
+        print(
+            f"  {colour}{i:>2}  {symbol} {label:<12}"
+            f"  {c.cyan}{start_str}{colour}  {c.cyan}{end_str}{colour}"
+            f"  {dur_str:>11}"
+            f"  {c.green if is_awake else c.dim}{uptime_str:>11}{c.reset}"
+        )
+
+    # Summary
+    day_total = day_end - (phases[0].start if phases else day_end)
+    if day_total.total_seconds() > 0:
+        pct = total_uptime.total_seconds() / day_total.total_seconds() * 100
+    else:
+        pct = 0.0
+    day_total_str = format_duration(day_total)
+    uptime_total_str = format_duration(total_uptime)
+
+    print(f"\n  {c.dim}{'─' * 64}{c.reset}")
+    print(
+        f"  {c.bold}Total uptime: {c.green}{uptime_total_str}{c.reset}"
+        f"{c.bold} / {day_total_str}  ({pct:.1f}%){c.reset}\n"
+    )
+
+
+# ── Date parsing ─────────────────────────────────────────────────────
+
+def parse_date(value: str) -> datetime:
+    """Parse a date string into a timezone-aware local midnight datetime.
+
+    Accepts:
+        YYYY-MM-DD     — explicit date
+        today           — current date
+        yesterday       — previous date
+        N (integer)     — N days ago
+    """
+    local_tz = datetime.now().astimezone().tzinfo
+    today = datetime.now(tz=local_tz).replace(hour=0, minute=0, second=0, microsecond=0)
+
+    lowered = value.strip().lower()
+    if lowered == "today":
+        return today
+    if lowered == "yesterday":
+        return today - timedelta(days=1)
+
+    # Integer → days ago
+    try:
+        days_ago = int(lowered)
+        if days_ago >= 0:
+            return today - timedelta(days=days_ago)
+    except ValueError:
+        pass
+
+    # YYYY-MM-DD
+    try:
+        naive = datetime.strptime(value.strip(), "%Y-%m-%d")
+        return naive.replace(tzinfo=local_tz)
+    except ValueError:
+        pass
+
+    print(f"Error: Cannot parse '{value}' as a date.", file=sys.stderr)
+    print("Accepted formats: YYYY-MM-DD, 'today', 'yesterday', or N (days ago).", file=sys.stderr)
+    sys.exit(1)
+
+
+# ── Main ─────────────────────────────────────────────────────────────
+
+def main() -> None:
+    parser = argparse.ArgumentParser(
+        description="Show computer uptime phases for a specific day.",
+    )
+    parser.add_argument(
+        "date",
+        nargs="?",
+        default="today",
+        help=(
+            "Date to query: YYYY-MM-DD, 'today', 'yesterday', or N (days ago). "
+            "Defaults to today."
+        ),
+    )
+    parser.add_argument(
+        "--no-color",
+        action="store_true",
+        help="Disable coloured output.",
+    )
+    args = parser.parse_args()
+
+    use_colour = not args.no_color and sys.stdout.isatty()
+    c = _Colours(use_colour)
+
+    target_date = parse_date(args.date)
+    local_tz = target_date.tzinfo
+
+    day_start = target_date
+    day_end = target_date + timedelta(days=1) - timedelta(seconds=1)
+
+    # If querying today, clamp to now
+    now = datetime.now(tz=local_tz)
+    is_today = target_date.date() == now.date()
+    if is_today:
+        day_end = now
+
+    # Query journal with lookback for cross-midnight state detection
+    query_start = day_start - timedelta(hours=LOOKBACK_HOURS)
+    query_end = day_end + timedelta(seconds=1)
+
+    raw = query_journal(query_start, query_end)
+    events = parse_events(raw)
+
+    phases = build_phases(events, day_start, day_end)
+    print_report(target_date, phases, day_end, c)
+
+
+if __name__ == "__main__":
+    main()
