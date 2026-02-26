@@ -1,0 +1,93 @@
+From 3a1697189c7b44800a6e98c16c7b58788422ec23 Mon Sep 17 00:00:00 2001
+From: Sebastian Bresin <sebastian.bresin@gmail.com>
+Date: Sun, 15 Feb 2026 13:55:45 +0100
+Subject: [PATCH 2/2] fix: carapace dir complete
+
+---
+ lib/-ftb-generate-query | 20 ++++++++++++++++++++
+ test/fzftab.ztst        | 31 +++++++++++++++++++++++++++++++
+ 2 files changed, 51 insertions(+)
+
+diff --git a/lib/-ftb-generate-query b/lib/-ftb-generate-query
+index 4f54604..2788b51 100644
+--- a/lib/-ftb-generate-query
++++ b/lib/-ftb-generate-query
+@@ -7,6 +7,14 @@ fi
+ local key qtype tmp query_string
+ typeset -g _ftb_query=
+ -ftb-zstyle -a query-string query_string || query_string=(prefix input first)
++
++# Detect if this is a file completion by checking for 'realdir' in compcap.
++local _ftb_is_file_completion=
++{
++  local _fv=${_ftb_compcap[1]#*$'\2'}
++  local -A _v=("${(@0)_fv}")
++  [[ -n $_v[realdir] ]] && _ftb_is_file_completion=1
++}
+ for qtype in $query_string; do
+   if [[ $qtype == prefix ]]; then
+     # find the longest common prefix among descriptions
+@@ -32,6 +40,18 @@ for qtype in $query_string; do
+     fi
+     tmp=${${tmp#$v[hpre]}#$v[apre]}
+   fi
++  # Strip directory prefix from the query when it doesn't match candidate
++  # descriptions. This handles:
++  # 1. Standard file completions (realdir set) where PREFIX contains a dir path
++  # 2. External completers like carapace that put the directory in PREFIX but
++  #    show only filenames as candidate descriptions
++  if [[ $tmp == */* ]]; then
++    local _ftb_dir_prefix=${tmp%/*}/
++    local _ftb_first_key=${_ftb_compcap[1]%$'\2'*}
++    if [[ -n $_ftb_is_file_completion ]] || [[ $_ftb_first_key != ${_ftb_dir_prefix}* ]]; then
++      tmp=${tmp##*/}
++    fi
++  fi
+   if (( $query_string[(I)longest] )); then
+     (( $#tmp > $#_ftb_query )) && _ftb_query=$tmp
+   elif [[ -n $tmp ]]; then
+diff --git a/test/fzftab.ztst b/test/fzftab.ztst
+index 48af48f..bc2f59c 100644
+--- a/test/fzftab.ztst
++++ b/test/fzftab.ztst
+@@ -248,6 +248,37 @@
+ >C1:{openpgp-keys-gentoo-release}
+ >C1:{-MERGING-pnpm-bin}
+ 
++  comptesteval 'touch dir1/aaa'
++  comptest $': dir1/\t'
++  comptesteval 'rm dir1/aaa'
++0:directory with trailing slash has empty query
++>line: {: dir1/}{}
++>QUERY:{}
++>DESCRIPTION:{file}
++>C1:{aaa}
++>C1:{file1}
++
++  comptesteval '_tst() { compadd -f -W $PWD/dir1 -p dir1/ aaa file1 }'
++  comptest $'tst dir1/\t'
++0:file completion with directory in prefix (carapace-style)
++>line: {tst dir1/aaa}{}
++>QUERY:{}
++>C0:{aaa}
++>C0:{file1}
++
++  comptesteval '_tst() {
++    local -a displaysArr=("aaa" "bbb")
++    local -a valuesArr=("lib/aaa" "lib/bbb")
++    _describe -t files files displaysArr valuesArr -Q -S ""
++  }'
++  comptest $'tst lib/\t'
++0:carapace-style path completion without -f flag strips dir from query
++>line: {tst lib/}{}
++>QUERY:{}
++>DESCRIPTION:{files}
++>C1:{aaa}
++>C1:{bbb}
++
+   comptesteval '_tst() {
+     local -a displaysArr=("Hello One (Two) [Three].mp3")
+     local -a valuesArr=("Hello\\ One\\ \\(Two\\)\\ \\[Three\\].mp3")
+-- 
+2.51.2
+

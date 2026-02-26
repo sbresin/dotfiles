@@ -133,7 +133,7 @@ in {
       }
       {
         name = "fzf-tab";
-        src = pkgs.unstable.zsh-fzf-tab;
+        src = pkgs.${namespace}.zsh-fzf-tab-patched;
         file = "share/fzf-tab/fzf-tab.plugin.zsh";
       }
       {

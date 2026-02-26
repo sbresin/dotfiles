@@ -1,0 +1,67 @@
+From be23b787cf2d2dc8c2b960b41956cdfba3f304f5 Mon Sep 17 00:00:00 2001
+From: Sebastian Bresin <sebastian.bresin@gmail.com>
+Date: Fri, 13 Feb 2026 21:34:27 +0100
+Subject: [PATCH 1/2] fix: no more double escaping
+
+---
+ fzf-tab.zsh      | 12 ++++++++++--
+ test/fzftab.ztst | 10 ++++++++++
+ 2 files changed, 20 insertions(+), 2 deletions(-)
+
+diff --git a/fzf-tab.zsh b/fzf-tab.zsh
+index 2d0255c..735577d 100644
+--- a/fzf-tab.zsh
++++ b/fzf-tab.zsh
+@@ -31,11 +31,11 @@ builtin unalias -m '[^+]*'
+   fi
+ 
+   # store matches in $__hits and descriptions in $__dscr
+-  local -a __hits __dscr
++  local -a __hits __dscr __raw
+   if (( $#dscrs == 1 )); then
+     __dscr=( "${(@P)${(v)dscrs}}" )
+   fi
+-  builtin compadd -A __hits -D __dscr "$@"
++  builtin compadd -O __raw -A __hits -D __dscr "$@"
+   local ret=$?
+   if (( $#__hits == 0 )); then
+     if is-at-least 5.9 && (( $#_mesg != 0 )); then
+@@ -114,6 +114,14 @@ builtin unalias -m '[^+]*'
+     local dscr word i
+     for i in {1..$#__hits}; do
+       word=$__hits[i] dscr=$__dscr[i]
++      # Fix double-quoting: when an intermediate function (e.g. _describe)
++      # strips -Q but doesn't strip pre-existing backslash escapes from values,
++      # compadd -A returns a double-escaped word. Detect this by comparing
++      # -A (quoted) vs -O (raw): if they differ and the raw word already
++      # contains escapes, use the raw word which is correctly single-escaped.
++      if [[ $i -le $#__raw && $word != $__raw[i] && ${(Q)__raw[i]} != $__raw[i] ]]; then
++        word=$__raw[i]
++      fi
+       if [[ -n $dscr ]]; then
+         dscr=${dscr//$'\n'}
+       elif [[ -n $word ]]; then
+diff --git a/test/fzftab.ztst b/test/fzftab.ztst
+index de4ae49..48af48f 100644
+--- a/test/fzftab.ztst
++++ b/test/fzftab.ztst
+@@ -247,6 +247,16 @@
+ >C1:{package }
+ >C1:{openpgp-keys-gentoo-release}
+ >C1:{-MERGING-pnpm-bin}
++
++  comptesteval '_tst() {
++    local -a displaysArr=("Hello One (Two) [Three].mp3")
++    local -a valuesArr=("Hello\\ One\\ \\(Two\\)\\ \\[Three\\].mp3")
++    _describe -t files files displaysArr valuesArr -Q -S ""
++  }'
++  comptest $'tst \t'
++0:compadd -Q with pre-quoted values (carapace-style)
++>line: {tst Hello\ One\ \(Two\)\ \[Three\].mp3}{}
++
+ %clean
+ 
+   zmodload -ui zsh/zpty
+-- 
+2.51.2
+
