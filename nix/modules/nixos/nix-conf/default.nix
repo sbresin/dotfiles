@@ -8,6 +8,8 @@
   nix.package = pkgs.lixPackageSets.latest.lix;
 
   nix.settings = {
+    max-jobs = 4; # max derivations built in parallel
+    cores = 4; # threads per derivation
     experimental-features = ["nix-command" "flakes"];
     trusted-users = ["sebe"];
 
