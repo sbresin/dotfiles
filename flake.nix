@@ -103,6 +103,7 @@
           "nvidia-x11"
           "nvidia-settings"
           "dank-mono"
+          "dank-mono-nerd"
           "terraform"
           "ngrok"
           "steam"

@@ -27,6 +27,7 @@ in {
         geist-font
         tamzen
         pkgs.${namespace}.dank-mono
+        pkgs.${namespace}.dank-mono-nerd
         pkgs.${namespace}.apple-emoji-linux
         # TODO: windows fonts
       ];
@@ -54,7 +55,7 @@ in {
         defaultFonts = {
           serif = ["Noto Serif"];
           sansSerif = ["Noto Sans"];
-          monospace = ["Dank Mono" "Symbols Nerd Font"];
+          monospace = ["DankMono Nerd Font Mono" "Symbols Nerd Font"];
           emoji = ["Apple Color Emoji"];
         };
       };
