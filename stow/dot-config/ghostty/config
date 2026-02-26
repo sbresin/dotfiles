@@ -42,16 +42,29 @@
 # # Just for example:
 # resize-overlay-duration = 4s 200ms
 
-command = tmux new -Atlocal
+command = tmux attach || sesh connect "$(pwd)"
 shell-integration = none
 
-theme = dark:rose-pine,light:rose-pine-dawn
+# Bell: trigger desktop notification + visual attention
+bell-features = system,attention,title
 
-font-family = Dank Mono
+theme = dark:Rose Pine,light:Rose Pine Dawn
+
+font-family = DankMono Nerd Font Mono
 font-family = Symbols Nerd Font Mono
 font-family = Apple Color Emoji
+font-family-bold = DankMono Nerd Font Mono
+font-family-bold = Symbols Nerd Font Mono
+font-family-bold = Apple Color Emoji
+font-family-italic = DankMono Nerd Font Mono
+font-family-italic = Symbols Nerd Font Mono
+font-family-italic = Apple Color Emoji
+font-family-bold-italic = DankMono Nerd Font Mono
+font-family-bold-italic = Symbols Nerd Font Mono
+font-family-bold-italic = Apple Color Emoji
+font-size = 13
 
-background-opacity = 0.8
+background-opacity = 0.9
 # TODO: enable when released
 # background-opacity-cells = true
 
@@ -72,11 +85,15 @@ keybind = alt+nine=unbind
 
 # these will be used in tmux
 keybind = ctrl+tab=unbind
-keybind = ctrl+shift+tab=unbind
-keybind = ctrl+shift+t=unbind
-keybind = ctrl+shift+w=unbind
+keybind = ctrl+shift+tab=csi:1;6Z
+keybind = ctrl+shift+t=csi:116;6u
+keybind = ctrl+shift+w=csi:119;6u
 keybind = ctrl+shift+left=unbind
 keybind = ctrl+shift+right=unbind
+keybind = ctrl+shift+one=csi:1;6q
+keybind = ctrl+shift+two=csi:2;6q
+keybind = ctrl+shift+three=csi:3;6q
+keybind = ctrl+shift+four=csi:4;6q
 
 # for tmux Ctrl-Space and Ctrl-Shift-Space look the same, so we map to a PUA unicode char here
 keybind = ctrl+shift+space=text:\u{E000}

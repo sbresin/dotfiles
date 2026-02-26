@@ -22,7 +22,7 @@ end
 config.check_for_updates = false
 
 -- GPU settings
-config.front_end = "WebGpu"
+config.front_end = "OpenGL"
 config.webgpu_power_preference = "LowPower"
 -- in sync prime mode, rendering on the internal GPU causes black screen
 local nv_prime_mode = os.getenv("PRIME_MODE");
@@ -59,8 +59,7 @@ config.window_background_opacity = 0.90
 
 -- font config
 config.font = wezterm.font_with_fallback {
-    'Dank Mono',
-    {family = 'Symbols Nerd Font Mono', weight = 'Regular'},
+    'DankMono Nerd Font Mono', {family = 'Symbols Nerd Font Mono', weight = 'Regular'},
     {family = 'Apple Color Emoji', weight = 'Regular'}
 }
 config.use_cap_height_to_scale_fallback_fonts = true
@@ -74,29 +73,27 @@ config.font_rules = {
         intensity = 'Bold',
         italic = false,
         font = wezterm.font_with_fallback {
-            {family = 'Dank Mono', weight = 'Bold'},
+            {family = 'DankMono Nerd Font Mono', weight = 'Bold'},
             {family = 'Symbols Nerd Font Mono', weight = 'Regular'},
             {family = 'Apple Color Emoji', weight = 'Regular'}
         }
-    },
-    {
+    }, {
         intensity = 'Normal',
         italic = true,
         font = wezterm.font_with_fallback {
-            {family = 'Dank Mono', style = 'Italic'},
+            {family = 'DankMono Nerd Font Mono', style = 'Italic'},
             {family = 'Symbols Nerd Font Mono', weight = 'Regular'},
             {family = 'Apple Color Emoji', weight = 'Regular'}
         }
-    },
-    {
+    }, {
         intensity = 'Bold',
         italic = true,
         font = wezterm.font_with_fallback {
-            {family = 'Dank Mono', weight = 'Bold', style = 'Italic'},
+            {family = 'DankMono Nerd Font Mono', weight = 'Bold', style = 'Italic'},
             {family = 'Symbols Nerd Font Mono', weight = 'Regular'},
             {family = 'Apple Color Emoji', weight = 'Regular'}
         }
-    },
+    }
 }
 
 -- tabbar settings
