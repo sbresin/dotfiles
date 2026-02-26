@@ -466,7 +466,7 @@ in {
       yq
       # pkgs.${namespace}.git-amnesia
       # LLM stuff
-      opencode
+      pkgs.${namespace}.opencode
       github-mcp-server
       terraform-mcp-server
       mcp-nixos
