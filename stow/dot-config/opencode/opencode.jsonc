@@ -1,8 +1,27 @@
 {
-	"$schema": "https://opencode.ai/config.json",
-	"theme": "rose-pine",
-	"plugin": ["opencode-anthropic-auth@0.0.12"],
-	"mode": {
+  "$schema": "https://opencode.ai/config.json",
+	"plugin": ["opencode-anthropic-auth@0.0.13"],
+	"provider": {
+		"ollama": {
+			"models": {
+				"glm-4.7-flash:latest": {
+					"_launch": true,
+					"name": "glm-4.7-flash:latest",
+				},
+			},
+			"name": "Ollama (local)",
+			"npm": "@ai-sdk/openai-compatible",
+			"options": {
+				"baseURL": "http://localhost:11434/v1",
+			},
+		},
+	},
+	"permission": {
+		"external_directory": {
+			"~/workspace/**": "allow",
+		},
+	},
+	"agent": {
 		"build": {
 			"prompt": "You are Claude Code, Anthropic's official CLI for Claude.",
 		},
@@ -31,7 +50,10 @@
 		},
 		"chrome-devtools": {
 			"type": "local",
-			"command": ["chrome-devtools-mcp", "--browser-url=http://127.0.0.1:9222"],
+			"command": [
+				"chrome-devtools-mcp",
+				"--browser-url=http://127.0.0.1:9222",
+			],
 			"enabled": false,
 		},
 		// "jira": {
