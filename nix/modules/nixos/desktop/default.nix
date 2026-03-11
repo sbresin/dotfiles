@@ -57,15 +57,26 @@ in {
       package = pkgs.unstable.hyprlock;
     };
 
-
-
     # bluetooth gui and applet
     services.blueman.enable = true;
 
     # network gui and applet
     programs.nm-applet.enable = true;
 
-    # backend for walker application launcher
+    # walker application launcher + elephant backend
+    systemd.user.services.walker = {
+      description = "Walker application launcher";
+      wantedBy = ["graphical-session.target"];
+      partOf = ["graphical-session.target"];
+      after = ["graphical-session.target"];
+      path = [pkgs.unstable.elephant];
+      serviceConfig = {
+        Restart = "always";
+        RestartSec = 5;
+        ExecStart = "${pkgs.unstable.walker}/bin/walker --gapplication-service";
+      };
+    };
+
     # Wrapper script reads the full user session PATH (set up by UWSM) before
     # starting elephant, so it can find and launch all apps (system, home-manager,
     # flatpak). NixOS's auto-generated PATH in the unit file is too minimal.
