@@ -398,6 +398,8 @@ in {
 
   home.sessionVariables = {
     EDITOR = "nvim";
+    # persist bkt cache across reboots (default /tmp is wiped by tmpfs root)
+    BKT_CACHE_DIR = "$HOME/.cache/bkt";
     # disable heroku cli telemetry
     DISABLE_TELEMETRY = "true";
     HEROKU_DISABLE_TELEMETRY = "true";
