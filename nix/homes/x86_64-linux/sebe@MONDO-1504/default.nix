@@ -6,12 +6,12 @@
   services.mpris-proxy.enable = true;
 
   # Tell libddcutil (used by ddcutil-service & vdu_controls) to skip the
-  # laptop's internal eDP panel I2C bus. Probing i2c-3 (AMDGPU DM i2c hw
-  # bus 0, wired to eDP-1) can deadlock the amdgpu driver and freeze the
-  # screen on this Framework AMD Strix Point laptop.
+  # laptop's internal eDP panel. Probing its I2C bus can deadlock the
+  # amdgpu driver and freeze the screen on this Framework AMD Strix Point.
+  # Format: MFG-MODEL-PRODUCT_CODE (hyphens in model become underscores).
   xdg.configFile."ddcutil/ddcutilrc".text = ''
     [global]
-    options: --ignore-bus 3
+    options: --ignore-mmid BOE-NE135A1M_NY1-3252
   '';
 
   home.stateVersion = "25.11";
