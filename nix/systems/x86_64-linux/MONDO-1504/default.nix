@@ -77,12 +77,12 @@
   };
 
   # DDC/CI monitor control via D-Bus (brightness, contrast for external monitors).
-  # Enables hardware.i2c, registers ddcutil-service on D-Bus for auto-start,
-  # and provides ddcutil CLI as a dependency.
-  services.ddccontrol = {
-    enable = true;
-    package = pkgs.unstable.ddcutil-service;
-  };
+  # Wire up i2c + ddcutil-service manually instead of services.ddccontrol, which
+  # unconditionally loads ddcci_backlight (a kernel driver we don't use and that
+  # doesn't exist in the CachyOS kernel).
+  hardware.i2c.enable = true;
+  services.dbus.packages = [pkgs.unstable.ddcutil-service];
+  systemd.packages = [pkgs.unstable.ddcutil-service];
 
   # Set your time zone.
   time.timeZone = "Europe/Berlin";
@@ -165,43 +165,46 @@
   };
 
   # List packages installed in system profile. To search, run:
-  environment.systemPackages = [
-    pkgs.${namespace}.neovim-patched
-  ] ++ (with pkgs.unstable; [
-    vim
-    git
-    git-crypt
-    # os setup/debug
-    fwupd
-    usbutils
-    lm_sensors
-    gparted
-    exfatprogs
-    # Terminal setup
-    ghostty
-    tmux
-    zed-editor
-    # inputs.wezterm.packages.${system}.default
-    pkgs.${namespace}.wezterm
-    # language support
-    hunspell
-    hunspellDicts.en_US
-    hunspellDicts.de_DE
-    # media / document tools
-    imagemagick
-    ffmpeg-full
-    pngquant
-    ocrmypdf
-    # GUI Apps
-    easyeffects
-    vial
-    vdu_controls
-    # this flakes packages
-    pkgs.${namespace}.oclif
-    # ROCm tools for GPU monitoring
-    pkgs.rocmPackages.rocm-smi
-    pkgs.rocmPackages.rocminfo
-  ]);
+  environment.systemPackages =
+    [
+      pkgs.${namespace}.neovim-patched
+    ]
+    ++ (with pkgs.unstable; [
+      vim
+      git
+      git-crypt
+      # os setup/debug
+      ddcutil-service
+      fwupd
+      usbutils
+      lm_sensors
+      gparted
+      exfatprogs
+      # Terminal setup
+      ghostty
+      tmux
+      zed-editor
+      # inputs.wezterm.packages.${system}.default
+      pkgs.${namespace}.wezterm
+      # language support
+      hunspell
+      hunspellDicts.en_US
+      hunspellDicts.de_DE
+      # media / document tools
+      imagemagick
+      ffmpeg-full
+      pngquant
+      ocrmypdf
+      # GUI Apps
+      easyeffects
+      vial
+      vdu_controls
+      # this flakes packages
+      pkgs.${namespace}.oclif
+      # ROCm tools for GPU monitoring
+      pkgs.rocmPackages.rocm-smi
+      pkgs.rocmPackages.rocminfo
+    ]);
 
   # link zsh completions, so they are available globally TODO: same for fish/bash?
   environment.pathsToLink = ["/share/zsh"];
