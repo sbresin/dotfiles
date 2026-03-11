@@ -38,8 +38,8 @@
   # for TPM based LUKS decryption we need systemd
   boot.initrd.systemd.enable = true;
 
-  # Use Linux_cachyos kernel
-  boot.kernelPackages = pkgs.linuxPackages_cachyos-gcc;
+  # CachyOS kernel with BORE scheduler, x86-64-v4 optimized for Zen 5
+  boot.kernelPackages = pkgs.cachyosKernels.linuxPackages-cachyos-latest-x86_64-v4;
   boot.extraModulePackages = [];
 
   # use sched_ext

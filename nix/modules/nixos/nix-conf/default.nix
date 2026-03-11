@@ -16,13 +16,13 @@
     # the system-level substituters & trusted-public-keys
     extra-trusted-public-keys = [
       "nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs="
-      "wezterm.cachix.org-1:kAbhjYUC9qvblTE+s7S+kl5XM1zVa4skO+E/1IDWdH0="
-      "hyprland.cachix.org-1:a7pgxzMz7+chwVL3/pzj6jIBMioiJM7ypFP8PwtkuGc="
+      "lantian:EeAUQ+W+6r7EtwnmYjeVwx5kOGEBpjlBfPlzGlTNvHc="
+      "cache.garnix.io:CTFPyKSLcx5RMJKfLo5EEPUObbA78b0YQ2DTCJXqr9g="
     ];
     extra-substituters = [
       "https://nix-community.cachix.org"
-      "https://wezterm.cachix.org"
-      "https://hyprland.cachix.org"
+      "https://attic.xuyh0120.win/lantian"
+      "https://cache.garnix.io"
     ];
   };
 

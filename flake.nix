@@ -4,13 +4,13 @@
   nixConfig = {
     extra-trusted-public-keys = [
       "nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs="
-      "wezterm.cachix.org-1:kAbhjYUC9qvblTE+s7S+kl5XM1zVa4skO+E/1IDWdH0="
-      "hyprland.cachix.org-1:a7pgxzMz7+chwVL3/pzj6jIBMioiJM7ypFP8PwtkuGc="
+      "lantian:EeAUQ+W+6r7EtwnmYjeVwx5kOGEBpjlBfPlzGlTNvHc="
+      "cache.garnix.io:CTFPyKSLcx5RMJKfLo5EEPUObbA78b0YQ2DTCJXqr9g="
     ];
     extra-substituters = [
       "https://nix-community.cachix.org"
-      "https://wezterm.cachix.org"
-      "https://hyprland.cachix.org"
+      "https://attic.xuyh0120.win/lantian"
+      "https://cache.garnix.io"
     ];
   };
 
@@ -38,8 +38,10 @@
     # secureboot for nixOS
     lanzaboote.url = "github:nix-community/lanzaboote/v0.4.3";
 
-    # patched kernel
-    chaotic.url = "github:chaotic-cx/nyx/nyxpkgs-unstable";
+    # CachyOS kernel (BORE scheduler, cachyos perf patches, sched-ext)
+    # replaces chaotic-cx/nyx which was archived Dec 2025
+    nix-cachyos-kernel.url = "github:xddxdd/nix-cachyos-kernel/release";
+    # do NOT override nixpkgs — patches must match the kernel version pinned upstream
 
     # declarative disk partitioning
     disko = {
@@ -73,16 +75,13 @@
       };
 
       overlays = with inputs; [
-        chaotic.overlays.default
+        nix-cachyos-kernel.overlays.pinned
       ];
 
       systems.modules.nixos = with inputs; [
         home-manager.nixosModules.home-manager
         impermanence.nixosModules.impermanence
         lanzaboote.nixosModules.lanzaboote
-        chaotic.nixosModules.nyx-cache
-        chaotic.nixosModules.nyx-overlay
-        chaotic.nixosModules.nyx-registry
         nix-flatpak.nixosModules.nix-flatpak
       ];
 

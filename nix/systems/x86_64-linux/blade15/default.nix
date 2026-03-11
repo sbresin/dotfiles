@@ -21,8 +21,8 @@
 
   boot.plymouth.enable = true;
 
-  # Use Linux_zen kernel
-  boot.kernelPackages = pkgs.linuxPackages_cachyos-gcc.extend (self: super: {
+  # CachyOS kernel with BORE scheduler
+  boot.kernelPackages = pkgs.cachyosKernels.linuxPackages-cachyos-latest.extend (self: super: {
     apfs = super.apfs.overrideAttrs (o: {
       version = "0.3.16-6.17";
       src = pkgs.fetchFromGitHub {
@@ -47,7 +47,7 @@
       #   ];
     });
   });
-  system.modulesTree = [(lib.getOutput "modules" pkgs.linuxPackages_cachyos-gcc.kernel)];
+  system.modulesTree = [(lib.getOutput "modules" pkgs.cachyosKernels.linuxPackages-cachyos-latest.kernel)];
 
   # use sched_ext
   services.scx = {
