@@ -47,8 +47,8 @@ in {
       # stay cold on AC as well
       RUNTIME_PM_ON_AC = "auto";
       PCIE_ASPM_ON_AC = "default";
-      PCIE_ASPM_ON_BAT = "powersupersave";
       RUNTIME_PM_DRIVER_DENYLIST = "mei_me nouveau radeon"; # xhci_hcd
+      PCIE_ASPM_ON_BAT = "default"; # powersupersave breaks xHCI on AMD Strix Point (USB dies on battery)
     };
 
     services.power-profiles-daemon.enable = lib.mkForce false;
