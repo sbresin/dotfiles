@@ -1,8 +1,8 @@
 {pkgs, ...}:
 let
-  version = "1.2.15";
-  srcHash = "sha256-26MV9TbyAF0KFqZtIHPYu6wqJwf0pNPdW/D3gDQEUlQ=";
-  nodeModulesHash = "sha256-Diu/C8b5eKUn7MRTFBcN5qgJZTp0szg0ECkgEaQZ87Y=";
+  version = "1.2.22";
+  srcHash = "sha256-fSSXUPfvhlWb5YEtW+bbi2mJaOV4Cdx3hbp6lnysxuo=";
+  nodeModulesHash = "sha256-U0DRfGsk6SeFqh8DuUsEQ/KmfTokNbr29RSxKgbdqG0=";
 in
 pkgs.unstable.opencode.overrideAttrs (final: old: {
   inherit version;
