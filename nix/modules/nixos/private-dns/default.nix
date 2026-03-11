@@ -24,7 +24,7 @@ in {
       nameservers = lib.mkForce [];
     };
 
-    services.dnscrypt-proxy2 = {
+    services.dnscrypt-proxy = {
       enable = true;
       settings = {
         forwarding_rules = "${dnscrypt-forwarding}";
