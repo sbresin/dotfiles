@@ -44,7 +44,8 @@ in {
       package = pkgs.unstable.steam;
       remotePlay.openFirewall = true;
       extraCompatPackages = with pkgs; [
-        proton-cachyos_x86_64_v3
+        # proton-cachyos was provided by chaotic-nyx (archived Dec 2025)
+        # TODO: find replacement source or package
         proton-ge-bin
       ];
       gamescopeSession = {
