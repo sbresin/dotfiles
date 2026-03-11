@@ -30,9 +30,6 @@ alias lg="lazygit -ucf ~/.config/lazygit/config.yml"
 set --export BUN_INSTALL "$HOME/.bun"
 set --export PATH $BUN_INSTALL/bin $PATH
 
-# sf cli settings
-set --export SF_DISABLE_TELEMETRY true # stop calling home
-set --export SF_ORG_METADATA_REST_DEPLOY true # speed up deployments
-set --export SF_IMPROVED_CODE_COVERAGE true # better coverage report
+# sf cli settings are set via home-manager (nix/modules/home/shell)
 
 
