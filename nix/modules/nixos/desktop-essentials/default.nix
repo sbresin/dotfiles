@@ -46,6 +46,12 @@ in {
       openFirewall = true;
     };
 
+    # open ports for Packet
+    networking.firewall = {
+      allowedTCPPorts = [9300];
+      allowedUDPPorts = [5353 5355];
+    };
+
     # Enable sound through pipewire
     services.pulseaudio.enable = false;
     services.pipewire = {
@@ -88,6 +94,7 @@ in {
     security.rtkit.enable = true;
 
     environment.systemPackages = with pkgs.unstable; [
+      packet
       wiremix
     ];
 

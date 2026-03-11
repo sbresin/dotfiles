@@ -67,11 +67,6 @@
     ];
   };
 
-  # open static port for packet (Android quickshare)
-  networking.firewall = {
-    allowedTCPPorts = [9300];
-  };
-
   # Set your time zone.
   time.timeZone = "Europe/Berlin";
 
@@ -177,7 +172,6 @@
       ocrmypdf
       # GUI Apps
       easyeffects
-      packet
       (pkgs.unstable.kicad.override {
         addons = with pkgs.unstable.kicadAddons; [kikit kikit-library];
       })
