@@ -42,28 +42,32 @@ in {
       # HTTP (http://<name>.localhost) allows unencrypted access without cert warnings.
       # HTTPS (<name>.localhost) uses Caddy's internal CA for encrypted local traffic.
       virtualHosts = let
-        httpsHosts = lib.mapAttrs' (name: svc: {
-          name = "${name}.localhost";
-          value = {
-            extraConfig = ''
-              tls internal
-              reverse_proxy ${svc.host}:${toString svc.port} {
-                header_up Host {upstream_hostport}
-              }
-            '';
-          };
-        }) cfg.services;
+        httpsHosts =
+          lib.mapAttrs' (name: svc: {
+            name = "${name}.localhost";
+            value = {
+              extraConfig = ''
+                tls internal
+                reverse_proxy ${svc.host}:${toString svc.port} {
+                  header_up Host {upstream_hostport}
+                }
+              '';
+            };
+          })
+          cfg.services;
 
-        httpHosts = lib.mapAttrs' (name: svc: {
-          name = "http://${name}.localhost";
-          value = {
-            extraConfig = ''
-              reverse_proxy ${svc.host}:${toString svc.port} {
-                header_up Host {upstream_hostport}
-              }
-            '';
-          };
-        }) cfg.services;
+        httpHosts =
+          lib.mapAttrs' (name: svc: {
+            name = "http://${name}.localhost";
+            value = {
+              extraConfig = ''
+                reverse_proxy ${svc.host}:${toString svc.port} {
+                  header_up Host {upstream_hostport}
+                }
+              '';
+            };
+          })
+          cfg.services;
       in
         httpsHosts // httpHosts;
     };
