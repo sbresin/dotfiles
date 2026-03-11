@@ -30,6 +30,11 @@
 
   boot.plymouth.enable = true;
 
+  boot.tmp = {
+    useTmpfs = true;
+    tmpfsSize = "4G";
+  };
+
   # for TPM based LUKS decryption we need systemd
   boot.initrd.systemd.enable = true;
 
