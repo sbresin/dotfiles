@@ -57,6 +57,12 @@
 
     # nice little emoji picker
     simplemoji.url = "github:SergioRibera/Simplemoji?ref=v1.2.3";
+
+    # Qt6 theme engine for Hyprland (replaces qt6ct)
+    hyprqt6engine = {
+      url = "github:hyprwm/hyprqt6engine";
+      inputs.nixpkgs.follows = "nixpkgs-unstable";
+    };
   };
 
   outputs = inputs:

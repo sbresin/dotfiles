@@ -30,6 +30,8 @@ export HYPRCURSOR_THEME='rose-pine-hyprcursor'
 export GDK_BACKEND='wayland,x11,*'
 # Qt: Use wayland if available, fall back to x11 if not.
 export QT_QPA_PLATFORM='wayland;xcb'
+# Qt6 theming via hyprqt6engine (Rose Pine color scheme)
+export QT_QPA_PLATFORMTHEME='hyprqt6engine'
 # Run SDL2 applications on Wayland. Remove or set to x11 if games that provide older versions of SDL cause compatibility issues
 export SDL_VIDEODRIVER='wayland'
 # Clutter package already has wayland enabled, this variable will force Clutter applications to try and use the Wayland backend

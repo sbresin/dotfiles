@@ -7,6 +7,52 @@
   ...
 }: let
   cfg = config.${namespace}.desktop;
+
+  hyprctl = "${pkgs.unstable.hyprland}/bin/hyprctl";
+
+  # Post-resume recovery script — called by hypridle's after_sleep_cmd.
+  # Uses absolute Nix store paths so it works in hypridle's minimal systemd
+  # environment (which lacks bash, brightnessctl, logger, etc. on PATH).
+  resume-script = pkgs.writeShellScript "hypr-resume" ''
+    log() { ${pkgs.util-linux}/bin/logger -t "hypr-resume" "$*"; }
+
+    log "=== Post-resume recovery starting ==="
+
+    # 1. Prevent hypridle from re-suspending while we recover.
+    #    systemd-inhibit forks to background; the inhibit lock lasts 60s.
+    ${pkgs.systemd}/bin/systemd-inhibit --what=idle:sleep --who="resume.sh" \
+      --why="Post-suspend recovery" --mode=block sleep 60 &
+    log "Idle/sleep inhibited for 60s"
+
+    # 2. Force DPMS on (retry up to 3 times — hyprctl can fail if the
+    #    socket isn't ready immediately after resume)
+    for attempt in 1 2 3; do
+      if ${hyprctl} dispatch dpms on 2>/dev/null; then
+        log "DPMS on succeeded (attempt $attempt)"
+        break
+      fi
+      log "DPMS on failed (attempt $attempt), retrying in 1s..."
+      sleep 1
+    done
+
+    # 3. Force the internal display on unconditionally as a safety net.
+    #    monitor_toggle.sh may later disable it (e.g., lid closed + external),
+    #    but we always want *something* visible first.
+    ${hyprctl} keyword monitor "eDP-1, preferred, auto, auto" 2>/dev/null || true
+    log "Internal display force-enabled"
+
+    # 4. Restore brightness (in case brightnessctl saved a dim state)
+    ${pkgs.brightnessctl}/bin/brightnessctl -r 2>/dev/null || true
+
+    # 5. Wait for UCSI/MST DP Alt Mode renegotiation on USB-C
+    sleep 5
+
+    # 6. Apply proper lid/external monitor logic
+    ${pkgs.bash}/bin/bash ~/.config/hypr/scripts/monitor_toggle.sh
+    log "monitor_toggle.sh completed"
+
+    log "=== Post-resume recovery finished ==="
+  '';
 in {
   options.${namespace}.desktop = {
     enable = lib.mkEnableOption "install graphical desktop environment";
@@ -231,6 +277,7 @@ in {
       hyprpicker
       rose-pine-cursor
       rose-pine-hyprcursor
+      inputs.hyprqt6engine.packages.${stdenv.hostPlatform.system}.default
 
       pkgs.${namespace}.hyprpaper-random
     ];
