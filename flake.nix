@@ -21,7 +21,7 @@
 
     # no boilerplate flake structure
     snowfall-lib = {
-      url = "github:snowfallorg/lib/v3.0.3";
+      url = "github:snowfallorg/lib/c566ad8b7352c30ec3763435de7c8f1c46ebb357";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
