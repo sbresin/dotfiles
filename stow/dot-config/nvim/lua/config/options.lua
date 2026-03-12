@@ -25,3 +25,6 @@ vim.filetype.add {
 
 -- anything less would be insane
 vim.opt.tabstop = 4;
+
+-- allow project-local .nvim.lua files (prompted to trust on first use)
+vim.opt.exrc = true

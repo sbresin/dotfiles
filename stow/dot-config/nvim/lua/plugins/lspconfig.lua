@@ -132,6 +132,7 @@ return {
                 jdtls = {
                     mason = false,
                     root_dir = function(fname)
+                        if vim.g.disable_jdtls then return nil end
                         for _, patterns in ipairs({{"gradlew", ".git", "mvnw"}}) do
                             local root =
                                 util.root_pattern(unpack(patterns))(fname)
