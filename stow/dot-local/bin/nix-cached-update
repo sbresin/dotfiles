@@ -1,0 +1,744 @@
+#!/usr/bin/env python3
+"""Find the latest nixpkgs revision where specified packages are cached and update the flake lock.
+
+Uses two strategies:
+  1. Hydra API — fast, queries the latest successful build per package to find
+     the most recent evaluation where all packages share a cached derivation.
+  2. Binary search — precise fallback, walks nixpkgs commits via the GitHub API
+     and checks cache.nixos.org narinfos to find the newest fully-cached revision.
+
+By default both strategies run hierarchically: Hydra narrows the window, then a
+binary search refines it forward toward HEAD.
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import pathlib
+import ssl
+import subprocess
+import sys
+import urllib.error
+import urllib.request
+from dataclasses import dataclass
+from datetime import datetime, timedelta, timezone
+from typing import List, Optional
+
+
+# ── SSL context ──────────────────────────────────────────────────────
+# NixOS puts certs at /etc/ssl/certs/ca-certificates.crt which Python's
+# default SSL context may not find automatically.
+
+def _make_ssl_context() -> ssl.SSLContext:
+    ctx = ssl.create_default_context()
+    for ca in ("/etc/ssl/certs/ca-certificates.crt", "/etc/ssl/certs/ca-bundle.crt"):
+        if pathlib.Path(ca).exists():
+            ctx.load_verify_locations(ca)
+            return ctx
+    return ctx
+
+
+_SSL_CTX = _make_ssl_context()
+
+
+# ── Colours ──────────────────────────────────────────────────────────
+
+
+class _C:
+    """ANSI helpers that degrade to empty strings when colour is off."""
+
+    def __init__(self, enabled: bool) -> None:
+        self._on = enabled
+
+    def _e(self, code: str) -> str:
+        return f"\033[{code}m" if self._on else ""
+
+    @property
+    def reset(self) -> str:
+        return self._e("0")
+
+    @property
+    def bold(self) -> str:
+        return self._e("1")
+
+    @property
+    def dim(self) -> str:
+        return self._e("2")
+
+    @property
+    def red(self) -> str:
+        return self._e("31")
+
+    @property
+    def green(self) -> str:
+        return self._e("32")
+
+    @property
+    def yellow(self) -> str:
+        return self._e("33")
+
+    @property
+    def cyan(self) -> str:
+        return self._e("36")
+
+
+C = _C(sys.stderr.isatty())
+
+
+# ── Logging ──────────────────────────────────────────────────────────
+
+
+def info(msg: str) -> None:
+    print(msg, file=sys.stderr)
+
+
+def warn(msg: str) -> None:
+    print(f"{C.yellow}warn:{C.reset} {msg}", file=sys.stderr)
+
+
+def err(msg: str) -> None:
+    print(f"{C.red}error:{C.reset} {msg}", file=sys.stderr)
+
+
+def step(msg: str) -> None:
+    print(f"  {msg}", file=sys.stderr)
+
+
+# ── HTTP helpers ─────────────────────────────────────────────────────
+
+HYDRA_BASE = "https://hydra.nixos.org"
+CACHE_URL = "https://cache.nixos.org"
+GITHUB_API = "https://api.github.com"
+
+# User-Agent required by GitHub API
+_HEADERS = {"User-Agent": "nix-cached-update/1.0"}
+
+
+def _http_get_json(url: str, timeout: int = 30) -> Optional[dict]:
+    """GET *url*, return parsed JSON or None on failure."""
+    req = urllib.request.Request(url, headers={**_HEADERS, "Accept": "application/json"})
+    try:
+        with urllib.request.urlopen(req, timeout=timeout, context=_SSL_CTX) as resp:
+            return json.loads(resp.read())
+    except (urllib.error.URLError, TimeoutError, json.JSONDecodeError, OSError) as exc:
+        warn(f"HTTP request failed: {url}\n         {exc}")
+        return None
+
+
+def _http_head_ok(url: str, timeout: int = 10) -> bool:
+    """Return True if a HEAD (or GET) to *url* returns 2xx."""
+    req = urllib.request.Request(url, method="HEAD", headers=_HEADERS)
+    try:
+        with urllib.request.urlopen(req, timeout=timeout, context=_SSL_CTX) as resp:
+            return 200 <= resp.status < 300
+    except (urllib.error.URLError, TimeoutError, OSError):
+        return False
+
+
+# ── Cache check ──────────────────────────────────────────────────────
+
+
+def is_cached(store_path: str) -> bool:
+    """Check whether a /nix/store/… path has a narinfo on cache.nixos.org."""
+    # Extract the hash part: /nix/store/<hash>-name -> <hash>
+    name = store_path.removeprefix("/nix/store/")
+    hash_part = name.split("-", 1)[0]
+    return _http_head_ok(f"{CACHE_URL}/{hash_part}.narinfo")
+
+
+# ── Nix helpers ──────────────────────────────────────────────────────
+
+
+def nix_eval_json(expr: str) -> Optional[object]:
+    """Run ``nix eval --json --expr '…'`` and return the parsed result."""
+    try:
+        proc = subprocess.run(
+            ["nix", "eval", "--json", "--expr", expr],
+            capture_output=True,
+            text=True,
+            timeout=120,
+        )
+        if proc.returncode != 0:
+            return None
+        return json.loads(proc.stdout)
+    except (subprocess.TimeoutExpired, json.JSONDecodeError, OSError):
+        return None
+
+
+def output_paths_for_rev(rev: str, packages: List[str]) -> Optional[dict[str, str]]:
+    """Evaluate *packages* against a nixpkgs *rev* and return {pkg: out_path}."""
+    # Build a Nix expression that evaluates all packages in one shot.
+    pkg_attrs = "\n".join(
+        f'    "{pkg}" = builtins.unsafeDiscardStringContext '
+        f"(builtins.toString (pkgs.{pkg}).drvPath);"
+        for pkg in packages
+    )
+    expr = f"""
+let pkgs = import (builtins.getFlake "github:nixos/nixpkgs?rev={rev}")
+    {{ system = "x86_64-linux"; config = {{ allowUnfree = true; }}; }};
+in builtins.mapAttrs (n: drv: let
+    d = builtins.readFileType drv;  # just to force it
+  in drv) {{
+{pkg_attrs}
+}}"""
+
+    # Simpler: just get drv paths, then resolve outputs via nix derivation show
+    drv_expr = f"""
+let pkgs = import (builtins.getFlake "github:nixos/nixpkgs?rev={rev}")
+    {{ system = "x86_64-linux"; config = {{ allowUnfree = true; }}; }};
+in builtins.mapAttrs (_: v: builtins.unsafeDiscardStringContext (builtins.toString v)) {{
+{pkg_attrs}
+}}"""
+
+    drv_paths = nix_eval_json(drv_expr)
+    if not drv_paths or not isinstance(drv_paths, dict):
+        return None
+
+    # For each drv, get the "out" output path via nix derivation show
+    result: dict[str, str] = {}
+    all_drvs = list(drv_paths.values())
+
+    try:
+        proc = subprocess.run(
+            ["nix", "derivation", "show"] + all_drvs,
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+        if proc.returncode != 0:
+            return None
+        drv_info = json.loads(proc.stdout)
+    except (subprocess.TimeoutExpired, json.JSONDecodeError, OSError):
+        return None
+
+    for pkg, drv_path in drv_paths.items():
+        drv_data = drv_info.get(drv_path)
+        if not drv_data:
+            return None
+        out = drv_data.get("outputs", {}).get("out", {})
+        out_path = out.get("path") if isinstance(out, dict) else out
+        if not out_path:
+            return None
+        result[pkg] = out_path
+
+    return result
+
+
+def all_cached_at_rev(rev: str, packages: List[str]) -> Optional[dict[str, bool]]:
+    """Return {pkg: is_cached} for all *packages* at a nixpkgs *rev*.
+
+    Returns None if evaluation fails.
+    """
+    paths = output_paths_for_rev(rev, packages)
+    if paths is None:
+        return None
+    return {pkg: is_cached(path) for pkg, path in paths.items()}
+
+
+# ── Hydra strategy ───────────────────────────────────────────────────
+
+
+@dataclass
+class HydraResult:
+    """Result of querying Hydra for a single package."""
+
+    package: str
+    eval_id: int
+    revision: str
+    eval_date: str  # human-readable
+
+
+def hydra_latest_cached_eval(package: str) -> Optional[HydraResult]:
+    """Query Hydra for the latest successful build of *package* and return
+    the newest evaluation where that build's derivation is still valid."""
+
+    job = f"nixpkgs.{package}.x86_64-linux"
+    url = f"{HYDRA_BASE}/job/nixos/trunk-combined/{job}/latest"
+
+    data = _http_get_json(url, timeout=30)
+    if not data:
+        return None
+
+    evals = data.get("jobsetevals", [])
+    if not evals:
+        return None
+
+    max_eval = max(evals)
+
+    eval_data = _http_get_json(f"{HYDRA_BASE}/eval/{max_eval}", timeout=30)
+    if not eval_data:
+        return None
+
+    rev = None
+    for _name, inp in eval_data.get("jobsetevalinputs", {}).items():
+        if inp.get("revision") and inp.get("type") in (
+            "git",
+            "github",
+            None,
+            "",
+        ):
+            # The "nixpkgs" input — there's usually only one with a revision
+            if _name == "nixpkgs" or rev is None:
+                rev = inp["revision"]
+
+    if not rev:
+        return None
+
+    ts = eval_data.get("timestamp", 0)
+    dt = datetime.fromtimestamp(ts, tz=timezone.utc).strftime("%Y-%m-%d") if ts else "?"
+
+    return HydraResult(package=package, eval_id=max_eval, revision=rev, eval_date=dt)
+
+
+def hydra_find_revision(packages: List[str]) -> Optional[str]:
+    """Query Hydra for all *packages* and return the oldest (bottleneck) revision."""
+
+    info(f"\n{C.bold}Querying Hydra for latest cached builds...{C.reset}")
+
+    results: list[HydraResult] = []
+    failed: list[str] = []
+
+    for pkg in packages:
+        r = hydra_latest_cached_eval(pkg)
+        if r:
+            step(f"{C.cyan}{pkg:<40}{C.reset} eval {r.eval_id} ({r.eval_date})")
+            results.append(r)
+        else:
+            step(f"{C.yellow}{pkg:<40}{C.reset} not found on Hydra")
+            failed.append(pkg)
+
+    if failed:
+        warn(f"Hydra lookup failed for: {', '.join(failed)}")
+        if not results:
+            return None
+
+    if not results:
+        return None
+
+    # Pick the oldest revision (= the bottleneck package).
+    # All results have the same eval in practice, but if they differ we
+    # want the one with the lowest eval_id.
+    bottleneck = min(results, key=lambda r: r.eval_id)
+    info(f"\n  Hydra suggests: {C.bold}{bottleneck.revision[:12]}{C.reset} ({bottleneck.eval_date})")
+
+    return bottleneck.revision
+
+
+# ── GitHub helpers ───────────────────────────────────────────────────
+
+
+def github_commits_between(
+    since: str, until: str, branch: str = "nixos-unstable", per_page: int = 1
+) -> List[dict]:
+    """Return commits on *branch* between ISO timestamps *since* and *until*."""
+    url = (
+        f"{GITHUB_API}/repos/nixos/nixpkgs/commits"
+        f"?sha={branch}&since={since}&until={until}&per_page={per_page}"
+    )
+    data = _http_get_json(url, timeout=15)
+    return data if isinstance(data, list) else []
+
+
+def github_get_commit(rev: str) -> Optional[dict]:
+    """Fetch commit metadata for *rev*."""
+    url = f"{GITHUB_API}/repos/nixos/nixpkgs/commits/{rev}"
+    return _http_get_json(url, timeout=15)
+
+
+def commit_date(rev: str) -> Optional[str]:
+    """Return the committer date (ISO) for *rev*."""
+    data = github_get_commit(rev)
+    if data:
+        return data.get("commit", {}).get("committer", {}).get("date")
+    return None
+
+
+def midpoint_commit(
+    since_iso: str, until_iso: str, branch: str = "nixos-unstable"
+) -> Optional[str]:
+    """Find a commit roughly in the middle of a time range."""
+    # Parse, compute midpoint
+    fmt = "%Y-%m-%dT%H:%M:%SZ"
+    try:
+        t1 = datetime.strptime(since_iso, fmt).replace(tzinfo=timezone.utc)
+        t2 = datetime.strptime(until_iso, fmt).replace(tzinfo=timezone.utc)
+    except ValueError:
+        return None
+
+    mid = t1 + (t2 - t1) / 2
+    mid_iso = mid.strftime(fmt)
+
+    # Get the latest commit at or before the midpoint
+    commits = github_commits_between(since_iso, mid_iso, branch, per_page=1)
+    if commits:
+        return commits[0]["sha"]
+
+    # If nothing before midpoint, try after
+    commits = github_commits_between(mid_iso, until_iso, branch, per_page=1)
+    if commits:
+        return commits[-1]["sha"]
+
+    return None
+
+
+# ── Binary search strategy ───────────────────────────────────────────
+
+
+def binary_search_find_revision(
+    packages: List[str],
+    start_rev: Optional[str],
+    head_rev: str,
+    branch: str = "nixos-unstable",
+) -> Optional[str]:
+    """Binary search for the latest nixpkgs commit where all *packages* are cached.
+
+    *start_rev* is a known-good revision (all cached) or None.
+    *head_rev* is the latest revision to check (usually current HEAD).
+    """
+
+    info(f"\n{C.bold}Binary searching for latest cached revision...{C.reset}")
+
+    # Get dates for the boundary revisions
+    if start_rev:
+        low_date = commit_date(start_rev)
+    else:
+        # Default: 30 days back
+        now = datetime.now(tz=timezone.utc)
+        low_date = (now.replace(hour=0, minute=0, second=0) - timedelta(days=30)).strftime(
+            "%Y-%m-%dT%H:%M:%SZ"
+        )
+        # Find the actual commit at that date
+        commits = github_commits_between(
+            low_date,
+            low_date.replace("T00:00:00Z", "T23:59:59Z"),
+            branch,
+            per_page=1,
+        )
+        if commits:
+            start_rev = commits[0]["sha"]
+            low_date = commit_date(start_rev)
+        else:
+            err("Could not find a starting commit for binary search")
+            return None
+
+    high_date = commit_date(head_rev)
+
+    if not low_date or not high_date:
+        err("Could not resolve commit dates for binary search boundaries")
+        return None
+
+    # Verify the start_rev is actually cached (if provided by Hydra)
+    if start_rev:
+        step(f"Checking start: {start_rev[:12]}...")
+        result = all_cached_at_rev(start_rev, packages)
+        if result is None:
+            err(f"Failed to evaluate packages at {start_rev[:12]}")
+            return None
+        if not all(result.values()):
+            missing = [p for p, c in result.items() if not c]
+            warn(f"Start revision {start_rev[:12]} is not fully cached (missing: {', '.join(missing)})")
+            warn("Cannot binary search forward. Try --search-only with a wider window.")
+            return None
+
+    # Check if HEAD is already fully cached
+    step(f"Checking HEAD:  {head_rev[:12]}...")
+    head_result = all_cached_at_rev(head_rev, packages)
+    if head_result and all(head_result.values()):
+        info(f"\n  {C.green}HEAD is already fully cached!{C.reset}")
+        return head_rev
+
+    good_rev = start_rev
+    good_date = low_date
+    bad_rev = head_rev
+    bad_date = high_date
+
+    iteration = 0
+    max_iterations = 15
+
+    while iteration < max_iterations:
+        iteration += 1
+
+        mid_sha = midpoint_commit(good_date, bad_date, branch)
+        if not mid_sha or mid_sha in (good_rev, bad_rev):
+            # Converged — try to find exact boundary with a linear scan
+            break
+
+        mid_date_str = commit_date(mid_sha)
+        short = mid_sha[:12]
+        date_display = mid_date_str[:10] if mid_date_str else "?"
+
+        result = all_cached_at_rev(mid_sha, packages)
+        if result is None:
+            step(f"{date_display} {short} {C.yellow}? eval failed{C.reset}")
+            # Treat eval failure as "not cached" to be safe
+            bad_rev = mid_sha
+            bad_date = mid_date_str or bad_date
+            continue
+
+        if all(result.values()):
+            step(f"{date_display} {short} {C.green}✓ all cached{C.reset}")
+            good_rev = mid_sha
+            good_date = mid_date_str or good_date
+        else:
+            missing = [p for p, c in result.items() if not c]
+            step(f"{date_display} {short} {C.red}✗ {missing[0]} not cached{C.reset}")
+            bad_rev = mid_sha
+            bad_date = mid_date_str or bad_date
+
+    if not good_rev:
+        err("Binary search failed: no cached revision found")
+        return None
+
+    # Linear scan forward from good_rev to find the exact boundary
+    info(f"\n{C.bold}Refining boundary...{C.reset}")
+    best_rev = good_rev
+    best_date = good_date
+
+    # Get a handful of commits between good and bad
+    if good_date and bad_date:
+        commits = github_commits_between(good_date, bad_date, branch, per_page=30)
+        # Commits come newest-first from GitHub API; reverse for chronological order
+        commits.reverse()
+
+        for c_data in commits:
+            sha = c_data["sha"]
+            if sha == good_rev:
+                continue
+            if sha == bad_rev:
+                break
+
+            c_date = c_data.get("commit", {}).get("committer", {}).get("date", "?")
+            short = sha[:12]
+            date_display = c_date[:10]
+
+            result = all_cached_at_rev(sha, packages)
+            if result is None:
+                step(f"{date_display} {short} {C.yellow}? eval failed{C.reset}")
+                break
+
+            if all(result.values()):
+                step(f"{date_display} {short} {C.green}✓ all cached{C.reset}")
+                best_rev = sha
+                best_date = c_date
+            else:
+                missing = [p for p, c in result.items() if not c]
+                step(f"{date_display} {short} {C.red}✗ {missing[0]} not cached{C.reset}")
+                break
+
+    return best_rev
+
+
+# ── Flake lock update ────────────────────────────────────────────────
+
+
+def get_current_input_rev(flake_dir: str, input_name: str) -> Optional[str]:
+    """Read the current locked revision for *input_name* from flake.lock."""
+    lock_path = pathlib.Path(flake_dir) / "flake.lock"
+    if not lock_path.exists():
+        return None
+
+    with lock_path.open() as f:
+        lock = json.load(f)
+
+    nodes = lock.get("nodes", {})
+    # Handle Snowfall / standard flake.lock structure
+    # Input name in nodes might differ (e.g., nixpkgs-unstable -> nixpkgs-unstable_2)
+    # Walk the root node's inputs to find the actual node name
+    root = nodes.get("root", {})
+    root_inputs = root.get("inputs", {})
+
+    node_name = root_inputs.get(input_name)
+    if isinstance(node_name, list):
+        # "follows" — resolve the chain
+        node_name = node_name[-1] if node_name else None
+    if not node_name:
+        node_name = input_name
+
+    node = nodes.get(node_name, {})
+    locked = node.get("locked", {})
+    return locked.get("rev")
+
+
+def get_input_branch(flake_dir: str, input_name: str) -> str:
+    """Read the branch (ref) for *input_name* from flake.nix inputs.
+
+    Falls back to 'nixos-unstable'.
+    """
+    import re
+
+    flake_path = pathlib.Path(flake_dir) / "flake.nix"
+    if not flake_path.exists():
+        return "nixos-unstable"
+
+    content = flake_path.read_text()
+
+    # Match: <input_name>.url = "github:nixos/nixpkgs?ref=<branch>";
+    # or:    <input_name>.url = "github:nixos/nixpkgs/<rev>";
+    pattern = rf'{re.escape(input_name)}\.url\s*=\s*"github:nixos/nixpkgs\?ref=([^"]+)"'
+    match = re.search(pattern, content)
+    if match:
+        return match.group(1)
+
+    return "nixos-unstable"
+
+
+def update_flake_lock(flake_dir: str, input_name: str, rev: str) -> bool:
+    """Run nix flake lock --override-input."""
+    try:
+        proc = subprocess.run(
+            [
+                "nix",
+                "flake",
+                "lock",
+                "--override-input",
+                input_name,
+                f"github:nixos/nixpkgs/{rev}",
+            ],
+            cwd=flake_dir,
+            timeout=120,
+        )
+        return proc.returncode == 0
+    except (subprocess.TimeoutExpired, OSError) as exc:
+        err(f"Failed to update flake lock: {exc}")
+        return False
+
+
+# ── Main ─────────────────────────────────────────────────────────────
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(
+        prog="nix-cached-update",
+        description=(
+            "Find the latest nixpkgs revision where specified packages are "
+            "cached on cache.nixos.org, and update the flake lockfile."
+        ),
+    )
+    parser.add_argument(
+        "packages",
+        nargs="+",
+        metavar="PACKAGE",
+        help="Nix attribute paths to check (e.g. rocmPackages.rocblas ollama-rocm)",
+    )
+
+    strategy = parser.add_mutually_exclusive_group()
+    strategy.add_argument(
+        "--hydra-only",
+        action="store_true",
+        help="Only query Hydra API (fast, conservative)",
+    )
+    strategy.add_argument(
+        "--search-only",
+        action="store_true",
+        help="Skip Hydra, binary search only (slow, precise)",
+    )
+
+    parser.add_argument(
+        "--input",
+        default="nixpkgs-unstable",
+        metavar="NAME",
+        help="Flake input to update (default: nixpkgs-unstable)",
+    )
+    parser.add_argument(
+        "--flake",
+        default=".",
+        metavar="PATH",
+        help="Path to flake directory (default: .)",
+    )
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Show result without updating the lock",
+    )
+
+    args = parser.parse_args()
+
+    # Resolve current state
+    current_rev = get_current_input_rev(args.flake, args.input)
+    if not current_rev:
+        err(f"Could not find input '{args.input}' in {args.flake}/flake.lock")
+        sys.exit(1)
+
+    branch = get_input_branch(args.flake, args.input)
+
+    info(f"{C.bold}nix-cached-update{C.reset}")
+    info(f"  Input:    {C.cyan}{args.input}{C.reset}")
+    info(f"  Branch:   {C.cyan}{branch}{C.reset}")
+    info(f"  Current:  {C.cyan}{current_rev[:12]}{C.reset}")
+    info(f"  Packages: {C.cyan}{', '.join(args.packages)}{C.reset}")
+
+    # Check if current rev is already fully cached
+    info(f"\n{C.bold}Checking current revision...{C.reset}")
+    current_result = all_cached_at_rev(current_rev, args.packages)
+    if current_result and all(current_result.values()):
+        info(f"\n{C.green}All packages are already cached at the current revision.{C.reset}")
+        info("Nothing to do.")
+        sys.exit(0)
+    elif current_result:
+        missing = [p for p, c in current_result.items() if not c]
+        info(f"  Uncached: {C.red}{', '.join(missing)}{C.reset}")
+    else:
+        warn("Could not evaluate packages at current revision")
+
+    # Strategy 1: Hydra
+    hydra_rev: Optional[str] = None
+    if not args.search_only:
+        hydra_rev = hydra_find_revision(args.packages)
+
+    # Strategy 2: Binary search
+    result_rev: Optional[str] = None
+
+    if args.hydra_only:
+        result_rev = hydra_rev
+    elif args.search_only:
+        result_rev = binary_search_find_revision(
+            args.packages,
+            start_rev=None,
+            head_rev=current_rev,
+            branch=branch,
+        )
+    else:
+        # Hierarchical: use Hydra result as starting point for binary search
+        result_rev = binary_search_find_revision(
+            args.packages,
+            start_rev=hydra_rev,
+            head_rev=current_rev,
+            branch=branch,
+        )
+
+    if not result_rev:
+        err("Could not find a fully cached revision")
+        sys.exit(1)
+
+    # Report result
+    result_date = commit_date(result_rev)
+    current_date = commit_date(current_rev)
+    date_display = result_date[:10] if result_date else "?"
+    current_display = current_date[:10] if current_date else "?"
+
+    info(f"\n{C.bold}Result{C.reset}")
+    info(f"  Latest fully cached: {C.green}{result_rev[:12]}{C.reset} ({date_display})")
+
+    if result_rev == current_rev:
+        info(f"\n{C.green}Already at the best revision. Nothing to do.{C.reset}")
+        sys.exit(0)
+
+    info(f"\n  {C.dim}{current_rev[:12]} ({current_display}){C.reset}")
+    info(f"  {C.green}→ {result_rev[:12]} ({date_display}){C.reset}")
+
+    if args.dry_run:
+        info(f"\n{C.yellow}Dry run — flake.lock not updated.{C.reset}")
+        sys.exit(0)
+
+    # Apply
+    info(f"\n{C.bold}Updating flake input '{args.input}'...{C.reset}")
+    if update_flake_lock(args.flake, args.input, result_rev):
+        info(f"\n{C.green}Done.{C.reset}")
+    else:
+        err("Failed to update flake.lock")
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()
