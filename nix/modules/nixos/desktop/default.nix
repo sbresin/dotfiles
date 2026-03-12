@@ -222,7 +222,6 @@ in {
       gimp3-with-plugins # image editing
       weather
       dconf-editor # GTK settings
-      # inputs.nix-alien.packages.${stdenv.hostPlatform.system}.nix-alien
       pkgs.${namespace}.gnome-control-center-patched
       inputs.simplemoji.packages.${stdenv.hostPlatform.system}.default
       termusic

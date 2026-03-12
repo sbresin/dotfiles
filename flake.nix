@@ -55,9 +55,6 @@
     # declarative flatpak installs
     nix-flatpak.url = "github:gmodena/nix-flatpak/?ref=latest";
 
-    # run unpatched dynamically linked binaries
-    nix-alien.url = "github:thiagokokada/nix-alien";
-
     # nice little emoji picker
     simplemoji.url = "github:SergioRibera/Simplemoji?ref=v1.2.3";
   };
