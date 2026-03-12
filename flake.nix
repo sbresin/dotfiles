@@ -63,6 +63,11 @@
       url = "github:hyprwm/hyprqt6engine";
       inputs.nixpkgs.follows = "nixpkgs-unstable";
     };
+
+    peek-a-meet = {
+      url = "git+https://github.com/sbresin/peek-a-meet.git";
+      inputs.nixpkgs.follows = "nixpkgs-unstable";
+    };
   };
 
   outputs = inputs:

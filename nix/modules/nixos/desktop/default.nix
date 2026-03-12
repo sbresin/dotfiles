@@ -273,6 +273,7 @@ in {
       termusic
       bottles
       rsgain
+      inputs.peek-a-meet.packages.${pkgs.stdenv.hostPlatform.system}.default
 
       hyprpicker
       rose-pine-cursor
