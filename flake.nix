@@ -26,7 +26,10 @@
     };
 
     # use home-manager
-    home-manager.url = "github:nix-community/home-manager?ref=release-25.11";
+    home-manager = {
+      url = "github:nix-community/home-manager?ref=release-25.11";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
 
     # manages bind mounts to persistent storage
     impermanence = {
