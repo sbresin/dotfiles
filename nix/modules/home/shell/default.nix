@@ -413,6 +413,7 @@ in {
       alejandra
       nh
       nurl
+      pkgs.${namespace}.nix-update-patched
       devbox
       statix
       # languageservers

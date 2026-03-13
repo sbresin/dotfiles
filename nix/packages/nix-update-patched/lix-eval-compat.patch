@@ -1,0 +1,56 @@
+--- a/nix_update/eval.py	2026-03-13 11:46:12.309043538 +0100
++++ b/nix_update/eval.py	2026-03-13 11:45:10.201387279 +0100
+@@ -117,30 +117,33 @@
+     # Pass the attribute path as JSON string
+     attribute_json = json.dumps(opts.attribute_path)
+ 
+-    # Build nix-instantiate command with --arg and --argstr
++    sanitize = "false" if opts.override_filename else "true"
++    system_arg = f'system = "{opts.system}"; ' if opts.system else ""
++
++    # Use `nix eval` instead of `nix-instantiate` for Lix compatibility.
++    # nix-instantiate uses the old evaluator which handles path: flake
++    # inputs differently under Lix, causing store path resolution failures.
++    nix_expr = (
++        f'import {eval_nix} {{ '
++        f'importPath = "{opts.import_path}"; '
++        f'attribute = {json.dumps(attribute_json)}; '
++        f'isFlake = {("true" if opts.flake else "false")}; '
++        f'sanitizePositions = {sanitize}; '
++        f'{system_arg}'
++        f'}}'
++    )
++
+     cmd = [
+-        "nix-instantiate",
+-        "--eval",
++        "nix",
++        "eval",
+         "--json",
+-        "--strict",
+-        str(eval_nix),
+-        "--argstr",
+-        "importPath",
+-        opts.import_path,
+-        "--argstr",
+-        "attribute",
+-        attribute_json,
+-        "--arg",
+-        "isFlake",
+-        "true" if opts.flake else "false",
+-        "--arg",
+-        "sanitizePositions",
+-        "false" if opts.override_filename else "true",
++        "--impure",
++        "--expr",
++        nix_expr,
++        "--extra-experimental-features",
++        "flakes nix-command",
+     ]
+ 
+-    if opts.system:
+-        cmd.extend(["--argstr", "system", opts.system])
+-
+     res = run(cmd)
+     out = json.loads(res.stdout)
+     if opts.override_filename is not None:
