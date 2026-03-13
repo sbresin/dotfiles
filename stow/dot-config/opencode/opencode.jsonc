@@ -57,10 +57,10 @@
 			],
 			"enabled": false,
 		},
-		// "jira": {
-		// 	"type": "remote",
-		// 	"url": "https://jira.example.com/mcp",
-		// 	"enabled": true
-		// }
+		"atlassian": {
+			"type": "remote",
+			"url": "https://mcp.atlassian.com/v1/mcp",
+			"enabled": false,
+		}
 	},
 }
