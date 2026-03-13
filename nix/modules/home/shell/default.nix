@@ -38,23 +38,6 @@
     doCheck = false;
     pytestCheckPhase = "true";
   });
-
-  # Fix readlink noise when running gcloud on Nix.
-  # wrapProgram renames gcloud -> .gcloud-wrapped (a regular file, not a symlink),
-  # causing `readlink` in the _cloudsdk_root_dir function to emit "Invalid argument" to stderr.
-  # Upstream: https://github.com/NixOS/nixpkgs/issues/492130
-  # Remove once https://github.com/NixOS/nixpkgs/pull/492139 is merged
-  google-cloud-sdk-fixed = pkgs.unstable.google-cloud-sdk.overrideAttrs (oldAttrs: {
-    postFixup =
-      (oldAttrs.postFixup or "")
-      + ''
-        substituteInPlace $out/google-cloud-sdk/bin/.gcloud-wrapped \
-          --replace-fail 'while _cloudsdk_link=$(readlink "$_cloudsdk_path")' \
-                         'while _cloudsdk_link=$(readlink "$_cloudsdk_path" 2>/dev/null)' \
-          --replace-fail 'CLOUDSDK_ROOT_DIR=$(_cloudsdk_root_dir "$0")' \
-                         'CLOUDSDK_ROOT_DIR=$(realpath "$(dirname "$0")/..")'
-      '';
-  });
 in {
   # ************************************************************************************************
   # SHELLS
@@ -504,7 +487,7 @@ in {
       act
       caddy
       fastly
-      google-cloud-sdk-fixed
+      google-cloud-sdk
       heroku
       terraform
       tflint
