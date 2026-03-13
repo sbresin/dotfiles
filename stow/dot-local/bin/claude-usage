@@ -1,0 +1,323 @@
+#!/usr/bin/env python3
+"""Query Claude Pro/Max subscription usage via the Anthropic OAuth API.
+
+Reads the OAuth token persisted by OpenCode (opencode-anthropic-auth plugin),
+queries the undocumented usage endpoint, and displays quota information.
+
+Modes:
+    claude-usage              Pretty-print all usage windows to the terminal
+    claude-usage --json       Single waybar-compatible JSON line (five_hour)
+    claude-usage --listen     Continuous JSON output for ashell listen_cmd
+
+The OAuth access token is read from ~/.local/share/opencode/auth.json.
+When expired it is refreshed automatically using the stored refresh token.
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import signal
+import sys
+import tempfile
+import threading
+import time
+import urllib.error
+import urllib.request
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any, Optional
+
+# ── Constants ────────────────────────────────────────────────────────
+
+AUTH_PATH = Path.home() / ".local" / "share" / "opencode" / "auth.json"
+USAGE_URL = "https://api.anthropic.com/api/oauth/usage"
+TOKEN_URL = "https://console.anthropic.com/v1/oauth/token"
+CLIENT_ID = "9d1c250a-e61b-44d9-88ed-5944d1962f5e"
+
+POLL_INTERVAL = 900  # 15 minutes
+WARN_THRESHOLD = 60
+ALERT_THRESHOLD = 85
+BAR_WIDTH = 16
+
+WINDOW_LABELS: dict[str, str] = {
+    "five_hour": "5-hour",
+    "seven_day": "7-day",
+    "seven_day_sonnet": "Sonnet",
+    "seven_day_opus": "Opus",
+}
+
+# ── Token Management ─────────────────────────────────────────────────
+
+
+def read_auth() -> dict[str, Any]:
+    """Read the anthropic entry from OpenCode's auth store."""
+    with open(AUTH_PATH) as f:
+        data = json.load(f)
+    auth = data.get("anthropic")
+    if not auth or auth.get("type") != "oauth":
+        raise RuntimeError("No OAuth credentials for anthropic in auth.json")
+    return auth
+
+
+def refresh_token(auth: dict[str, Any]) -> str:
+    """Refresh an expired access token and persist the new credentials.
+
+    Returns the new access token.
+    """
+    payload = json.dumps({
+        "grant_type": "refresh_token",
+        "refresh_token": auth["refresh"],
+        "client_id": CLIENT_ID,
+    }).encode()
+
+    req = urllib.request.Request(
+        TOKEN_URL,
+        data=payload,
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    with urllib.request.urlopen(req, timeout=15) as resp:
+        token_data = json.loads(resp.read())
+
+    new_auth = {
+        "type": "oauth",
+        "refresh": token_data["refresh_token"],
+        "access": token_data["access_token"],
+        "expires": int(time.time() * 1000) + token_data["expires_in"] * 1000,
+    }
+
+    # Atomic write-back: read full file, update anthropic entry, write to
+    # temp file in the same directory, then os.replace for atomicity.
+    with open(AUTH_PATH) as f:
+        full_data = json.load(f)
+    full_data["anthropic"] = new_auth
+
+    fd, tmp_path = tempfile.mkstemp(dir=AUTH_PATH.parent, suffix=".tmp")
+    try:
+        with os.fdopen(fd, "w") as f:
+            json.dump(full_data, f, indent=2)
+            f.write("\n")
+        os.replace(tmp_path, AUTH_PATH)
+    except BaseException:
+        with open(tmp_path) as _:
+            pass  # ensure fd is closed
+        os.unlink(tmp_path)
+        raise
+
+    return token_data["access_token"]
+
+
+def get_access_token() -> str:
+    """Return a valid access token, refreshing if necessary."""
+    auth = read_auth()
+    expires_ms = auth.get("expires", 0)
+    if not auth.get("access") or expires_ms < time.time() * 1000:
+        return refresh_token(auth)
+    return auth["access"]
+
+
+# ── Usage Fetch ──────────────────────────────────────────────────────
+
+
+def fetch_usage(access_token: str) -> dict[str, Any]:
+    """Query the Claude usage endpoint and return the parsed response."""
+    req = urllib.request.Request(
+        USAGE_URL,
+        headers={
+            "Authorization": f"Bearer {access_token}",
+            "anthropic-beta": "oauth-2025-04-20",
+        },
+    )
+    with urllib.request.urlopen(req, timeout=15) as resp:
+        return json.loads(resp.read())
+
+
+# ── Formatting ───────────────────────────────────────────────────────
+
+
+def format_remaining(resets_at: str) -> str:
+    """Convert an ISO reset timestamp to a compact remaining-time string.
+
+    Examples: "4d3h", "2h14m", "45m", "<1m"
+    """
+    reset_dt = datetime.fromisoformat(resets_at)
+    delta = reset_dt - datetime.now(timezone.utc)
+    total_seconds = max(int(delta.total_seconds()), 0)
+
+    days, remainder = divmod(total_seconds, 86400)
+    hours, remainder = divmod(remainder, 3600)
+    minutes = remainder // 60
+
+    if days > 0:
+        return f"{days}d{hours}h"
+    if hours > 0:
+        return f"{hours}h{minutes:02d}m"
+    if minutes > 0:
+        return f"{minutes}m"
+    return "<1m"
+
+
+def state_for_pct(pct: float) -> str:
+    """Return the alt-field state string for a given utilization percentage."""
+    if pct >= ALERT_THRESHOLD:
+        return "alert"
+    if pct >= WARN_THRESHOLD:
+        return "warn"
+    return "ok"
+
+
+def format_json(usage: dict[str, Any]) -> str:
+    """Build a single waybar-compatible JSON line from five_hour data."""
+    window = usage.get("five_hour")
+    if window is None:
+        return json.dumps({"text": "0%", "alt": "ok"})
+
+    pct = window["utilization"]
+    remaining = format_remaining(window["resets_at"])
+    state = state_for_pct(pct)
+    return json.dumps({"text": f"{pct:.0f}% {remaining}", "alt": state})
+
+
+def format_bar(pct: float) -> str:
+    """Build a unicode progress bar of BAR_WIDTH characters."""
+    filled = round(pct / 100 * BAR_WIDTH)
+    filled = max(0, min(BAR_WIDTH, filled))
+    return "█" * filled + "░" * (BAR_WIDTH - filled)
+
+
+def colorize(text: str, pct: float) -> str:
+    """Wrap text in ANSI color codes based on utilization thresholds."""
+    if pct >= ALERT_THRESHOLD:
+        code = "31"  # red
+    elif pct >= WARN_THRESHOLD:
+        code = "33"  # yellow
+    else:
+        code = "32"  # green
+    return f"\033[{code}m{text}\033[0m"
+
+
+def format_human(usage: dict[str, Any]) -> str:
+    """Build a multi-line human-readable table of all usage windows."""
+    use_color = sys.stdout.isatty()
+    lines: list[str] = []
+
+    header = "Claude Usage"
+    separator = "─" * 48
+    if use_color:
+        lines.append(f"\033[1m{header}\033[0m")
+        lines.append(f"\033[2m{separator}\033[0m")
+    else:
+        lines.append(header)
+        lines.append(separator)
+
+    for key, label in WINDOW_LABELS.items():
+        window = usage.get(key)
+        if window is None:
+            lines.append(f"  {label:<10s} —")
+            continue
+
+        pct = window["utilization"]
+        remaining = format_remaining(window["resets_at"])
+        bar = format_bar(pct)
+
+        if use_color:
+            bar_colored = colorize(bar, pct)
+            pct_colored = colorize(f"{pct:3.0f}%", pct)
+            lines.append(
+                f"  {label:<10s} {bar_colored}  {pct_colored}   resets in {remaining}"
+            )
+        else:
+            lines.append(
+                f"  {label:<10s} {bar}  {pct:3.0f}%   resets in {remaining}"
+            )
+
+    return "\n".join(lines)
+
+
+# ── Main ─────────────────────────────────────────────────────────────
+
+
+def run_once_json() -> None:
+    """Fetch usage and print a single JSON line."""
+    try:
+        token = get_access_token()
+        usage = fetch_usage(token)
+        print(format_json(usage), flush=True)
+    except Exception:
+        print(json.dumps({"text": "?", "alt": "error"}), flush=True)
+        sys.exit(1)
+
+
+def run_once_human() -> None:
+    """Fetch usage and print a human-readable table."""
+    try:
+        token = get_access_token()
+        usage = fetch_usage(token)
+        print(format_human(usage))
+    except Exception as exc:
+        print(f"Error: {exc}", file=sys.stderr)
+        sys.exit(1)
+
+
+def run_listen(interval: int) -> None:
+    """Continuously fetch usage and print JSON lines for ashell.
+
+    Responds to SIGUSR1 by immediately re-fetching instead of waiting
+    for the next poll interval.  This allows the ashell on-click command
+    to trigger an instant refresh via ``pkill -USR1 -f 'claude-usage --listen'``.
+    """
+    wake_event = threading.Event()
+
+    def _handle_sigusr1(signum: int, frame: Any) -> None:
+        wake_event.set()
+
+    signal.signal(signal.SIGUSR1, _handle_sigusr1)
+
+    while True:
+        try:
+            token = get_access_token()
+            usage = fetch_usage(token)
+            print(format_json(usage), flush=True)
+        except Exception:
+            print(json.dumps({"text": "?", "alt": "error"}), flush=True)
+
+        wake_event.wait(timeout=interval)
+        wake_event.clear()
+
+
+def main() -> None:
+    """Parse arguments and dispatch to the appropriate mode."""
+    parser = argparse.ArgumentParser(
+        description="Query Claude Pro/Max subscription usage.",
+    )
+    parser.add_argument(
+        "--json",
+        action="store_true",
+        help="output a single waybar-compatible JSON line and exit",
+    )
+    parser.add_argument(
+        "--listen",
+        action="store_true",
+        help="continuously output JSON lines (for ashell listen_cmd)",
+    )
+    parser.add_argument(
+        "--interval",
+        type=int,
+        default=POLL_INTERVAL,
+        help=f"poll interval in seconds for --listen (default: {POLL_INTERVAL})",
+    )
+
+    args = parser.parse_args()
+
+    if args.listen:
+        run_listen(args.interval)
+    elif args.json:
+        run_once_json()
+    else:
+        run_once_human()
+
+
+if __name__ == "__main__":
+    main()
