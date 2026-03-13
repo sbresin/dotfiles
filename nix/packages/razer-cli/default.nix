@@ -5,7 +5,7 @@
 }:
 pkgs.python3Packages.buildPythonApplication rec {
   pname = "razer-cli";
-  version = "2.2.1";
+  version = "2.3.0";
 
   src = pkgs.fetchPypi {
     inherit pname version;

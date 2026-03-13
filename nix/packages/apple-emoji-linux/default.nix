@@ -5,11 +5,11 @@
 }:
 stdenvNoCC.mkDerivation rec {
   pname = "apple-emoji-linux";
-  version = "17.4";
+  version = "macos-26-20260219-2aa12422";
 
   src = fetchurl {
-    url = "https://github.com/samuelngs/apple-emoji-linux/releases/download/v${version}/AppleColorEmoji.ttf";
-    hash = "sha256-SG3JQLybhY/fMX+XqmB/BKhQSBB0N1VRqa+H6laVUPE=";
+    url = "https://github.com/samuelngs/apple-emoji-ttf/releases/download/${version}/AppleColorEmoji-Linux.ttf";
+    hash = "sha256-U1oEOvBHBtJEcQWeZHRb/IDWYXraLuo0NdxWINwPUxg=";
   };
 
   dontUnpack = true;
@@ -22,7 +22,7 @@ stdenvNoCC.mkDerivation rec {
 
   meta = {
     description = "Brings Apple's vibrant emojis to your Linux experience";
-    homepage = "https://github.com/samuelngs/apple-emoji-linux";
+    homepage = "https://github.com/samuelngs/apple-emoji-ttf";
     license = lib.licenses.asl20;
     platforms = lib.platforms.all;
     maintainers = [];

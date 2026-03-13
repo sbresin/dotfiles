@@ -17,13 +17,13 @@
   ...
 }: let
   pname = "es-de";
-  version = "3.1.0";
+  version = "3.4.0";
 in
   stdenv.mkDerivation {
     inherit pname version;
     src = fetchzip {
       url = "https://gitlab.com/es-de/emulationstation-de/-/archive/v${version}/emulationstation-de-v${version}.tar.gz";
-      hash = "sha256-v9nOY9T5VOVLBUKoDXqwYa1iYvW42iGA+3kpPUOmHkg=";
+      hash = "sha256-poegMKtPtUbdUbAwVj6O+rh7bxou+Wc+IDS3TBHh2LU=";
     };
 
     nativeBuildInputs = [

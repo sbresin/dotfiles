@@ -10,16 +10,16 @@
 }:
 buildNpmPackage rec {
   pname = "docs-mcp-server";
-  version = "1.36.0";
+  version = "2.0.4";
 
   src = fetchFromGitHub {
     owner = "arabold";
     repo = "docs-mcp-server";
     rev = "v${version}";
-    hash = "sha256-cYwcgIvBmAr4MR+12WNfPm5H8xXAxW0eoxpuBZSLS34=";
+    hash = "sha256-nT45pU0chtn3zawcsX44PkUaBiW2MnUyftKP/qehtTY=";
   };
 
-  npmDepsHash = "sha256-OCxjiQ3XpkV5ae7gNNhyYOe5nJNz89Irt7lO2Byyq1E=";
+  npmDepsHash = "sha256-/Uzpqv92pRcANeBcE/uZ4tRa5XuoZ0JEiwhlbkGel6U=";
 
   nodejs = nodejs_22;
 

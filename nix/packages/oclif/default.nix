@@ -10,13 +10,13 @@
 }:
 stdenv.mkDerivation rec {
   pname = "oclif";
-  version = "4.4.21";
+  version = "4.22.87";
 
   src = fetchFromGitHub {
     owner = "oclif";
     repo = "oclif";
     rev = "refs/tags/${version}";
-    hash = "sha256-xaRbsU4+iIrTSs79XGfgH0xZtfIgBFEITIrcDbHY9MY=";
+    hash = "sha256-EY+qMR6R4UcDK5TDrV3NVmiwOGO7HKzm6527Pm9X+Ak=";
   };
 
   nativeBuildInputs = [makeWrapper yarn fixup-yarn-lock];
@@ -24,7 +24,7 @@ stdenv.mkDerivation rec {
 
   yarnOfflineCache = fetchYarnDeps {
     yarnLock = "${src}/yarn.lock";
-    hash = "sha256-BuMiN4T+SIF6hr5OPeEO6UwKUcIWetSZ2m84KkLXHkE=";
+    hash = "sha256-jO+U4ZOVemanx9Bg5AqRNcT0eLKbj+LXUIsKeca0+48=";
   };
 
   configurePhase = ''

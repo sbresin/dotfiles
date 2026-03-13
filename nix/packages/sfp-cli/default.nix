@@ -7,7 +7,7 @@
   apple-sdk,
   stdenv,
 }: let
-  version = "39.4.1";
+  version = "39.8.0";
 in
   buildNpmPackage {
     inherit version;
@@ -17,14 +17,14 @@ in
       owner = "flxbl-io";
       repo = "sfp";
       rev = "refs/tags/v${version}";
-      hash = "sha256-xogqyr69+UzgclAquaRpa7WMNk8d0y7gW2zwt6frK+Y=";
+      hash = "sha256-ilbmbvCLaTFfpRJ+1b/QK7qGryxu8eVgBmu9RrFXhjQ=";
     };
 
     patches = [
-      ./add-plugins-plugin.patch
+      # ./add-plugins-plugin.patch
     ];
     # sha256-uY7C+5G5Uh9UwIWuhrsdSRfSevfp7zcU4Q7ELgpgRmg=
-    npmDepsHash = "sha256-O/FNkgBHHwbPBQ5S5Jt1CDvdIw5yAhfi3rbg8GLju0g=";
+    npmDepsHash = "sha256-vmPaRqNeD1NNT6wprcWpIDeiY+bbsrzzs8TlIkzqsdA=";
 
     nodejs = nodejs_22;
 

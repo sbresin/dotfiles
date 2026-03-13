@@ -1,40 +1,40 @@
 {
   lib,
-  fetchFromGitHub,
-  buildNpmPackage,
+  fetchurl,
   nodejs_22,
   makeWrapper,
+  stdenvNoCC,
 }:
-buildNpmPackage rec {
+stdenvNoCC.mkDerivation rec {
   pname = "chrome-devtools-mcp";
-  version = "0.15.0";
+  version = "0.20.0";
 
-  src = fetchFromGitHub {
-    owner = "ChromeDevTools";
-    repo = "chrome-devtools-mcp";
-    rev = "chrome-devtools-mcp-v${version}";
-    hash = "sha256-IcnphWQDjf+VQkhPJgtreeKtEkXDyD3WcLXYoX3OoqM=";
+  src = fetchurl {
+    url = "https://registry.npmjs.org/${pname}/-/${pname}-${version}.tgz";
+    hash = "sha512-wBnt8901lAXdac3AB7WdONYTAXGW+YqqIVVg7PztxYVNPs3VVgM2UZnZT/ICYPIofKTuRBOkRdEE/VYm90ZgYA==";
   };
 
-  npmDepsHash = "sha256-e/xB+PRExG32b36unPix2lq2jLp7LsgezdZcZuBbJTo=";
-
-  nodejs = nodejs_22;
-
-  # Skip Puppeteer's Chrome download - we connect to external browser
-  env = {
-    PUPPETEER_SKIP_DOWNLOAD = "1";
-  };
+  sourceRoot = "package";
+  dontBuild = true;
 
   nativeBuildInputs = [makeWrapper];
 
-  # Use "bundle" instead of "build" - this runs rollup to bundle all dependencies
-  # into a single file, which is required for the package to work standalone
-  npmBuildScript = "bundle";
-
   # Disable telemetry by default
-  postInstall = ''
-    wrapProgram $out/bin/chrome-devtools-mcp \
+  installPhase = ''
+    runHook preInstall
+
+    mkdir -p $out/libexec/${pname} $out/bin
+    cp -r build LICENSE package.json $out/libexec/${pname}/
+
+    makeWrapper ${nodejs_22}/bin/node $out/bin/chrome-devtools-mcp \
+      --add-flags $out/libexec/${pname}/build/src/bin/chrome-devtools-mcp.js \
       --set CHROME_DEVTOOLS_MCP_NO_USAGE_STATISTICS "1"
+
+    makeWrapper ${nodejs_22}/bin/node $out/bin/chrome-devtools \
+      --add-flags $out/libexec/${pname}/build/src/bin/chrome-devtools.js \
+      --set CHROME_DEVTOOLS_MCP_NO_USAGE_STATISTICS "1"
+
+    runHook postInstall
   '';
 
   meta = with lib; {

@@ -19,18 +19,18 @@
 }:
 rustPlatform.buildRustPackage rec {
   pname = "rusty-psn";
-  version = "0.5.1";
+  version = "0.5.10";
 
   src = fetchFromGitHub {
     owner = "RainbowCookie32";
     repo = "rusty-psn";
     rev = "v${version}";
-    sha256 = "sha256-o6utGY8tPI90ba9FyOzhkJ2W1RGOyCLU7TEtHouMiSk=";
+    sha256 = "sha256-3sy3PBiV7ioRnYwI2vF6lGVj3Q/Ls6GmENyGePCgQ3k=";
   };
 
   # cargoPatches = [ ./fix-cargo-lock.patch ];
 
-  cargoHash = "sha256-lzBZaS46SMXlmoBfDyBtEuNfjS8VWGXYlC6SugKLB10=";
+  cargoHash = "sha256-orsCExYx9ZGtda13mmFk7665WFwZ7E7rr5wEcDxc+vY=";
 
   # Tests require network access
   doCheck = false;
