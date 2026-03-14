@@ -92,6 +92,9 @@ in {
       dolphin-emu
       mgba
       ryubing
+      cemu
+      rpcs3
+      # flycast
       # games
       solarus-launcher
       # Upstream duckstation maintainer does not treat tags as immutable,
@@ -122,10 +125,6 @@ in {
         "com.valvesoftware.Steam".Context.sockets = ["x11"]; # No Wayland support
       };
       packages = [
-        # emulators
-        "net.rpcs3.RPCS3"
-        "info.cemu.Cemu"
-        "org.flycast.Flycast"
         # proprietary
         "com.discordapp.Discord"
       ];
