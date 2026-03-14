@@ -8,8 +8,9 @@ pkgs.python3Packages.buildPythonApplication rec {
   version = "2.3.0";
 
   src = pkgs.fetchPypi {
-    inherit pname version;
-    hash = "sha256-/qT98cGRQd968DGe25hsyjqIwcYbhw77ABUslHGpdEE=";
+    pname = "razer_cli";
+    inherit version;
+    hash = "sha256-BvNumOvyNYqEnbhBZ/zdcQwF4+8kMGYE6X1QZwHil9g=";
   };
 
   pyproject = true;
