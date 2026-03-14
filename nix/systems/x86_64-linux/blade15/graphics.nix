@@ -30,7 +30,17 @@
     # useful for debugging PRIME problems
     mesa-demos
     vulkan-tools
+    # Intel GPU usage monitoring (used by ashell gpu-usage-listen.sh)
+    intel-gpu-tools
   ];
+
+  # Allow intel_gpu_top to read i915 PMU counters as a non-root user
+  security.wrappers.intel_gpu_top = {
+    owner = "root";
+    group = "users";
+    capabilities = "cap_perfmon+ep";
+    source = "${pkgs.intel-gpu-tools}/bin/intel_gpu_top";
+  };
 
   # Load nvidia driver for Xorg and Wayland
   services.xserver.videoDrivers = ["nvidia"];
