@@ -22,32 +22,36 @@
   boot.plymouth.enable = true;
 
   # CachyOS kernel with BORE scheduler
-  boot.kernelPackages = pkgs.cachyosKernels.linuxPackages-cachyos-latest.extend (self: super: {
-    apfs = super.apfs.overrideAttrs (o: {
-      version = "0.3.16-6.17";
-      src = pkgs.fetchFromGitHub {
-        owner = "linux-apfs";
-        repo = "linux-apfs-rw";
-        rev = "v0.3.16";
-        hash = "sha256-11ypevJwxNKAmJbl2t+nGXq40hjWbLIdltLqSeTVdHc=";
-      };
-    });
-    openrazer = super.openrazer.overrideAttrs (o: {
-      version = "3.10.3";
-      src = pkgs.fetchFromGitHub {
-        owner = "openrazer";
-        repo = "openrazer";
-        tag = "v3.10.3";
-        hash = "sha256-M5g3Rn9WuyudhWQfDooopjexEgGVB0rzfJsPg+dqwn4=";
-      };
-      # patches =
-      #   o.patches or []
-      #   ++ [
-      #     ./blade15_base_2021_add_fn_toggle.patch
-      #   ];
-    });
-  });
-  system.modulesTree = [(lib.getOutput "modules" pkgs.cachyosKernels.linuxPackages-cachyos-latest.kernel)];
+  boot.kernelPackages = pkgs.cachyosKernels.linuxPackages-cachyos-latest.extend (
+    self: super: {
+      apfs = super.apfs.overrideAttrs (o: {
+        version = "0.3.18-6.19";
+        src = pkgs.fetchFromGitHub {
+          owner = "linux-apfs";
+          repo = "linux-apfs-rw";
+          rev = "v0.3.18";
+          hash = "sha256-cyjaWNND8FIH6NOmLNxk/mYkYgQc4/SMpwXUVFGPe3c=";
+        };
+      });
+      openrazer = super.openrazer.overrideAttrs (o: {
+        version = "3.10.3";
+        src = pkgs.fetchFromGitHub {
+          owner = "openrazer";
+          repo = "openrazer";
+          tag = "v3.10.3";
+          hash = "sha256-M5g3Rn9WuyudhWQfDooopjexEgGVB0rzfJsPg+dqwn4=";
+        };
+        # patches =
+        #   o.patches or []
+        #   ++ [
+        #     ./blade15_base_2021_add_fn_toggle.patch
+        #   ];
+      });
+    }
+  );
+  system.modulesTree = [
+    (lib.getOutput "modules" pkgs.cachyosKernels.linuxPackages-cachyos-latest.kernel)
+  ];
 
   # use sched_ext
   services.scx = {
