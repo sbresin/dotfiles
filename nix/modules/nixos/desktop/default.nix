@@ -265,7 +265,6 @@ in {
       nautilus # gnome file manager
       snapshot # gnome camera
       gnome-disk-utility
-      gimp3-with-plugins # image editing
       weather
       dconf-editor # GTK settings
       pkgs.${namespace}.gnome-control-center-patched

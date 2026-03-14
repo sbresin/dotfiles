@@ -23,12 +23,8 @@
       # tools
       "com.github.tchx84.Flatseal"
       # desktop apps
-      "com.github.jeromerobert.pdfarranger"
-      "com.vscodium.codium"
       "org.telegram.desktop"
-      "org.libreoffice.LibreOffice"
       "com.mastermindzh.tidal-hifi"
-      "org.inkscape.Inkscape"
       # browsers
       "org.mozilla.firefox"
       "io.github.zen_browser.zen"

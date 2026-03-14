@@ -96,6 +96,13 @@ in {
     environment.systemPackages = with pkgs.unstable; [
       packet
       wiremix
+      # Desktop apps (migrated from Flatpak)
+      pdfarranger
+      libreoffice
+      inkscape
+      vscodium
+      gimp-with-plugins
+      pied
     ];
 
     boot.extraModprobeConfig = ''
