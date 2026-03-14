@@ -175,7 +175,7 @@
       (pkgs.unstable.kicad.override {
         addons = with pkgs.unstable.kicadAddons; [kikit kikit-library];
       })
-      pkgs.freecad
+      freecad
       # stuff for tinkering
       rpiboot
       # this flakes packages
