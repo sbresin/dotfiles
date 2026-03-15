@@ -40,7 +40,7 @@ in
 
           initial-window-mode=fullscreen
 
-          [colors]
+          [colors-dark]
           background=191724
           foreground=e0def4
         '';
