@@ -30,7 +30,7 @@
     # useful for debugging PRIME problems
     mesa-demos
     vulkan-tools
-    # Intel GPU usage monitoring (used by ashell gpu-usage-listen.sh)
+    # Intel GPU usage monitoring (used by ashell gpu-usage-listen.py)
     intel-gpu-tools
   ];
 

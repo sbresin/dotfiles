@@ -9,7 +9,7 @@ stdenvNoCC.mkDerivation {
   pname = "export-ble-infos";
   version = "0.0.1-f390aab";
 
-  src = lib.snowfall.fs.get-file "nix/packages/export-ble-infos/src";
+  src = ./src;
 
   dontConfigure = true;
   dontBuild = true;

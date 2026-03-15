@@ -178,8 +178,9 @@ alert = ".*notification"
 name = "GpuUsage"
 icon = "󰢮"
 command = "true"
-listen_cmd = "bash ~/.config/ashell/scripts/gpu-usage-listen.sh"
-alert = "^(warn|hot)$"
+listen_cmd = "python3 ~/.config/ashell/scripts/gpu-usage-listen.py"
+icons.'intel.*' = "󰍛"
+alert = "^.*(warn|hot)$"
 
 # Settings module configuration
 [settings]

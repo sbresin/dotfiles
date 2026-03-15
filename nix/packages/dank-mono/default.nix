@@ -8,7 +8,7 @@ stdenvNoCC.mkDerivation {
   version = "0.1";
 
   src = fetchzip {
-    url = "file://${lib.snowfall.fs.get-file "nix/packages/dank-mono/Dank_Mono_15_Oct_2020.encrypted.zip"}";
+    url = "file://${./Dank_Mono_15_Oct_2020.encrypted.zip}";
     hash = "sha256-0OTANoEoZTqDFiQLHVw+ytStWMOiB/Z/V2M9ZWTQSCE=";
     stripRoot = false;
   };
