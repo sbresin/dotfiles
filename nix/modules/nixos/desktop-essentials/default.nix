@@ -4,16 +4,18 @@
   pkgs,
 
   ...
-}: let
+}:
+let
   cfg = config.sebe.desktop-essentials;
-in {
+in
+{
   options.sebe.desktop-essentials = {
     enable = lib.mkEnableOption "install/setup essentials for desktop systems";
   };
 
   config = lib.mkIf cfg.enable {
     # needed for cross compiling aarch64 system configs
-    boot.binfmt.emulatedSystems = ["aarch64-linux"];
+    boot.binfmt.emulatedSystems = [ "aarch64-linux" ];
 
     # Configure keymap in X11
     services.xserver.xkb = {
@@ -32,7 +34,7 @@ in {
     services.printing = {
       enable = true;
       # add hp printer drivers
-      drivers = with pkgs; [hplip];
+      drivers = with pkgs; [ hplip ];
       # enable virtual pdf printer
       cups-pdf.enable = true;
     };
@@ -48,8 +50,11 @@ in {
 
     # open ports for Packet
     networking.firewall = {
-      allowedTCPPorts = [9300];
-      allowedUDPPorts = [5353 5355];
+      allowedTCPPorts = [ 9300 ];
+      allowedUDPPorts = [
+        5353
+        5355
+      ];
     };
 
     # Enable sound through pipewire

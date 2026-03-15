@@ -1,12 +1,15 @@
 # Overlay that registers all custom packages under pkgs.sebe.*
 # Replaces Snowfall Lib's auto-discovery of nix/packages/*/
-{inputs}: final: prev: let
+{ inputs }:
+final: prev:
+let
   # Standard callPackage — for packages with explicit deps like {lib, stdenv, ...}:
-  pkg = path: final.callPackage path {};
+  pkg = path: final.callPackage path { };
 
   # For packages using the {pkgs, ...}: convention that need the full package set
-  pkgFull = path: final.callPackage path {pkgs = final;};
-in {
+  pkgFull = path: final.callPackage path { pkgs = final; };
+in
+{
   sebe = {
     aarch64-installer-netboot = final.callPackage ../../packages/aarch64-installer-netboot {
       pkgs = final;

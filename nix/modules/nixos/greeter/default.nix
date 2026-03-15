@@ -4,16 +4,17 @@
   pkgs,
 
   ...
-}: let
+}:
+let
   cfg = config.sebe.greeter;
-in {
+in
+{
   options.sebe.greeter = {
     enable = lib.mkEnableOption "install login greeter (tuigreet)";
   };
 
-  config =
-    lib.mkIf cfg.enable
-    (let
+  config = lib.mkIf cfg.enable (
+    let
       transparent-cursor = pkgs.fetchFromGitHub {
         owner = "johnodon";
         repo = "Transparent_Cursor_Theme";
@@ -44,7 +45,8 @@ in {
           foreground=e0def4
         '';
       };
-    in {
+    in
+    {
       services.greetd = {
         enable = true;
         settings = {
@@ -59,5 +61,6 @@ in {
         XCURSOR_PATH = transparent-cursor;
         XCURSOR_THEME = "Transparent";
       };
-    });
+    }
+  );
 }

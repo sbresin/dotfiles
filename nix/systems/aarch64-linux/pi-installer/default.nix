@@ -2,7 +2,8 @@
   lib,
   pkgs,
   ...
-}: {
+}:
+{
   # The last console argument in the list that linux can find at boot will receive kernel logs.
   # The serial ports listed here are:
   # - ttyS0: serial
@@ -13,7 +14,11 @@
     "nomodeset" # not needed for headless installers
   ];
 
-  boot.supportedFilesystems = lib.mkForce ["vfat" "btrfs" "tmpfs"];
+  boot.supportedFilesystems = lib.mkForce [
+    "vfat"
+    "btrfs"
+    "tmpfs"
+  ];
 
   networking.hostName = "pi-installer";
 
@@ -22,7 +27,7 @@
   users.users.sebe = {
     isNormalUser = true;
     shell = pkgs.zsh;
-    extraGroups = ["wheel"];
+    extraGroups = [ "wheel" ];
     openssh.authorizedKeys.keys = [
       "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIARDUSJe+7l/6PKYcXQyFyoMYeZE7s/zGIbtoXmZfB7y sebe@blade15"
     ];
@@ -30,7 +35,12 @@
 
   programs.zsh.enable = true;
 
-  environment.systemPackages = with pkgs; [git neovim disko ethtool];
+  environment.systemPackages = with pkgs; [
+    git
+    neovim
+    disko
+    ethtool
+  ];
 
   system.stateVersion = "25.05";
   nixpkgs.hostPlatform = "aarch64-linux";

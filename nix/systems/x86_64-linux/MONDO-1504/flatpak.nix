@@ -1,4 +1,5 @@
-{...}: {
+{ ... }:
+{
   services.flatpak = {
     enable = true;
     update.auto = {
@@ -8,7 +9,11 @@
     overrides = {
       global = {
         # Force Wayland by default
-        Context.sockets = ["wayland" "!x11" "!fallback-x11"];
+        Context.sockets = [
+          "wayland"
+          "!x11"
+          "!fallback-x11"
+        ];
 
         Environment = {
           # Fix un-themed cursor in some Wayland apps

@@ -1,2 +1,1 @@
-{pkgs, ...}:
-pkgs.unstable.callPackage ./package.nix {}
+{ pkgs, ... }: pkgs.unstable.callPackage ./package.nix { }

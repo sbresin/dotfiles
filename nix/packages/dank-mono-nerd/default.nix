@@ -10,7 +10,7 @@ stdenvNoCC.mkDerivation {
 
   src = pkgs.sebe.dank-mono;
 
-  nativeBuildInputs = [nerd-font-patcher];
+  nativeBuildInputs = [ nerd-font-patcher ];
 
   dontUnpack = true;
   dontConfigure = true;

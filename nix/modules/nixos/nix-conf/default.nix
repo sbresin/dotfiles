@@ -2,7 +2,8 @@
   pkgs,
   options,
   ...
-}: {
+}:
+{
   # use Lix fork (faster and community driven)
   # nix dependend packages set through overlay
   nix.package = pkgs.lixPackageSets.latest.lix;
@@ -10,8 +11,11 @@
   nix.settings = {
     max-jobs = 4; # max derivations built in parallel
     cores = 4; # threads per derivation
-    experimental-features = ["nix-command" "flakes"];
-    trusted-users = ["sebe"];
+    experimental-features = [
+      "nix-command"
+      "flakes"
+    ];
+    trusted-users = [ "sebe" ];
 
     # the system-level substituters & trusted-public-keys
     extra-trusted-public-keys = [
@@ -39,17 +43,15 @@
     enable = true;
     libraries =
       options.programs.nix-ld.libraries.default
-      ++ (
-        with pkgs; [
-          dbus # libdbus-1.so.3
-          fontconfig # libfontconfig.so.1
-          freetype # libfreetype.so.6
-          glib # libglib-2.0.so.0
-          libGL # libGL.so.1
-          libxkbcommon # libxkbcommon.so.0
-          xorg.libX11 # libX11.so.6
-          wayland
-        ]
-      );
+      ++ (with pkgs; [
+        dbus # libdbus-1.so.3
+        fontconfig # libfontconfig.so.1
+        freetype # libfreetype.so.6
+        glib # libglib-2.0.so.0
+        libGL # libGL.so.1
+        libxkbcommon # libxkbcommon.so.0
+        xorg.libX11 # libX11.so.6
+        wayland
+      ]);
   };
 }

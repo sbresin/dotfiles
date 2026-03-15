@@ -3,9 +3,11 @@
   lib,
 
   ...
-}: let
+}:
+let
   cfg = config.sebe.impermanence;
-in {
+in
+{
   options.sebe.impermanence = {
     enable = lib.mkEnableOption "setup impermanence persistent storage";
   };

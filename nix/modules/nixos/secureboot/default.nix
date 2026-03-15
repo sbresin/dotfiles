@@ -4,9 +4,11 @@
   pkgs,
 
   ...
-}: let
+}:
+let
   cfg = config.sebe.secureboot;
-in {
+in
+{
   options.sebe.secureboot = {
     enable = lib.mkEnableOption "setup secureboot";
   };

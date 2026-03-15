@@ -1,4 +1,5 @@
-{pkgs, ...}: {
+{ pkgs, ... }:
+{
   pname = "rpi4-uefi-firmware";
   version = "v2025.10.31";
   edk2 = pkgs.fetchFromGitHub {

@@ -4,9 +4,11 @@
   pkgs,
 
   ...
-}: let
+}:
+let
   cfg = config.sebe.font-config;
-in {
+in
+{
   options.sebe.font-config = {
     enable = lib.mkEnableOption "configure font rendering";
   };
@@ -53,10 +55,13 @@ in {
         };
 
         defaultFonts = {
-          serif = ["Noto Serif"];
-          sansSerif = ["Noto Sans"];
-          monospace = ["DankMono Nerd Font Mono" "Symbols Nerd Font"];
-          emoji = ["Apple Color Emoji"];
+          serif = [ "Noto Serif" ];
+          sansSerif = [ "Noto Sans" ];
+          monospace = [
+            "DankMono Nerd Font Mono"
+            "Symbols Nerd Font"
+          ];
+          emoji = [ "Apple Color Emoji" ];
         };
       };
     };

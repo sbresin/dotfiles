@@ -1,4 +1,5 @@
-{pkgs, ...}: {
+{ pkgs, ... }:
+{
   home.username = "sbresin";
   home.homeDirectory = "/Users/sbresin";
 
@@ -8,7 +9,10 @@
   nix = {
     package = pkgs.nix;
     settings = {
-      experimental-features = ["nix-command" "flakes"];
+      experimental-features = [
+        "nix-command"
+        "flakes"
+      ];
       max-jobs = 8;
     };
   };

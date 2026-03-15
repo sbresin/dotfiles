@@ -3,7 +3,8 @@
   pkgs,
 
   ...
-}: {
+}:
+{
   imports = [
     ./hardware-configuration.nix
     ./swapfile.nix
@@ -57,7 +58,7 @@
   services.scx = {
     enable = true;
     scheduler = "scx_lavd";
-    extraArgs = ["--autopilot"];
+    extraArgs = [ "--autopilot" ];
   };
 
   # SSD needs TRIM
@@ -94,13 +95,29 @@
   users.users.root.initialHashedPassword = "$6$7Sq/gCE9D0uBEAlt$QJJS0FCjeIk0dFyQi7MnZIm7nKZ4wYbubjNmCvFA5JqJa8Mzmgv2gCGY7UXDXSoEJPwBTL9cQNBkwrz2LzquJ.";
 
   users.groups = {
-    storage = {};
-    plugdev = {};
+    storage = { };
+    plugdev = { };
   };
   users.users.sebe = {
     isNormalUser = true;
     shell = pkgs.zsh;
-    extraGroups = ["wheel" "input" "uinput" "networkmanager" "lp" "scanner" "plugdev" "cdrom" "adbusers" "openrazer" "storage" "gamemode" "vboxusers" "wireshark" "dialout"];
+    extraGroups = [
+      "wheel"
+      "input"
+      "uinput"
+      "networkmanager"
+      "lp"
+      "scanner"
+      "plugdev"
+      "cdrom"
+      "adbusers"
+      "openrazer"
+      "storage"
+      "gamemode"
+      "vboxusers"
+      "wireshark"
+      "dialout"
+    ];
     initialHashedPassword = "$6$.7TC31zU0p1OfOH2$b7.CZMpPB.X6YFZMR5akKaEhDTlUPnUJc.gXmv1GqnVV528RuQKvqCp0sRTUk/ZXo.eofNBD9QUup6s9adyXI/";
   };
 
@@ -143,7 +160,8 @@
   };
 
   # List packages installed in system profile. To search, run:
-  environment.systemPackages = with pkgs;
+  environment.systemPackages =
+    with pkgs;
     [
       tectonic
     ]
@@ -177,7 +195,10 @@
       # GUI Apps
       easyeffects
       (pkgs.unstable.kicad.override {
-        addons = with pkgs.unstable.kicadAddons; [kikit kikit-library];
+        addons = with pkgs.unstable.kicadAddons; [
+          kikit
+          kikit-library
+        ];
       })
       freecad
       # stuff for tinkering
@@ -191,7 +212,7 @@
     ]);
 
   # link zsh completions, so they are available globally TODO: same for fish/bash?
-  environment.pathsToLink = ["/share/zsh"];
+  environment.pathsToLink = [ "/share/zsh" ];
 
   # Some programs need SUID wrappers, can be configured further or are
   # started in user sessions.

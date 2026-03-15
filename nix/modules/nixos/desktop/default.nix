@@ -5,7 +5,8 @@
 
   inputs,
   ...
-}: let
+}:
+let
   cfg = config.sebe.desktop;
 
   hyprctl = "${pkgs.unstable.hyprland}/bin/hyprctl";
@@ -53,7 +54,8 @@
 
     log "=== Post-resume recovery finished ==="
   '';
-in {
+in
+{
   options.sebe.desktop = {
     enable = lib.mkEnableOption "install graphical desktop environment";
   };
@@ -112,10 +114,10 @@ in {
     # walker application launcher + elephant backend
     systemd.user.services.walker = {
       description = "Walker application launcher";
-      wantedBy = ["graphical-session.target"];
-      partOf = ["graphical-session.target"];
-      after = ["graphical-session.target"];
-      path = [pkgs.unstable.elephant];
+      wantedBy = [ "graphical-session.target" ];
+      partOf = [ "graphical-session.target" ];
+      after = [ "graphical-session.target" ];
+      path = [ pkgs.unstable.elephant ];
       serviceConfig = {
         Restart = "always";
         RestartSec = 5;
@@ -128,16 +130,18 @@ in {
     # flatpak). NixOS's auto-generated PATH in the unit file is too minimal.
     systemd.user.services.elephant = {
       description = "Elephant application launcher backend";
-      wantedBy = ["graphical-session.target"];
-      partOf = ["graphical-session.target"];
-      after = ["graphical-session.target"];
+      wantedBy = [ "graphical-session.target" ];
+      partOf = [ "graphical-session.target" ];
+      after = [ "graphical-session.target" ];
       serviceConfig = {
         Restart = "always";
         RestartSec = 10;
-        ExecStart = toString (pkgs.writeShellScript "elephant-wrapper" ''
-          eval "$(${pkgs.systemd}/bin/systemctl --user show-environment | ${pkgs.gnugrep}/bin/grep ^PATH=)"
-          exec ${pkgs.unstable.elephant}/bin/elephant "$@"
-        '');
+        ExecStart = toString (
+          pkgs.writeShellScript "elephant-wrapper" ''
+            eval "$(${pkgs.systemd}/bin/systemctl --user show-environment | ${pkgs.gnugrep}/bin/grep ^PATH=)"
+            exec ${pkgs.unstable.elephant}/bin/elephant "$@"
+          ''
+        );
       };
     };
 

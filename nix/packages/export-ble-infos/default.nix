@@ -15,8 +15,11 @@ stdenvNoCC.mkDerivation {
   dontBuild = true;
   doCheck = false;
 
-  nativeBuildInputs = [makeWrapper];
-  buildInputs = [python3 chntpw];
+  nativeBuildInputs = [ makeWrapper ];
+  buildInputs = [
+    python3
+    chntpw
+  ];
 
   installPhase = ''
     runHook preInstall
@@ -28,7 +31,7 @@ stdenvNoCC.mkDerivation {
   '';
 
   postFixup = ''
-    wrapProgram "$out/bin/export-ble-infos" --prefix PATH : "${lib.makeBinPath [chntpw]}"
+    wrapProgram "$out/bin/export-ble-infos" --prefix PATH : "${lib.makeBinPath [ chntpw ]}"
   '';
 
   meta = with lib; {

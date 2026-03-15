@@ -3,9 +3,9 @@
   lib,
   pkgs,
   ...
-}: let
-  inherit
-    (lib)
+}:
+let
+  inherit (lib)
     mkEnableOption
     mkOption
     types
@@ -15,11 +15,12 @@
     ;
 
   cfg = config.programs.ondir;
-in {
+in
+{
   options.programs.ondir = {
     enable = mkEnableOption "ondir, the directory-specific task automation tool";
 
-    package = lib.mkPackageOption pkgs "ondir" {};
+    package = lib.mkPackageOption pkgs "ondir" { };
 
     config = mkOption {
       type = types.lines;
@@ -39,16 +40,14 @@ in {
   };
 
   config = mkIf cfg.enable {
-    home.packages = [cfg.package];
+    home.packages = [ cfg.package ];
 
-    programs.zsh.initContent = mkIf cfg.enableZshIntegration (
-      mkAfter ''
-        eval_ondir() {
-          eval "$(${getExe cfg.package} "$OLDPWD" "$PWD")"
-        }
-        chpwd_functions=( eval_ondir ''${chpwd_functions[@]} )
-      ''
-    );
+    programs.zsh.initContent = mkIf cfg.enableZshIntegration (mkAfter ''
+      eval_ondir() {
+        eval "$(${getExe cfg.package} "$OLDPWD" "$PWD")"
+      }
+      chpwd_functions=( eval_ondir ''${chpwd_functions[@]} )
+    '');
 
     home.file.".ondirrc" = mkIf (cfg.config != "") {
       text = cfg.config;

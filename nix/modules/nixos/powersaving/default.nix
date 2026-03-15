@@ -4,9 +4,11 @@
   pkgs,
 
   ...
-}: let
+}:
+let
   cfg = config.sebe.powersaving;
-in {
+in
+{
   options.sebe.powersaving = {
     enable = lib.mkEnableOption "enable powersaving";
 

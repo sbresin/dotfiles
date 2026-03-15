@@ -3,11 +3,13 @@
   lib,
   self,
   ...
-}: let
+}:
+let
   cfg = config.sebe.kanata;
   # use config files from flake repo
   config-dir = "${self}/stow/dot-config/kanata";
-in {
+in
+{
   options.sebe.kanata = {
     enable = lib.mkEnableOption "enable kanata globally";
   };
@@ -26,4 +28,3 @@ in {
     };
   };
 }
-

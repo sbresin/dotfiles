@@ -5,7 +5,8 @@
   stdenvNoCC,
   writeShellScript,
   ...
-}: let
+}:
+let
   # the original launch scripts redirects to the updated node executable, but we only want the updated JS
   launchScript = writeShellScript "sf" ''
     set -e
@@ -32,29 +33,29 @@
     SF_BINPATH="$DIR" SF_REDIRECTED="$SF_REDIRECTED" "$NODE" --no-deprecation "$DIR/run" "$@"
   '';
 in
-  stdenvNoCC.mkDerivation {
-    pname = "sf-cli";
-    version = "2.75.5";
+stdenvNoCC.mkDerivation {
+  pname = "sf-cli";
+  version = "2.75.5";
 
-    # TODO: install from npm instead, but set SF_INSTALLER, so auto updates work
-    src = fetchurl {
-      url = "https://developer.salesforce.com/media/salesforce-cli/sf/versions/2.75.5/eef8ca4/sf-v2.75.5-eef8ca4-linux-x64.tar.xz";
-      hash = "sha256-3BRrVF+tY2jOAFWtz3PsnVki23YgjT5Kgzenb1kzDoo=";
-    };
+  # TODO: install from npm instead, but set SF_INSTALLER, so auto updates work
+  src = fetchurl {
+    url = "https://developer.salesforce.com/media/salesforce-cli/sf/versions/2.75.5/eef8ca4/sf-v2.75.5-eef8ca4-linux-x64.tar.xz";
+    hash = "sha256-3BRrVF+tY2jOAFWtz3PsnVki23YgjT5Kgzenb1kzDoo=";
+  };
 
-    installPhase = ''
-      mkdir $out
-      cp -R ./* "$out/"
-      rm "$out/bin/node"
-      install -D ${launchScript} "$out/bin/sf"
-      substituteInPlace "$out/bin/sf" --subst-var out
-      ln -fs "$out/bin/sf" "$out/bin/sfdx"
-    '';
+  installPhase = ''
+    mkdir $out
+    cp -R ./* "$out/"
+    rm "$out/bin/node"
+    install -D ${launchScript} "$out/bin/sf"
+    substituteInPlace "$out/bin/sf" --subst-var out
+    ln -fs "$out/bin/sf" "$out/bin/sfdx"
+  '';
 
-    meta = {
-      description = "Salesforce CLI is a command-line interface that simplifies development and build automation when working with your Salesforce org.";
-      homepage = "https://developer.salesforce.com/docs/atlas.en-us.sfdx_setup.meta/sfdx_setup/sfdx_setup_intro.htm";
-      license = lib.licenses.bsd3;
-      # maintainers = with lib.maintainers; [ "sbresin" ];
-    };
-  }
+  meta = {
+    description = "Salesforce CLI is a command-line interface that simplifies development and build automation when working with your Salesforce org.";
+    homepage = "https://developer.salesforce.com/docs/atlas.en-us.sfdx_setup.meta/sfdx_setup/sfdx_setup_intro.htm";
+    license = lib.licenses.bsd3;
+    # maintainers = with lib.maintainers; [ "sbresin" ];
+  };
+}

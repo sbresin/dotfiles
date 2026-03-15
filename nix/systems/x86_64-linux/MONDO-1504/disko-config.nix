@@ -14,7 +14,7 @@
                 type = "filesystem";
                 format = "vfat";
                 mountpoint = "/boot";
-                mountOptions = ["umask=0077"];
+                mountOptions = [ "umask=0077" ];
               };
             };
             luks = {
@@ -27,10 +27,10 @@
                 passwordFile = "/tmp/secret.key"; # interactive password entry
                 content = {
                   type = "btrfs";
-                  extraArgs = ["-f"]; # Override existing partition
+                  extraArgs = [ "-f" ]; # Override existing partition
                   subvolumes = {
                     "@home" = {
-                      mountOptions = ["compress-force=zstd:1"];
+                      mountOptions = [ "compress-force=zstd:1" ];
                       mountpoint = "/home";
                     };
                     "@nix" = {

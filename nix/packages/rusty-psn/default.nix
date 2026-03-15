@@ -35,58 +35,51 @@ rustPlatform.buildRustPackage rec {
   # Tests require network access
   doCheck = false;
 
-  nativeBuildInputs =
-    [
-      pkg-config
-    ]
-    ++ lib.optionals withGui [
-      copyDesktopItems
-      cmake
-    ];
+  nativeBuildInputs = [
+    pkg-config
+  ]
+  ++ lib.optionals withGui [
+    copyDesktopItems
+    cmake
+  ];
 
-  buildInputs =
-    [
-      openssl
-    ]
-    ++ lib.optionals withGui [
-      glib
-      gtk3
-      freetype
-      openssl
+  buildInputs = [
+    openssl
+  ]
+  ++ lib.optionals withGui [
+    glib
+    gtk3
+    freetype
+    openssl
 
-      # GUI libs
-      libxkbcommon
-      libGL
-      fontconfig
+    # GUI libs
+    libxkbcommon
+    libGL
+    fontconfig
 
-      # wayland libraries
-      wayland
+    # wayland libraries
+    wayland
 
-      # x11 libraries
-      xorg.libXcursor
-      xorg.libXrandr
-      xorg.libXi
-      xorg.libX11
+    # x11 libraries
+    xorg.libXcursor
+    xorg.libXrandr
+    xorg.libXi
+    xorg.libX11
 
-      # xorg.libxcb
-    ];
+    # xorg.libxcb
+  ];
 
   buildNoDefaultFeatures = true;
   buildFeatures = [
-    (
-      if withGui
-      then "egui"
-      else "cli"
-    )
+    (if withGui then "egui" else "cli")
   ];
 
-  postFixup =
-    ''
-      patchelf --set-rpath "${lib.makeLibraryPath buildInputs}" $out/bin/rusty-psn
-    ''
-    + lib.optionalString withGui ''
-      mv $out/bin/rusty-psn $out/bin/rusty-psn-gui
-    '';
+  postFixup = ''
+    patchelf --set-rpath "${lib.makeLibraryPath buildInputs}" $out/bin/rusty-psn
+  ''
+  + lib.optionalString withGui ''
+    mv $out/bin/rusty-psn $out/bin/rusty-psn-gui
+  '';
 
   desktopItem = lib.optionalString withGui (makeDesktopItem {
     name = "rusty-psn";
@@ -104,14 +97,14 @@ rustPlatform.buildRustPackage rec {
       "update"
     ];
   });
-  desktopItems = lib.optionals withGui [desktopItem];
+  desktopItems = lib.optionals withGui [ desktopItem ];
 
   meta = with lib; {
     description = "Simple tool to grab updates for PS3 games, directly from Sony's servers using their updates API";
     homepage = "https://github.com/RainbowCookie32/rusty-psn/";
     license = licenses.mit;
-    platforms = ["x86_64-linux"];
-    maintainers = with maintainers; [AngryAnt];
+    platforms = [ "x86_64-linux" ];
+    maintainers = with maintainers; [ AngryAnt ];
     mainProgram = "rusty-psn";
   };
 }

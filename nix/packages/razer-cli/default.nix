@@ -32,6 +32,6 @@ pkgs.python3Packages.buildPythonApplication rec {
     description = "Command line interface for controlling Razer devices on Linux";
     homepage = "https://github.com/lolei/razer-cli";
     license = licenses.gpl3;
-    maintainers = [];
+    maintainers = [ ];
   };
 }

@@ -1,4 +1,5 @@
-{inputs, ...}: let
+{ inputs, ... }:
+let
   nixosSystem = inputs.nixpkgs.lib.nixosSystem {
     system = "aarch64-linux";
     modules = [
@@ -9,11 +10,11 @@
 
   build = nixosSystem.config.system.build;
 in
-  nixosSystem.pkgs.symlinkJoin {
-    name = "netboot";
-    paths = [
-      build.netbootRamdisk
-      build.kernel
-      build.netbootIpxeScript
-    ];
-  }
+nixosSystem.pkgs.symlinkJoin {
+  name = "netboot";
+  paths = [
+    build.netbootRamdisk
+    build.kernel
+    build.netbootIpxeScript
+  ];
+}

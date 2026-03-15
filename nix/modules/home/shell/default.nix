@@ -4,7 +4,8 @@
   config,
 
   ...
-}: let
+}:
+let
   wezterm_shell_integration = pkgs.fetchurl {
     url = "https://raw.githubusercontent.com/wezterm/wezterm/refs/heads/main/assets/shell-integration/wezterm.sh";
     hash = "sha256-GQGDcxMHv04TEaFguHXi0dOoOX5VUR2He4XjTxPuuaw=";
@@ -16,10 +17,9 @@
   # This removes that patch to restore upstream behavior (PATH-based resolution).
   # See: https://github.com/pre-commit/pre-commit/issues/2497
   pre-commit-fixed = pkgs.unstable.pre-commit.overrideAttrs (oldAttrs: {
-    patches =
-      builtins.filter
-      (p: baseNameOf (toString p) != "hook-tmpl.patch")
-      (oldAttrs.patches or []);
+    patches = builtins.filter (p: baseNameOf (toString p) != "hook-tmpl.patch") (
+      oldAttrs.patches or [ ]
+    );
 
     postPatch = ''
       substituteInPlace pre_commit/languages/python.py \
@@ -38,7 +38,8 @@
     doCheck = false;
     pytestCheckPhase = "true";
   });
-in {
+in
+{
   # ************************************************************************************************
   # SHELLS
   programs.bash = {
@@ -294,7 +295,7 @@ in {
     enable = true;
     package = pkgs.unstable.gh;
     gitCredentialHelper.enable = true;
-    extensions = []; # not setting it to allow local installation of extensions
+    extensions = [ ]; # not setting it to allow local installation of extensions
     settings = {
       # git_protocol = "ssh";
       prompt = "enabled";
@@ -363,7 +364,7 @@ in {
     enableTmuxIntegration = true;
     tmuxKey = "s";
     icons = true;
-    settings = {};
+    settings = { };
   };
 
   # Prevent home-manager from managing sesh.toml (we stow it instead)
@@ -402,7 +403,8 @@ in {
     VIRTUALENV_HOME = "$HOME/.virtualenvs";
   };
 
-  home.packages = with pkgs.unstable;
+  home.packages =
+    with pkgs.unstable;
     [
       # use rust coreutils over gnu, only at user level for now
       (lib.hiPrio pkgs.unstable.uutils-coreutils-noprefix)
@@ -500,10 +502,10 @@ in {
       pkgs.sebe.xonsh
     ]
     ++
-    # terminal clipboard
-    lib.optionals pkgs.stdenv.hostPlatform.isLinux [
-      wl-clipboard
-      xclip
-      xsel
-    ];
+      # terminal clipboard
+      lib.optionals pkgs.stdenv.hostPlatform.isLinux [
+        wl-clipboard
+        xclip
+        xsel
+      ];
 }

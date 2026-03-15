@@ -17,7 +17,7 @@ stdenvNoCC.mkDerivation rec {
   sourceRoot = "package";
   dontBuild = true;
 
-  nativeBuildInputs = [makeWrapper];
+  nativeBuildInputs = [ makeWrapper ];
 
   # Disable telemetry by default
   installPhase = ''

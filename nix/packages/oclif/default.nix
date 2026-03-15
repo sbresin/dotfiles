@@ -19,8 +19,12 @@ stdenv.mkDerivation rec {
     hash = "sha256-EY+qMR6R4UcDK5TDrV3NVmiwOGO7HKzm6527Pm9X+Ak=";
   };
 
-  nativeBuildInputs = [makeWrapper yarn fixup-yarn-lock];
-  buildInputs = [nodejs_20];
+  nativeBuildInputs = [
+    makeWrapper
+    yarn
+    fixup-yarn-lock
+  ];
+  buildInputs = [ nodejs_20 ];
 
   yarnOfflineCache = fetchYarnDeps {
     yarnLock = "${src}/yarn.lock";

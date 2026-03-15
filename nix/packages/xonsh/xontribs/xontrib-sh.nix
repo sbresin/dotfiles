@@ -4,33 +4,34 @@
   setuptools,
   wheel,
   lib,
-}: let
+}:
+let
   pname = "xontrib-sh";
   version = "0.3.1";
 in
-  buildPythonPackage {
-    inherit pname version;
+buildPythonPackage {
+  inherit pname version;
 
-    src = fetchFromGitHub {
-      owner = "anki-code";
-      repo = pname;
-      rev = version;
-      sha256 = "sha256-KL/AxcsvjxqxvjDlf1axitgME3T+iyuW6OFb1foRzN8=";
-    };
+  src = fetchFromGitHub {
+    owner = "anki-code";
+    repo = pname;
+    rev = version;
+    sha256 = "sha256-KL/AxcsvjxqxvjDlf1axitgME3T+iyuW6OFb1foRzN8=";
+  };
 
-    pyproject = true;
-    build-system = [setuptools];
+  pyproject = true;
+  build-system = [ setuptools ];
 
-    doCheck = false;
+  doCheck = false;
 
-    nativeBuildInputs = [
-      setuptools
-      wheel
-    ];
+  nativeBuildInputs = [
+    setuptools
+    wheel
+  ];
 
-    meta = with lib; {
-      homepage = "https://github.com/anki-code/xontrib-sh";
-      license = licenses.mit;
-      description = "Paste and run commands from bash, fish, zsh, tcsh in the [xonsh shell](https://xon.sh).";
-    };
-  }
+  meta = with lib; {
+    homepage = "https://github.com/anki-code/xontrib-sh";
+    license = licenses.mit;
+    description = "Paste and run commands from bash, fish, zsh, tcsh in the [xonsh shell](https://xon.sh).";
+  };
+}

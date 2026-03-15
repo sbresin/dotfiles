@@ -25,6 +25,6 @@ stdenvNoCC.mkDerivation rec {
     homepage = "https://github.com/samuelngs/apple-emoji-ttf";
     license = lib.licenses.asl20;
     platforms = lib.platforms.all;
-    maintainers = [];
+    maintainers = [ ];
   };
 }

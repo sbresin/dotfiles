@@ -4,7 +4,8 @@
   pkgs,
 
   ...
-}: {
+}:
+{
   imports = [
     ./disko-config.nix
     ./hardware-configuration.nix
@@ -40,13 +41,13 @@
 
   # CachyOS kernel with BORE scheduler, x86-64-v4 optimized for Zen 5
   boot.kernelPackages = pkgs.cachyosKernels.linuxPackages-cachyos-latest-x86_64-v4;
-  boot.extraModulePackages = [];
+  boot.extraModulePackages = [ ];
 
   # use sched_ext
   services.scx = {
     enable = true;
     scheduler = "scx_lavd";
-    extraArgs = ["--autopilot"];
+    extraArgs = [ "--autopilot" ];
   };
 
   # Custom fan control for Framework laptop - quieter fan curves
@@ -81,8 +82,8 @@
   # unconditionally loads ddcci_backlight (a kernel driver we don't use and that
   # doesn't exist in the CachyOS kernel).
   hardware.i2c.enable = true;
-  services.dbus.packages = [pkgs.unstable.ddcutil-service];
-  systemd.packages = [pkgs.unstable.ddcutil-service];
+  services.dbus.packages = [ pkgs.unstable.ddcutil-service ];
+  systemd.packages = [ pkgs.unstable.ddcutil-service ];
 
   # Set your time zone.
   time.timeZone = "Europe/Berlin";
@@ -97,8 +98,8 @@
   users.users.root.initialHashedPassword = "$6$7Sq/gCE9D0uBEAlt$QJJS0FCjeIk0dFyQi7MnZIm7nKZ4wYbubjNmCvFA5JqJa8Mzmgv2gCGY7UXDXSoEJPwBTL9cQNBkwrz2LzquJ.";
 
   users.groups = {
-    storage = {};
-    plugdev = {};
+    storage = { };
+    plugdev = { };
   };
   users.users.sebe = {
     isNormalUser = true;
@@ -161,53 +162,52 @@
     package = pkgs.unstable._1password-gui;
     # Certain features, including CLI integration and system authentication support,
     # require enabling PolKit integration on some desktop environments (e.g. Plasma).
-    polkitPolicyOwners = ["sebe"];
+    polkitPolicyOwners = [ "sebe" ];
   };
 
   # List packages installed in system profile. To search, run:
-  environment.systemPackages =
-    [
-      pkgs.sebe.neovim-patched
-    ]
-    ++ (with pkgs.unstable; [
-      vim
-      git
-      git-crypt
-      # os setup/debug
-      ddcutil-service
-      fwupd
-      usbutils
-      lm_sensors
-      gparted
-      exfatprogs
-      # Terminal setup
-      ghostty
-      tmux
-      zed-editor
-      # inputs.wezterm.packages.${system}.default
-      pkgs.sebe.wezterm
-      # language support
-      hunspell
-      hunspellDicts.en_US
-      hunspellDicts.de_DE
-      # media / document tools
-      imagemagick
-      ffmpeg-full
-      pngquant
-      ocrmypdf
-      # GUI Apps
-      easyeffects
-      vial
-      vdu_controls
-      # this flakes packages
-      pkgs.sebe.oclif
-      # ROCm tools for GPU monitoring
-      pkgs.rocmPackages.rocm-smi
-      pkgs.rocmPackages.rocminfo
-    ]);
+  environment.systemPackages = [
+    pkgs.sebe.neovim-patched
+  ]
+  ++ (with pkgs.unstable; [
+    vim
+    git
+    git-crypt
+    # os setup/debug
+    ddcutil-service
+    fwupd
+    usbutils
+    lm_sensors
+    gparted
+    exfatprogs
+    # Terminal setup
+    ghostty
+    tmux
+    zed-editor
+    # inputs.wezterm.packages.${system}.default
+    pkgs.sebe.wezterm
+    # language support
+    hunspell
+    hunspellDicts.en_US
+    hunspellDicts.de_DE
+    # media / document tools
+    imagemagick
+    ffmpeg-full
+    pngquant
+    ocrmypdf
+    # GUI Apps
+    easyeffects
+    vial
+    vdu_controls
+    # this flakes packages
+    pkgs.sebe.oclif
+    # ROCm tools for GPU monitoring
+    pkgs.rocmPackages.rocm-smi
+    pkgs.rocmPackages.rocminfo
+  ]);
 
   # link zsh completions, so they are available globally TODO: same for fish/bash?
-  environment.pathsToLink = ["/share/zsh"];
+  environment.pathsToLink = [ "/share/zsh" ];
 
   # Some programs need SUID wrappers, can be configured further or are
   # started in user sessions.

@@ -6,18 +6,28 @@
   lib,
   modulesPath,
   ...
-}: {
+}:
+{
   imports = [
     (modulesPath + "/installer/scan/not-detected.nix")
   ];
 
-  boot.initrd.availableKernelModules = ["xhci_pci" "nvme" "usbhid" "usb_storage" "sd_mod"];
-  boot.kernelModules = ["kvm-intel"];
-  boot.extraModulePackages = [config.boot.kernelPackages.apfs];
+  boot.initrd.availableKernelModules = [
+    "xhci_pci"
+    "nvme"
+    "usbhid"
+    "usb_storage"
+    "sd_mod"
+  ];
+  boot.kernelModules = [ "kvm-intel" ];
+  boot.extraModulePackages = [ config.boot.kernelPackages.apfs ];
   # nouveau boots to blackscreen
-  boot.blacklistedKernelModules = ["nouveau"];
+  boot.blacklistedKernelModules = [ "nouveau" ];
   # "mem_sleep_default=s2idle"
-  boot.kernelParams = ["pcie_aspm=force" "mem_sleep_default=deep"];
+  boot.kernelParams = [
+    "pcie_aspm=force"
+    "mem_sleep_default=deep"
+  ];
 
   boot.tmp = {
     useTmpfs = true;
@@ -33,59 +43,89 @@
   fileSystems."/" = {
     device = "none";
     fsType = "tmpfs";
-    options = ["defaults" "size=2G" "mode=755"];
+    options = [
+      "defaults"
+      "size=2G"
+      "mode=755"
+    ];
   };
 
   fileSystems."/efi" = {
     device = "/dev/disk/by-path/pci-0000:03:00.0-nvme-1-part1";
     fsType = "vfat";
-    options = ["fmask=0022" "dmask=0022"];
+    options = [
+      "fmask=0022"
+      "dmask=0022"
+    ];
   };
 
   fileSystems."/boot" = {
     device = "/dev/disk/by-partlabel/nixboot";
     fsType = "vfat";
-    options = ["fmask=0022" "dmask=0022"];
+    options = [
+      "fmask=0022"
+      "dmask=0022"
+    ];
   };
 
   fileSystems."/nix" = {
     device = "/dev/mapper/nixos_crypt";
     fsType = "btrfs";
-    options = ["subvol=@nix" "noatime" "compress-force=zstd:1"];
+    options = [
+      "subvol=@nix"
+      "noatime"
+      "compress-force=zstd:1"
+    ];
   };
 
   fileSystems."/home" = {
     device = "/dev/mapper/nixos_crypt";
     fsType = "btrfs";
-    options = ["subvol=@home" "compress-force=zstd:1"];
+    options = [
+      "subvol=@home"
+      "compress-force=zstd:1"
+    ];
   };
 
   fileSystems."/persistent" = {
     device = "/dev/mapper/nixos_crypt";
     neededForBoot = true;
     fsType = "btrfs";
-    options = ["subvol=@persistent" "noatime" "compress-force=zstd:1"];
+    options = [
+      "subvol=@persistent"
+      "noatime"
+      "compress-force=zstd:1"
+    ];
   };
 
   fileSystems."/swap" = {
     device = "/dev/mapper/nixos_crypt";
     fsType = "btrfs";
-    options = ["subvol=@swap" "noatime"];
+    options = [
+      "subvol=@swap"
+      "noatime"
+    ];
   };
 
   # lanzaboote XBOOTLDR workaround https://github.com/nix-community/lanzaboote/issues/173#issuecomment-1532386210
   fileSystems."/efi/EFI/Linux" = {
     device = "/boot/EFI/Linux";
-    depends = ["/boot" "/efi"];
-    options = ["bind"];
+    depends = [
+      "/boot"
+      "/efi"
+    ];
+    options = [ "bind" ];
   };
   fileSystems."/efi/EFI/nixos" = {
     device = "/boot/EFI/nixos";
-    depends = ["/boot" "/efi"];
-    options = ["bind"];
+    depends = [
+      "/boot"
+      "/efi"
+    ];
+    options = [ "bind" ];
   };
 
-  swapDevices = [];
+  swapDevices = [ ];
 
   # Enables DHCP on each ethernet and wireless interface. In case of scripted networking
   # (the default) this is the recommended approach. When using systemd-networkd it's

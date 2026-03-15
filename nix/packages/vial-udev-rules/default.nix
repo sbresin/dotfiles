@@ -8,7 +8,7 @@ stdenvNoCC.mkDerivation (finalAttrs: {
   pname = "vial-udev-rules";
   version = "2025-12-12";
 
-  nativeBuildInputs = [udevCheckHook];
+  nativeBuildInputs = [ udevCheckHook ];
 
   src = writeTextFile {
     name = "59-viia.rules";

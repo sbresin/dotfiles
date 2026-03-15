@@ -6,49 +6,50 @@
   poetry-core,
   pytestCheckHook,
   xonsh,
-}: let
+}:
+let
   pname = "xontrib-jedi";
   version = "0.1.1";
 in
-  buildPythonPackage {
-    inherit pname version;
+buildPythonPackage {
+  inherit pname version;
 
-    src = fetchFromGitHub {
-      owner = "xonsh";
-      repo = pname;
-      rev = "v${version}";
-      hash = "sha256-T4Yxr91emM2mjclQOjQsnnPO/JijAGNcqmZjxrz72Bs=";
-    };
+  src = fetchFromGitHub {
+    owner = "xonsh";
+    repo = pname;
+    rev = "v${version}";
+    hash = "sha256-T4Yxr91emM2mjclQOjQsnnPO/JijAGNcqmZjxrz72Bs=";
+  };
 
-    format = "pyproject";
+  format = "pyproject";
 
-    prePatch = ''
-      substituteInPlace pyproject.toml \
-        --replace 'xonsh = ">=0.12"' ""
-    '';
+  prePatch = ''
+    substituteInPlace pyproject.toml \
+      --replace 'xonsh = ">=0.12"' ""
+  '';
 
-    nativeBuildInputs = [
-      poetry-core
-    ];
+  nativeBuildInputs = [
+    poetry-core
+  ];
 
-    propagatedBuildInputs = [
-      jedi
-    ];
+  propagatedBuildInputs = [
+    jedi
+  ];
 
-    preCheck = ''
-      export HOME=$TMPDIR
-      substituteInPlace tests/test_jedi.py \
-        --replace "/usr/bin" "${jedi}/bin"
-    '';
+  preCheck = ''
+    export HOME=$TMPDIR
+    substituteInPlace tests/test_jedi.py \
+      --replace "/usr/bin" "${jedi}/bin"
+  '';
 
-    checkInputs = [
-      pytestCheckHook
-      xonsh
-    ];
+  checkInputs = [
+    pytestCheckHook
+    xonsh
+  ];
 
-    meta = with lib; {
-      description = "Xonsh Python mode completions using jedi";
-      homepage = "https://github.com/xonsh/xontrib-jedi";
-      license = licenses.mit;
-    };
-  }
+  meta = with lib; {
+    description = "Xonsh Python mode completions using jedi";
+    homepage = "https://github.com/xonsh/xontrib-jedi";
+    license = licenses.mit;
+  };
+}

@@ -4,14 +4,21 @@
   pkgs,
 
   ...
-}: let
+}:
+let
   cfg = config.sebe.ollama;
-in {
+in
+{
   options.sebe.ollama = {
     enable = lib.mkEnableOption "ollama LLM server";
 
     backend = lib.mkOption {
-      type = lib.types.enum ["cpu" "rocm" "cuda" "vulkan"];
+      type = lib.types.enum [
+        "cpu"
+        "rocm"
+        "cuda"
+        "vulkan"
+      ];
       default = "cpu";
       description = "Acceleration backend for ollama";
     };
@@ -34,9 +41,7 @@ in {
           cuda = pkgs.unstable.ollama-cuda;
           vulkan = pkgs.unstable.ollama-vulkan;
         }
-        .${
-          cfg.backend
-        };
+        .${cfg.backend};
       rocmOverrideGfx = cfg.rocmOverrideGfx;
       environmentVariables = {
         OLLAMA_CONTEXT_LENGTH = "200000";

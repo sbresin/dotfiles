@@ -4,9 +4,11 @@
   pkgs,
 
   ...
-}: let
+}:
+let
   cfg = config.sebe.cdburning;
-in {
+in
+{
   options.sebe.cdburning = {
     enable = lib.mkEnableOption "install software for cd burning";
   };

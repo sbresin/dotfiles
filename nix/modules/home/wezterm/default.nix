@@ -1,4 +1,5 @@
-{pkgs, ...}: let
+{ pkgs, ... }:
+let
   wezterm_tabline = pkgs.fetchFromGitHub {
     owner = "michaelbrusegard";
     repo = "tabline.wez";
@@ -23,7 +24,8 @@
     rev = "55f4bbfe17d3273a2347d6e04903fcecd3f2ee11";
     hash = "sha256-1xcDBjAtXJk2TR+qR1xxsR4WgxA9tqBOsd19nQx8ry8=";
   };
-in {
+in
+{
   xdg.configFile."wezterm/plugins.lua".text =
     # lua
     ''

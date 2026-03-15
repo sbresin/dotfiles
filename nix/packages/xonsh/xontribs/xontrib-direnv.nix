@@ -4,34 +4,35 @@
   fetchFromGitHub,
   direnv,
   setuptools,
-}: let
+}:
+let
   pname = "xonsh-direnv";
   version = "1.6.5";
 in
-  buildPythonPackage {
-    inherit pname version;
+buildPythonPackage {
+  inherit pname version;
 
-    src = fetchFromGitHub {
-      owner = "74th";
-      repo = pname;
-      rev = version;
-      hash = "sha256-huBJ7WknVCk+WgZaXHlL+Y1sqsn6TYqMP29/fsUPSyU=";
-    };
+  src = fetchFromGitHub {
+    owner = "74th";
+    repo = pname;
+    rev = version;
+    hash = "sha256-huBJ7WknVCk+WgZaXHlL+Y1sqsn6TYqMP29/fsUPSyU=";
+  };
 
-    pyproject = true;
-    build-system = [setuptools];
+  pyproject = true;
+  build-system = [ setuptools ];
 
-    propagatedBuildInputs = [
-      direnv
-    ];
+  propagatedBuildInputs = [
+    direnv
+  ];
 
-    nativeBuildInputs = [
-      setuptools
-    ];
+  nativeBuildInputs = [
+    setuptools
+  ];
 
-    meta = with lib; {
-      description = "Direnv support for Xonsh";
-      homepage = "https://github.com/74th/xonsh-direnv/";
-      license = licenses.mit;
-    };
-  }
+  meta = with lib; {
+    description = "Direnv support for Xonsh";
+    homepage = "https://github.com/74th/xonsh-direnv/";
+    license = licenses.mit;
+  };
+}

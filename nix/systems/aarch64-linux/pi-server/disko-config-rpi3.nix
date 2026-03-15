@@ -29,17 +29,20 @@
                 type = "filesystem";
                 format = "vfat";
                 mountpoint = "/boot";
-                mountOptions = ["umask=0077"];
+                mountOptions = [ "umask=0077" ];
               };
             };
             root = {
               size = "100%";
               content = {
                 type = "btrfs";
-                extraArgs = ["-f"]; # Override existing partition
+                extraArgs = [ "-f" ]; # Override existing partition
                 subvolumes = {
                   "@home" = {
-                    mountOptions = ["compress=zstd" "compress-force=zstd:1"];
+                    mountOptions = [
+                      "compress=zstd"
+                      "compress-force=zstd:1"
+                    ];
                     mountpoint = "/home";
                   };
                   "@nix" = {

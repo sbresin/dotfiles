@@ -4,9 +4,11 @@
   pkgs,
 
   ...
-}: let
+}:
+let
   cfg = config.sebe.gaming;
-in {
+in
+{
   options.sebe.gaming = {
     enable = lib.mkEnableOption "install gaming stuff";
   };
@@ -15,7 +17,7 @@ in {
     # add direct user access to game controllers
     services.udev = {
       enable = true;
-      packages = with pkgs.unstable; [game-devices-udev-rules];
+      packages = with pkgs.unstable; [ game-devices-udev-rules ];
       extraRules = ''
         # enable access to wii Bluetooth chip for dolphin-emu passthrough
         SUBSYSTEM=="usb", ATTRS{idVendor}=="057e", ATTRS{idProduct}=="0305", TAG+="uaccess", GROUP="plugdev", MODE="0666"
@@ -121,8 +123,8 @@ in {
     services.flatpak = {
       enable = true;
       overrides = {
-        "com.discordapp.Discord".Context.sockets = ["x11"]; # No Wayland support
-        "com.valvesoftware.Steam".Context.sockets = ["x11"]; # No Wayland support
+        "com.discordapp.Discord".Context.sockets = [ "x11" ]; # No Wayland support
+        "com.valvesoftware.Steam".Context.sockets = [ "x11" ]; # No Wayland support
       };
       packages = [
         # proprietary

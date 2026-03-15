@@ -4,9 +4,11 @@
   pkgs,
 
   ...
-}: let
+}:
+let
   cfg = config.sebe.docker;
-in {
+in
+{
   options.sebe.docker = {
     enable = lib.mkEnableOption "Docker virtualisation with buildx support";
   };

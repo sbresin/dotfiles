@@ -9,45 +9,46 @@
   lib,
   notify-py,
   xdotool,
-}: let
+}:
+let
   pname = "xontrib-cmd-durations";
   version = "0.3.2";
 in
-  buildPythonPackage {
-    inherit pname version;
+buildPythonPackage {
+  inherit pname version;
 
-    src = fetchFromGitHub {
-      owner = "jnoortheen";
-      repo = pname;
-      rev = "v${version}";
-      sha256 = "sha256-qFIjXBLyNqGnrslMvhqKpTvJDT79yWdHkDvS6JebVUk=";
-    };
+  src = fetchFromGitHub {
+    owner = "jnoortheen";
+    repo = pname;
+    rev = "v${version}";
+    sha256 = "sha256-qFIjXBLyNqGnrslMvhqKpTvJDT79yWdHkDvS6JebVUk=";
+  };
 
-    doCheck = false;
+  doCheck = false;
 
-    nativeBuildInputs = [
-      setuptools
-      wheel
-      poetry-core
-    ];
+  nativeBuildInputs = [
+    setuptools
+    wheel
+    poetry-core
+  ];
 
-    propagatedBuildInputs = [notify-py] ++ (lib.optionals stdenv.hostPlatform.isLinux [xdotool]);
+  propagatedBuildInputs = [ notify-py ] ++ (lib.optionals stdenv.hostPlatform.isLinux [ xdotool ]);
 
-    format = "pyproject";
+  format = "pyproject";
 
-    build-system = [
-      setuptools
-      pdm-pep517
-      poetry-core
-    ];
+  build-system = [
+    setuptools
+    pdm-pep517
+    poetry-core
+  ];
 
-    postPatch = ''
-      sed -ie "/xonsh.*=/d" pyproject.toml
-    '';
+  postPatch = ''
+    sed -ie "/xonsh.*=/d" pyproject.toml
+  '';
 
-    meta = with lib; {
-      homepage = "https://github.com/jnoortheen/xontrib-cmd-durations";
-      license = licenses.mit;
-      description = "Show long running commands durations in prompt with option to send notification when terminal is not focused.";
-    };
-  }
+  meta = with lib; {
+    homepage = "https://github.com/jnoortheen/xontrib-cmd-durations";
+    license = licenses.mit;
+    description = "Show long running commands durations in prompt with option to send notification when terminal is not focused.";
+  };
+}

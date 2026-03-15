@@ -3,13 +3,14 @@
   pkgs,
   lib,
   ...
-}: {
+}:
+{
   # early KMS
-  boot.initrd.kernelModules = ["i915"];
-  boot.extraModulePackages = [];
+  boot.initrd.kernelModules = [ "i915" ];
+  boot.extraModulePackages = [ ];
 
   # enable HuC firmware for intel-media-driver
-  boot.kernelParams = ["i915.enable_guc=2"];
+  boot.kernelParams = [ "i915.enable_guc=2" ];
 
   hardware.graphics = {
     enable = true;
@@ -43,7 +44,7 @@
   };
 
   # Load nvidia driver for Xorg and Wayland
-  services.xserver.videoDrivers = ["nvidia"];
+  services.xserver.videoDrivers = [ "nvidia" ];
 
   hardware.nvidia = {
     open = true;
@@ -73,7 +74,12 @@
       # Remove NVIDIA VGA/3D controller devices
       ACTION=="add", SUBSYSTEM=="pci", ATTR{vendor}=="0x10de", ATTR{class}=="0x03[0-9]*", ATTR{power/control}="auto", ATTR{remove}="1"
     '';
-    boot.blacklistedKernelModules = ["nouveau" "nvidia" "nvidia_drm" "nvidia_modeset"];
+    boot.blacklistedKernelModules = [
+      "nouveau"
+      "nvidia"
+      "nvidia_drm"
+      "nvidia_modeset"
+    ];
   };
 
   specialisation.nvidia-sync.configuration = {

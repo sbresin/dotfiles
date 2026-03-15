@@ -4,7 +4,8 @@
 
   pkgs,
   ...
-}: let
+}:
+let
   cfg = config.sebe.private-dns;
   dnscrypt-forwarding = pkgs.writeTextFile {
     name = "forwarding-rules.txt";
@@ -13,7 +14,8 @@
       192.in-addr.arpa 192.168.178.1
     '';
   };
-in {
+in
+{
   options.sebe.private-dns = {
     enable = lib.mkEnableOption "setup dnscrypt proxy";
   };
@@ -21,7 +23,7 @@ in {
   config = lib.mkIf cfg.enable {
     networking = {
       # don't globally enforce nameservers, configure per network through nnetworkmanager
-      nameservers = lib.mkForce [];
+      nameservers = lib.mkForce [ ];
     };
 
     services.dnscrypt-proxy = {
@@ -42,12 +44,15 @@ in {
         };
 
         # You can choose a specific set of servers from https://github.com/DNSCrypt/dnscrypt-resolvers/blob/master/v3/public-resolvers.md
-        server_names = ["cloudflare-security"];
+        server_names = [ "cloudflare-security" ];
 
         query_log = {
           file = "/var/log/dnscrypt-proxy/query.log";
           format = "tsv";
-          ignored_qtypes = ["DNSKEY" "NS"];
+          ignored_qtypes = [
+            "DNSKEY"
+            "NS"
+          ];
         };
       };
     };

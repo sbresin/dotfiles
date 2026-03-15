@@ -12,7 +12,7 @@ joycond.overrideAttrs (previousAttrs: {
     sha256 = "sha256-VT433rrgZ6ltdXLQRjtjRy7rhMl1g9dan9SRqlsCPTk=";
   };
 
-  patches = [./fix_sdl.patch];
+  patches = [ ./fix_sdl.patch ];
 
   installPhase = ''
     mkdir -p $out/{bin,etc/{systemd/system,udev/rules.d},lib/modules-load.d}
