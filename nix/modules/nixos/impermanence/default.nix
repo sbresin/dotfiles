@@ -1,12 +1,12 @@
 {
   config,
   lib,
-  namespace,
+
   ...
 }: let
-  cfg = config.${namespace}.impermanence;
+  cfg = config.sebe.impermanence;
 in {
-  options.${namespace}.impermanence = {
+  options.sebe.impermanence = {
     enable = lib.mkEnableOption "setup impermanence persistent storage";
   };
 

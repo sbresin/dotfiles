@@ -1,8 +1,12 @@
 {pkgs, ...}: {
+  home.username = "sbresin";
+  home.homeDirectory = "/Users/sbresin";
+
   # use standalone home-manager
   programs.home-manager.enable = true;
 
   nix = {
+    package = pkgs.nix;
     settings = {
       experimental-features = ["nix-command" "flakes"];
       max-jobs = 8;

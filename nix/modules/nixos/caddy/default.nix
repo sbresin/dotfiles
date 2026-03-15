@@ -2,12 +2,12 @@
   config,
   lib,
   pkgs,
-  namespace,
+
   ...
 }: let
-  cfg = config.${namespace}.caddy;
+  cfg = config.sebe.caddy;
 in {
-  options.${namespace}.caddy = {
+  options.sebe.caddy = {
     enable = lib.mkEnableOption "caddy reverse proxy for local services";
 
     services = lib.mkOption {

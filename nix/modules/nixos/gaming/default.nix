@@ -2,12 +2,12 @@
   config,
   lib,
   pkgs,
-  namespace,
+
   ...
 }: let
-  cfg = config.${namespace}.gaming;
+  cfg = config.sebe.gaming;
 in {
-  options.${namespace}.gaming = {
+  options.sebe.gaming = {
     enable = lib.mkEnableOption "install gaming stuff";
   };
 
@@ -25,7 +25,7 @@ in {
     # enable combining joycons to single controller
     services.joycond = {
       enable = true;
-      package = pkgs.${namespace}.joycond;
+      package = pkgs.sebe.joycond;
     };
 
     # enable game mode
@@ -83,7 +83,7 @@ in {
     #     owner = "root";
     #     group = "cdrom";
     #     permissions = "u+wrx,g+x";
-    #     source = "${pkgs.${namespace}.friidump}/bin/friidump";
+    #     source = "${pkgs.sebe.friidump}/bin/friidump";
     #   };
     # };
 
@@ -114,8 +114,8 @@ in {
       # nvtopPackages.nvidia
       # rom tools
       mame.tools
-      # pkgs.${namespace}.rusty-psn
-      # pkgs.${namespace}.threedstool
+      # pkgs.sebe.rusty-psn
+      # pkgs.sebe.threedstool
     ];
 
     services.flatpak = {

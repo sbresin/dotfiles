@@ -1,7 +1,7 @@
 {
   lib,
   pkgs,
-  namespace,
+
   ...
 }: {
   imports = [
@@ -124,7 +124,7 @@
   };
 
   # my own modules
-  ${namespace} = {
+  sebe = {
     cdburning.enable = true;
     desktop.enable = true;
     desktop-essentials.enable = true;
@@ -148,7 +148,7 @@
       tectonic
     ]
     ++ [
-      pkgs.${namespace}.neovim-patched
+      pkgs.sebe.neovim-patched
     ]
     ++ (with pkgs.unstable; [
       vim
@@ -164,7 +164,7 @@
       tmux
       zed-editor
       # inputs.wezterm.packages.${system}.default
-      pkgs.${namespace}.wezterm
+      pkgs.sebe.wezterm
       # language support
       hunspell
       hunspellDicts.en_US
@@ -183,11 +183,11 @@
       # stuff for tinkering
       rpiboot
       # this flakes packages
-      pkgs.${namespace}.razer-cli
-      pkgs.${namespace}.oclif
-      pkgs.${namespace}.bt-dualboot
-      pkgs.${namespace}.export-ble-infos
-      # pkgs.${namespace}.ryujinx
+      pkgs.sebe.razer-cli
+      pkgs.sebe.oclif
+      pkgs.sebe.bt-dualboot
+      pkgs.sebe.export-ble-infos
+      # pkgs.sebe.ryujinx
     ]);
 
   # link zsh completions, so they are available globally TODO: same for fish/bash?

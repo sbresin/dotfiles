@@ -2,12 +2,12 @@
   config,
   lib,
   pkgs,
-  namespace,
+
   ...
 }: let
-  cfg = config.${namespace}.docker;
+  cfg = config.sebe.docker;
 in {
-  options.${namespace}.docker = {
+  options.sebe.docker = {
     enable = lib.mkEnableOption "Docker virtualisation with buildx support";
   };
 

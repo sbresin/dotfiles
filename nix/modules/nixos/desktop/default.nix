@@ -2,11 +2,11 @@
   config,
   lib,
   pkgs,
-  namespace,
+
   inputs,
   ...
 }: let
-  cfg = config.${namespace}.desktop;
+  cfg = config.sebe.desktop;
 
   hyprctl = "${pkgs.unstable.hyprland}/bin/hyprctl";
 
@@ -54,7 +54,7 @@
     log "=== Post-resume recovery finished ==="
   '';
 in {
-  options.${namespace}.desktop = {
+  options.sebe.desktop = {
     enable = lib.mkEnableOption "install graphical desktop environment";
   };
 
@@ -267,7 +267,7 @@ in {
       gnome-disk-utility
       weather
       dconf-editor # GTK settings
-      pkgs.${namespace}.gnome-control-center-patched
+      pkgs.sebe.gnome-control-center-patched
       inputs.simplemoji.packages.${stdenv.hostPlatform.system}.default
       termusic
       bottles
@@ -279,7 +279,7 @@ in {
       rose-pine-hyprcursor
       inputs.hyprqt6engine.packages.${stdenv.hostPlatform.system}.default
 
-      pkgs.${namespace}.hyprpaper-random
+      pkgs.sebe.hyprpaper-random
     ];
 
     services.speechd.enable = true;

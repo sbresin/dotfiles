@@ -2,12 +2,12 @@
   config,
   lib,
   pkgs,
-  namespace,
+
   ...
 }: let
-  cfg = config.${namespace}.ollama;
+  cfg = config.sebe.ollama;
 in {
-  options.${namespace}.ollama = {
+  options.sebe.ollama = {
     enable = lib.mkEnableOption "ollama LLM server";
 
     backend = lib.mkOption {

@@ -2,12 +2,12 @@
   config,
   lib,
   pkgs,
-  namespace,
+
   ...
 }: let
-  cfg = config.${namespace}.greeter;
+  cfg = config.sebe.greeter;
 in {
-  options.${namespace}.greeter = {
+  options.sebe.greeter = {
     enable = lib.mkEnableOption "install login greeter (tuigreet)";
   };
 

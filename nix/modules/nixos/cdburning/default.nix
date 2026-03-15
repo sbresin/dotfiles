@@ -2,12 +2,12 @@
   config,
   lib,
   pkgs,
-  namespace,
+
   ...
 }: let
-  cfg = config.${namespace}.cdburning;
+  cfg = config.sebe.cdburning;
 in {
-  options.${namespace}.cdburning = {
+  options.sebe.cdburning = {
     enable = lib.mkEnableOption "install software for cd burning";
   };
 

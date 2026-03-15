@@ -1,11 +1,11 @@
 {
   config,
   lib,
-  namespace,
+
   pkgs,
   ...
 }: let
-  cfg = config.${namespace}.private-dns;
+  cfg = config.sebe.private-dns;
   dnscrypt-forwarding = pkgs.writeTextFile {
     name = "forwarding-rules.txt";
     text = ''
@@ -14,7 +14,7 @@
     '';
   };
 in {
-  options.${namespace}.private-dns = {
+  options.sebe.private-dns = {
     enable = lib.mkEnableOption "setup dnscrypt proxy";
   };
 

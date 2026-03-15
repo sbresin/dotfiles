@@ -2,7 +2,7 @@
   pkgs,
   lib,
   config,
-  namespace,
+
   ...
 }: let
   wezterm_shell_integration = pkgs.fetchurl {
@@ -116,7 +116,7 @@ in {
       }
       {
         name = "fzf-tab";
-        src = pkgs.${namespace}.zsh-fzf-tab-patched;
+        src = pkgs.sebe.zsh-fzf-tab-patched;
         file = "share/fzf-tab/fzf-tab.plugin.zsh";
       }
       {
@@ -413,7 +413,7 @@ in {
       alejandra
       nh
       nurl
-      pkgs.${namespace}.nix-update-patched
+      pkgs.sebe.nix-update-patched
       devbox
       statix
       # languageservers
@@ -476,14 +476,14 @@ in {
       zip
       wget
       yq
-      # pkgs.${namespace}.git-amnesia
+      # pkgs.sebe.git-amnesia
       # LLM stuff
-      pkgs.${namespace}.opencode
+      pkgs.sebe.opencode
       github-mcp-server
       terraform-mcp-server
       mcp-nixos
-      pkgs.${namespace}.docs-mcp-server
-      pkgs.${namespace}.chrome-devtools-mcp
+      pkgs.sebe.docs-mcp-server
+      pkgs.sebe.chrome-devtools-mcp
       # platform tools
       act
       caddy
@@ -494,11 +494,10 @@ in {
       tflint
       xcaddy
       # sfdc development
-      pkgs.${namespace}.sf-cli
-      pkgs.${namespace}.sfp-cli
+      pkgs.sebe.sf-cli
+      pkgs.sebe.sfp-cli
       # xonsh with xontribs
-      (pkgs.${namespace}.xonsh.override
-        {pkgs = pkgs.unstable;})
+      pkgs.sebe.xonsh
     ]
     ++
     # terminal clipboard

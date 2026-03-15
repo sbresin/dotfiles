@@ -2,12 +2,12 @@
   config,
   lib,
   pkgs,
-  namespace,
+
   ...
 }: let
-  cfg = config.${namespace}.secureboot;
+  cfg = config.sebe.secureboot;
 in {
-  options.${namespace}.secureboot = {
+  options.sebe.secureboot = {
     enable = lib.mkEnableOption "setup secureboot";
   };
 

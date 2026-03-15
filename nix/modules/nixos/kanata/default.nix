@@ -1,14 +1,14 @@
 {
   config,
   lib,
-  namespace,
+  self,
   ...
 }: let
-  cfg = config.${namespace}.kanata;
+  cfg = config.sebe.kanata;
   # use config files from flake repo
-  config-dir = lib.snowfall.fs.get-file "stow/dot-config/kanata";
+  config-dir = "${self}/stow/dot-config/kanata";
 in {
-  options.${namespace}.kanata = {
+  options.sebe.kanata = {
     enable = lib.mkEnableOption "enable kanata globally";
   };
 

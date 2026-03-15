@@ -2,7 +2,7 @@
   config,
   lib,
   pkgs,
-  namespace,
+
   ...
 }: {
   imports = [
@@ -126,7 +126,7 @@
   programs.adb.enable = true;
 
   # my own modules
-  ${namespace} = {
+  sebe = {
     desktop.enable = true;
     desktop-essentials.enable = true;
     font-config.enable = true;
@@ -167,7 +167,7 @@
   # List packages installed in system profile. To search, run:
   environment.systemPackages =
     [
-      pkgs.${namespace}.neovim-patched
+      pkgs.sebe.neovim-patched
     ]
     ++ (with pkgs.unstable; [
       vim
@@ -185,7 +185,7 @@
       tmux
       zed-editor
       # inputs.wezterm.packages.${system}.default
-      pkgs.${namespace}.wezterm
+      pkgs.sebe.wezterm
       # language support
       hunspell
       hunspellDicts.en_US
@@ -200,7 +200,7 @@
       vial
       vdu_controls
       # this flakes packages
-      pkgs.${namespace}.oclif
+      pkgs.sebe.oclif
       # ROCm tools for GPU monitoring
       pkgs.rocmPackages.rocm-smi
       pkgs.rocmPackages.rocminfo

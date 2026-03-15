@@ -17,13 +17,6 @@
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs?ref=nixos-25.11";
     nixpkgs-unstable.url = "github:nixos/nixpkgs?ref=nixos-unstable";
-    # nixpkgs-d3b2661f7.url = "github:nixos/nixpkgs/d3b2661f728ad6d24b1f4b0fa74394a24d6b1dc4";
-
-    # no boilerplate flake structure
-    snowfall-lib = {
-      url = "github:snowfallorg/lib/c566ad8b7352c30ec3763435de7c8f1c46ebb357";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
 
     # use home-manager
     home-manager = {
@@ -70,70 +63,195 @@
     };
   };
 
-  outputs = inputs:
-    inputs.snowfall-lib.mkFlake {
-      inherit inputs;
-      src = ./.;
+  outputs =
+    {
+      self,
+      nixpkgs,
+      ...
+    }@inputs:
+    let
+      systems = [
+        "x86_64-linux"
+        "aarch64-linux"
+      ];
+      forAllSystems = nixpkgs.lib.genAttrs systems;
 
-      snowfall = {
-        root = ./nix;
-        namespace = "sebe";
+      # Shared unfree package allowlist
+      allowedUnfreePackages = [
+        "corefonts"
+        "nvidia-x11"
+        "nvidia-settings"
+        "dank-mono"
+        "dank-mono-nerd"
+        "terraform"
+        "ngrok"
+        "steam"
+        "steam-unwrapped"
+        "zsh-abbr"
+        "duckstation"
+        "1password"
+        "1password-cli"
+        "1password-gui"
+        "crush"
+      ];
 
-        meta = {
-          name = "sebe-flake";
-          title = "Sebes Flake";
+      # Shared nixpkgs config (allowUnfree + ROCm for Linux)
+      mkNixpkgsConfig =
+        {
+          system ? "x86_64-linux",
+          extraConfig ? { },
+        }:
+        {
+          allowUnfreePredicate = pkg: builtins.elem (nixpkgs.lib.getName pkg) allowedUnfreePackages;
+        }
+        // nixpkgs.lib.optionalAttrs (nixpkgs.lib.hasSuffix "-linux" system) {
+          rocmSupport = true;
+        }
+        // extraConfig;
+
+      # Auto-import all NixOS modules from nix/modules/nixos/*/
+      nixosModulesList =
+        let
+          dir = ./nix/modules/nixos;
+        in
+        map (name: dir + "/${name}") (builtins.attrNames (builtins.readDir dir));
+
+      # Auto-import all home-manager modules from nix/modules/home/*/
+      homeModulesList =
+        let
+          dir = ./nix/modules/home;
+        in
+        map (name: dir + "/${name}") (builtins.attrNames (builtins.readDir dir));
+
+      # Overlay sets — cachyos kernel overlay is only useful on x86_64-linux
+      baseOverlays = with self.overlays; [
+        unstable
+        lix
+        sebe-packages
+      ];
+      x86LinuxOverlays = baseOverlays ++ [ self.overlays.cachyos ];
+
+      overlaysForSystem = system: if system == "x86_64-linux" then x86LinuxOverlays else baseOverlays;
+
+      # Shared NixOS modules applied to ALL hosts
+      sharedNixosModules = [
+        inputs.home-manager.nixosModules.home-manager
+        inputs.impermanence.nixosModules.impermanence
+        inputs.lanzaboote.nixosModules.lanzaboote
+        inputs.nix-flatpak.nixosModules.nix-flatpak
+
+        # nixpkgs config + home-manager settings (overlays set per-host in mkNixos)
+        {
+          nixpkgs.config = mkNixpkgsConfig { };
+
+          home-manager = {
+            useUserPackages = true;
+            useGlobalPkgs = true;
+            backupFileExtension = "backuphm";
+            extraSpecialArgs = { inherit inputs self; };
+            sharedModules = homeModulesList;
+          };
+        }
+      ]
+      ++ nixosModulesList;
+
+      # Helper to create a NixOS system configuration
+      mkNixos =
+        {
+          hostPath,
+          system ? "x86_64-linux",
+          extraModules ? [ ],
+        }:
+        nixpkgs.lib.nixosSystem {
+          specialArgs = { inherit inputs self; };
+          modules =
+            sharedNixosModules
+            ++ [ { nixpkgs.overlays = overlaysForSystem system; } ]
+            ++ extraModules
+            ++ [ hostPath ];
+        };
+
+      # Helper to create a standalone home-manager configuration
+      mkHome =
+        {
+          system,
+          homePath,
+        }:
+        inputs.home-manager.lib.homeManagerConfiguration {
+          pkgs = import nixpkgs {
+            inherit system;
+            overlays = overlaysForSystem system;
+            config = mkNixpkgsConfig { inherit system; };
+          };
+          extraSpecialArgs = { inherit inputs self; };
+          modules = homeModulesList ++ [ homePath ];
+        };
+    in
+    {
+      overlays = {
+        unstable = import ./nix/overlays/unstable { inherit inputs; };
+        lix = import ./nix/overlays/lix;
+        sebe-packages = import ./nix/overlays/sebe-packages { inherit inputs; };
+        cachyos = inputs.nix-cachyos-kernel.overlays.pinned;
+      };
+
+      packages = forAllSystems (
+        system:
+        let
+          pkgs = import nixpkgs {
+            inherit system;
+            overlays = overlaysForSystem system;
+            config.allowUnfree = true;
+          };
+        in
+        pkgs.sebe
+      );
+
+      formatter = forAllSystems (system: nixpkgs.legacyPackages.${system}.nixfmt-tree);
+
+      nixosConfigurations = {
+        blade15 = mkNixos {
+          hostPath = ./nix/systems/x86_64-linux/blade15;
+          extraModules = [
+            { home-manager.users.sebe = import (./nix/homes/x86_64-linux + "/sebe@blade15"); }
+          ];
+        };
+
+        MONDO-1504 = mkNixos {
+          hostPath = ./nix/systems/x86_64-linux/MONDO-1504;
+          extraModules = [
+            inputs.disko.nixosModules.default
+            { home-manager.users.sebe = import (./nix/homes/x86_64-linux + "/sebe@MONDO-1504"); }
+          ];
+        };
+
+        pi-server = mkNixos {
+          hostPath = ./nix/systems/aarch64-linux/pi-server;
+          system = "aarch64-linux";
+          extraModules = [ inputs.disko.nixosModules.default ];
+        };
+
+        pi-installer = mkNixos {
+          hostPath = ./nix/systems/aarch64-linux/pi-installer;
+          system = "aarch64-linux";
         };
       };
 
-      overlays = with inputs; [
-        nix-cachyos-kernel.overlays.pinned
-      ];
+      homeConfigurations = {
+        "sebe@blade15" = mkHome {
+          system = "x86_64-linux";
+          homePath = ./nix/homes/x86_64-linux + "/sebe@blade15";
+        };
 
-      systems.modules.nixos = with inputs; [
-        home-manager.nixosModules.home-manager
-        impermanence.nixosModules.impermanence
-        lanzaboote.nixosModules.lanzaboote
-        nix-flatpak.nixosModules.nix-flatpak
-      ];
+        "sebe@MONDO-1504" = mkHome {
+          system = "x86_64-linux";
+          homePath = ./nix/homes/x86_64-linux + "/sebe@MONDO-1504";
+        };
 
-      systems.hosts.MONDO-1504.modules = with inputs; [
-        disko.nixosModules.default
-      ];
-
-      systems.hosts.pi-server.modules = with inputs; [
-        disko.nixosModules.default
-      ];
-
-      channels-config = {
-        rocmSupport = true; # Enable ROCm GPU support for AMD GPUs
-        allowUnfreePredicate = pkg: let
-          pkgName = inputs.nixpkgs.lib.getName pkg;
-        in (builtins.elem pkgName [
-          "corefonts"
-          "nvidia-x11"
-          "nvidia-settings"
-          "dank-mono"
-          "dank-mono-nerd"
-          "terraform"
-          "ngrok"
-          "steam"
-          "steam-unwrapped"
-          "zsh-abbr"
-          "duckstation"
-          "1password"
-          "1password-cli"
-          "1password-gui"
-          "crush"
-          # nvtop dependencies
-          #   "libnpp"
-        ]);
-        # || (inputs.nixpkgs.lib.strings.hasPrefix "cuda" pkgName)
-        # || (inputs.nixpkgs.lib.strings.hasPrefix "libcu" pkgName)
-        # || (inputs.nixpkgs.lib.strings.hasPrefix "libnv" pkgName);
-      };
-
-      outputs-builder = channels: {
-        formatter = channels.nixpkgs.alejandra;
+        "sbresin@MONDO-0614" = mkHome {
+          system = "x86_64-darwin";
+          homePath = ./nix/homes/x86_64-darwin + "/sbresin@MONDO-0614";
+        };
       };
     };
 }

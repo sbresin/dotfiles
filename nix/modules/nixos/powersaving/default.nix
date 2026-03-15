@@ -2,12 +2,12 @@
   config,
   lib,
   pkgs,
-  namespace,
+
   ...
 }: let
-  cfg = config.${namespace}.powersaving;
+  cfg = config.sebe.powersaving;
 in {
-  options.${namespace}.powersaving = {
+  options.sebe.powersaving = {
     enable = lib.mkEnableOption "enable powersaving";
 
     diskDevices = lib.mkOption {

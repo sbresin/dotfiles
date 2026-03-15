@@ -2,12 +2,12 @@
   config,
   lib,
   pkgs,
-  namespace,
+
   ...
 }: let
-  cfg = config.${namespace}.desktop-essentials;
+  cfg = config.sebe.desktop-essentials;
 in {
-  options.${namespace}.desktop-essentials = {
+  options.sebe.desktop-essentials = {
     enable = lib.mkEnableOption "install/setup essentials for desktop systems";
   };
 
@@ -110,7 +110,7 @@ in {
     '';
 
     services.udev.packages = [
-      pkgs.${namespace}.vial-udev-rules
+      pkgs.sebe.vial-udev-rules
     ];
   };
 }

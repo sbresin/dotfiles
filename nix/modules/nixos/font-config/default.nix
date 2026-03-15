@@ -2,12 +2,12 @@
   config,
   lib,
   pkgs,
-  namespace,
+
   ...
 }: let
-  cfg = config.${namespace}.font-config;
+  cfg = config.sebe.font-config;
 in {
-  options.${namespace}.font-config = {
+  options.sebe.font-config = {
     enable = lib.mkEnableOption "configure font rendering";
   };
 
@@ -26,9 +26,9 @@ in {
         noto-fonts
         geist-font
         tamzen
-        pkgs.${namespace}.dank-mono
-        pkgs.${namespace}.dank-mono-nerd
-        pkgs.${namespace}.apple-emoji-linux
+        pkgs.sebe.dank-mono
+        pkgs.sebe.dank-mono-nerd
+        pkgs.sebe.apple-emoji-linux
         # TODO: windows fonts
       ];
 
