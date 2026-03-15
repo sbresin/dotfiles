@@ -57,6 +57,7 @@ local prettier_apex = {
 }
 
 local alejandra = {formatCommand = "alejandra - ", formatStdin = true}
+local nixfmt = {formatCommand = "nixfmt", formatStdin = true}
 
 local sedTrailingSpace = {
     formatCommand = "sed -e 's/[ \t]*$//g'",
@@ -122,7 +123,7 @@ return {
                             javascript = {prettierd},
                             html = {prettierd},
                             yaml = {actionlint},
-                            nix = {alejandra},
+                            nix = {nixfmt},
                             sql = {sqruff},
                             css = {prettierd},
                             vue = {prettierd}
