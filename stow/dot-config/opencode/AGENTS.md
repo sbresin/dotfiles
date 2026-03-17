@@ -14,3 +14,10 @@ to inspect sibling projects. Use `ls ~/workspace` to discover what's available.
 
 Check per-project AGENTS.md files at ~/workspace/<project>/AGENTS.md for
 project-specific context and dependency information when available.
+
+## Git & GitHub
+
+When working with git, always ask before pushing a branch or opening a pull request —
+never do either autonomously. When creating pull requests, always create them as
+**Draft** PRs. Do not force-push or rewrite history on shared branches without
+explicit approval.
