@@ -20,6 +20,10 @@
 	"permission": {
 		"external_directory": {
 			"~/workspace/**": "allow",
+			"/tmp/opencode-*/**": "allow",
+		},
+		"edit": {
+			"/tmp/opencode-*/**": "allow",
 		},
 	},
 	"agent": {
