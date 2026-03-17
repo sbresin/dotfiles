@@ -15,56 +15,70 @@ async function hasCommand(cmd: string): Promise<boolean> {
   }
 }
 
-async function copyToClipboard(text: string): Promise<string> {
+function mimeLabel(mimeType?: string): string {
+  return mimeType ? ` as ${mimeType}` : ""
+}
+
+async function copyToClipboard(text: string, mimeType?: string): Promise<string> {
   if (await hasCommand("wl-copy")) {
-    const proc = Bun.spawn(["wl-copy"], {
+    const args = mimeType ? ["wl-copy", "--type", mimeType] : ["wl-copy"]
+    const proc = Bun.spawn(args, {
       stdin: new Blob([text]),
     })
     proc.unref()
     await proc.exited
-    return "Copied to clipboard using wl-copy (Wayland)"
+    return `Copied to clipboard${mimeLabel(mimeType)} using wl-copy (Wayland)`
   }
   if (await hasCommand("xclip")) {
-    const proc = Bun.spawn(["xclip", "-selection", "clipboard"], {
+    const args = mimeType
+      ? ["xclip", "-selection", "clipboard", "-t", mimeType]
+      : ["xclip", "-selection", "clipboard"]
+    const proc = Bun.spawn(args, {
       stdin: new Blob([text]),
     })
     proc.unref()
     await proc.exited
-    return "Copied to clipboard using xclip (X11)"
+    return `Copied to clipboard${mimeLabel(mimeType)} using xclip (X11)`
   }
   if (await hasCommand("pbcopy")) {
     const proc = Bun.spawn(["pbcopy"], {
       stdin: new Blob([text]),
     })
     await proc.exited
-    return "Copied to clipboard using pbcopy (macOS)"
+    const note = mimeType ? " (mimeType ignored — pbcopy only supports plain text)" : ""
+    return `Copied to clipboard using pbcopy (macOS)${note}`
   }
   throw new Error("No clipboard tool available. Install wl-copy (Wayland), xclip (X11), or use macOS (pbcopy).")
 }
 
-async function copyFileToClipboard(path: string): Promise<string> {
+async function copyFileToClipboard(path: string, mimeType?: string): Promise<string> {
   if (await hasCommand("wl-copy")) {
-    const proc = Bun.spawn(["wl-copy"], {
+    const args = mimeType ? ["wl-copy", "--type", mimeType] : ["wl-copy"]
+    const proc = Bun.spawn(args, {
       stdin: Bun.file(path),
     })
     proc.unref()
     await proc.exited
-    return `Copied contents of ${path} to clipboard using wl-copy (Wayland)`
+    return `Copied contents of ${path} to clipboard${mimeLabel(mimeType)} using wl-copy (Wayland)`
   }
   if (await hasCommand("xclip")) {
-    const proc = Bun.spawn(["xclip", "-selection", "clipboard"], {
+    const args = mimeType
+      ? ["xclip", "-selection", "clipboard", "-t", mimeType]
+      : ["xclip", "-selection", "clipboard"]
+    const proc = Bun.spawn(args, {
       stdin: Bun.file(path),
     })
     proc.unref()
     await proc.exited
-    return `Copied contents of ${path} to clipboard using xclip (X11)`
+    return `Copied contents of ${path} to clipboard${mimeLabel(mimeType)} using xclip (X11)`
   }
   if (await hasCommand("pbcopy")) {
     const proc = Bun.spawn(["pbcopy"], {
       stdin: Bun.file(path),
     })
     await proc.exited
-    return `Copied contents of ${path} to clipboard using pbcopy (macOS)`
+    const note = mimeType ? " (mimeType ignored — pbcopy only supports plain text)" : ""
+    return `Copied contents of ${path} to clipboard using pbcopy (macOS)${note}`
   }
   throw new Error("No clipboard tool available. Install wl-copy (Wayland), xclip (X11), or use macOS (pbcopy).")
 }
@@ -73,9 +87,12 @@ export default tool({
   description: "Copy text to the system clipboard. Uses wl-copy on Wayland, xclip on X11, or pbcopy on macOS.",
   args: {
     text: tool.schema.string().describe("The text to copy to the clipboard"),
+    mimeType: tool.schema.string().optional().describe(
+      "MIME type for the clipboard content (e.g., 'text/html', 'text/plain'). Defaults to text/plain.",
+    ),
   },
   async execute(args) {
-    return copyToClipboard(args.text)
+    return copyToClipboard(args.text, args.mimeType)
   },
 })
 
@@ -83,8 +100,11 @@ export const file = tool({
   description: "Copy contents of a file to the system clipboard. Uses wl-copy on Wayland, xclip on X11, or pbcopy on macOS.",
   args: {
     path: tool.schema.string().describe("Path to the file whose contents to copy"),
+    mimeType: tool.schema.string().optional().describe(
+      "MIME type for the clipboard content (e.g., 'image/png', 'text/html'). Defaults to text/plain.",
+    ),
   },
   async execute(args) {
-    return copyFileToClipboard(args.path)
+    return copyFileToClipboard(args.path, args.mimeType)
   },
 })
