@@ -5,3 +5,9 @@ __pycache__/
 TODO.md
 **/lazygit/state.yml
 **/wezterm/plugins.lua
+
+# OpenCode auto-generated files (written into repo via directory symlink)
+stow/dot-config/opencode/node_modules/
+stow/dot-config/opencode/package.json
+stow/dot-config/opencode/bun.lock
+stow/dot-config/opencode/.gitignore

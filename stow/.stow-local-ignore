@@ -1,0 +1,27 @@
+# Default stow ignores (this file replaces the built-in list)
+RCS
+.+,v
+
+CVS
+\.\#.+
+\.cvsignore
+
+\.svn
+_darcs
+\.hg
+
+\.git
+\.gitignore
+\.gitmodules
+
+.+~
+\#.*\#
+
+^/README.*
+^/LICENSE.*
+^/COPYING
+
+# OpenCode is symlinked as a directory, not managed file-by-file.
+# This lets OpenCode's auto-installed node_modules resolve correctly
+# for custom tool imports.
+^/\.config/opencode

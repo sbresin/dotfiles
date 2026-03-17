@@ -156,14 +156,33 @@ build HOST:
 
 # ── Stow ─────────────────────────────────────────────────────────────
 
+# opencode is excluded from stow (via .stow-local-ignore) and symlinked
+# as a directory so that its auto-installed node_modules resolves
+# correctly for custom tool imports.
+[private]
+ensure-opencode-symlink:
+	#!/usr/bin/env bash
+	set -euo pipefail
+	target="$HOME/.config/opencode"
+	source="$HOME/workspace/dotfiles/stow/dot-config/opencode"
+	if [[ -L "$target" ]]; then
+		exit 0
+	fi
+	if [[ -d "$target" ]]; then
+		echo "warning: replacing ~/.config/opencode directory with symlink"
+		rm -rf "$target"
+	fi
+	ln -s "$source" "$target"
+
 # symlink stow packages into $HOME
-stow:
+stow: ensure-opencode-symlink
 	stow stow
 
 # re-stow (prune dead symlinks + restow)
-restow:
+restow: ensure-opencode-symlink
 	stow -R stow
 
 # remove all stow symlinks
 unstow:
 	stow -D stow
+	rm -f "$HOME/.config/opencode"
