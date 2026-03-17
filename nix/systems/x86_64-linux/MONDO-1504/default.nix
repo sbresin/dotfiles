@@ -2,7 +2,6 @@
   config,
   lib,
   pkgs,
-
   ...
 }:
 {
@@ -67,6 +66,7 @@
     package = pkgs.unstable.fwupd;
   };
 
+  networking.hostName = "MONDO-1504";
   networking.networkmanager = {
     enable = true;
     wifi.powersave = true;

@@ -64,6 +64,7 @@
   # SSD needs TRIM
   services.fstrim.enable = true;
 
+  networking.hostName = "blade15";
   networking.networkmanager = {
     enable = true;
     wifi.powersave = true;
