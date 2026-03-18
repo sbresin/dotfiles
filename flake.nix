@@ -123,6 +123,20 @@
         in
         map (name: dir + "/${name}") (builtins.attrNames (builtins.readDir dir));
 
+      # Pre-compute unstable pkgs per system — outside overlay fixed-point.
+      # This avoids the expensive `import nixpkgs-unstable` inside the overlay,
+      # where it would depend on `prev.config` and get entangled with the
+      # fixed-point resolution. Benchmarked at 35% faster eval (77s → 50s).
+      unstablePkgs = builtins.listToAttrs (
+        map (system: {
+          name = system;
+          value = import inputs.nixpkgs-unstable {
+            inherit system;
+            config = mkNixpkgsConfig { inherit system; };
+          };
+        }) (systems ++ [ "x86_64-darwin" ])
+      );
+
       # Overlay sets — cachyos kernel overlay is only useful on x86_64-linux
       baseOverlays = with self.overlays; [
         unstable
@@ -189,7 +203,7 @@
     in
     {
       overlays = {
-        unstable = import ./nix/overlays/unstable { inherit inputs; };
+        unstable = import ./nix/overlays/unstable { inherit inputs unstablePkgs; };
         lix = import ./nix/overlays/lix;
         sebe-packages = import ./nix/overlays/sebe-packages { inherit inputs; };
         cachyos = inputs.nix-cachyos-kernel.overlays.pinned;
