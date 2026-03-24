@@ -461,6 +461,7 @@ in
       copier
       fx
       gh-dash
+      jira-cli-go
       glow
       go-grip
       httpie

@@ -1,0 +1,1020 @@
+#!/usr/bin/env python3
+"""Generate a standup summary of yesterday's GitHub, Jira, and OpenCode activity.
+
+Collects data from multiple sources and prints a coloured terminal report:
+
+    1. PRs opened    — pull requests you authored on the given day
+    2. PRs reviewed  — pull requests you reviewed (including your own),
+                       with a tag when you were the one who merged them
+    3. Jira activity — issues you transitioned, created, or updated
+    4. OpenCode sessions — coding sessions from the local SQLite database,
+                           with file-change stats
+
+Usage:
+    standup                  # yesterday (default)
+    standup today            # today
+    standup 2026-03-14       # specific date
+    standup 2                # 2 days ago
+    standup --no-sessions    # skip OpenCode sessions
+    standup --no-prs         # skip GitHub PRs
+    standup --no-jira        # skip Jira activity
+
+Requires: gh (GitHub CLI) authenticated, Python 3.11+ stdlib.
+Optional: jira (jira-cli-go) for Jira integration.
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import re
+import shutil
+import sqlite3
+import subprocess
+import sys
+import threading
+import time
+from concurrent.futures import ThreadPoolExecutor, Future
+from dataclasses import dataclass, field
+from datetime import datetime, timedelta
+from pathlib import Path
+from typing import Optional
+
+
+# ── Constants ────────────────────────────────────────────────────────
+
+OPENCODE_DB = Path.home() / ".local" / "share" / "opencode" / "opencode-stable.db"
+JIRA_CONFIG = Path.home() / ".config" / ".jira" / ".config.yml"
+
+GH = "gh"
+JIRA = "jira"
+
+# GitHub search returns max 100 results per call; this is plenty for a day
+GH_SEARCH_LIMIT = 100
+
+
+# ── Types ────────────────────────────────────────────────────────────
+
+@dataclass
+class PullRequest:
+    title: str
+    repo: str
+    number: int
+    url: str
+    state: str  # "open", "closed", "merged"
+    author: str
+    merged_by: Optional[str] = None
+
+
+@dataclass
+class Session:
+    title: str
+    project: str
+    time: str  # HH:MM local
+    additions: int
+    deletions: int
+    files: int
+
+
+@dataclass
+class JiraIssue:
+    key: str        # e.g. "PLAT-123"
+    summary: str
+    status: str     # e.g. "In Progress", "Done"
+    issue_type: str  # e.g. "Story", "Bug", "Task"
+
+
+@dataclass
+class JiraActivity:
+    transitioned: list[JiraIssue] = field(default_factory=list)
+    created: list[JiraIssue] = field(default_factory=list)
+    in_progress: list[JiraIssue] = field(default_factory=list)
+    in_review: list[JiraIssue] = field(default_factory=list)
+    todo: list[JiraIssue] = field(default_factory=list)
+    todo_total: int = 0
+    updated: list[JiraIssue] = field(default_factory=list)
+
+    def total(self) -> int:
+        return (
+            len(self.transitioned) + len(self.created)
+            + len(self.in_progress) + len(self.in_review)
+            + len(self.todo) + len(self.updated)
+        )
+
+
+@dataclass
+class StandupData:
+    opened: Optional[list[PullRequest]] = None
+    reviewed: Optional[list[PullRequest]] = None
+    jira: Optional[JiraActivity] = None
+    sessions: Optional[list[Session]] = None
+
+
+# ── Colour helpers ───────────────────────────────────────────────────
+
+class _Colours:
+    """ANSI colour codes that degrade to empty strings when colour is off."""
+
+    def __init__(self, enabled: bool) -> None:
+        self._on = enabled
+
+    def _esc(self, code: str) -> str:
+        return f"\033[{code}m" if self._on else ""
+
+    @property
+    def reset(self) -> str:
+        return self._esc("0")
+
+    @property
+    def bold(self) -> str:
+        return self._esc("1")
+
+    @property
+    def dim(self) -> str:
+        return self._esc("2")
+
+    @property
+    def green(self) -> str:
+        return self._esc("32")
+
+    @property
+    def yellow(self) -> str:
+        return self._esc("33")
+
+    @property
+    def blue(self) -> str:
+        return self._esc("34")
+
+    @property
+    def magenta(self) -> str:
+        return self._esc("35")
+
+    @property
+    def cyan(self) -> str:
+        return self._esc("36")
+
+
+# ── Progress spinner ─────────────────────────────────────────────────
+
+class _Progress:
+    """Thread-safe spinner with per-task status, drawn to stderr.
+
+    Each task is shown as a line with a braille spinner (running) or
+    a checkmark (done).  The block is erased when stop() is called so
+    the final report prints cleanly.
+    """
+
+    _FRAMES = "⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏"
+    _INTERVAL = 0.08  # seconds between redraws
+
+    def __init__(self, enabled: bool) -> None:
+        self._enabled = enabled
+        self._tasks: dict[str, str] = {}  # name → "running" | "done"
+        self._lock = threading.Lock()
+        self._stop_event = threading.Event()
+        self._frame = 0
+        self._lines_drawn = 0
+        self._thread: Optional[threading.Thread] = None
+        if self._enabled:
+            self._thread = threading.Thread(target=self._run, daemon=True)
+            self._thread.start()
+
+    def start(self, name: str) -> None:
+        """Mark a task as running."""
+        if not self._enabled:
+            return
+        with self._lock:
+            self._tasks[name] = "running"
+
+    def complete(self, name: str) -> None:
+        """Mark a task as done."""
+        if not self._enabled:
+            return
+        with self._lock:
+            self._tasks[name] = "done"
+
+    def stop(self) -> None:
+        """Stop the spinner thread and erase all progress lines."""
+        if not self._enabled or self._thread is None:
+            return
+        self._stop_event.set()
+        self._thread.join(timeout=1)
+        # Erase the progress block
+        self._clear()
+
+    def _run(self) -> None:
+        """Background loop that redraws the progress block."""
+        while not self._stop_event.is_set():
+            self._draw()
+            self._frame += 1
+            self._stop_event.wait(self._INTERVAL)
+
+    def _draw(self) -> None:
+        """Redraw all task lines on stderr."""
+        with self._lock:
+            tasks = list(self._tasks.items())
+
+        if not tasks:
+            return
+
+        buf: list[str] = []
+
+        # Move cursor up to overwrite previous output
+        if self._lines_drawn > 0:
+            buf.append(f"\033[{self._lines_drawn}F")
+
+        spinner = self._FRAMES[self._frame % len(self._FRAMES)]
+
+        for name, state in tasks:
+            if state == "done":
+                buf.append(f"  \033[32m✓\033[0m \033[2m{name}\033[0m\033[K\n")
+            else:
+                buf.append(f"  \033[36m{spinner}\033[0m {name}\033[K\n")
+
+        sys.stderr.write("".join(buf))
+        sys.stderr.flush()
+        self._lines_drawn = len(tasks)
+
+    def _clear(self) -> None:
+        """Erase all progress lines from stderr."""
+        if self._lines_drawn > 0:
+            buf = f"\033[{self._lines_drawn}F"
+            buf += "\033[K\n" * self._lines_drawn
+            buf += f"\033[{self._lines_drawn}F"
+            sys.stderr.write(buf)
+            sys.stderr.flush()
+            self._lines_drawn = 0
+
+
+# ── Date parsing ─────────────────────────────────────────────────────
+
+def parse_date(value: str) -> datetime:
+    """Parse a date string into a timezone-aware local midnight datetime.
+
+    Accepts:
+        YYYY-MM-DD     — explicit date
+        today           — current date
+        yesterday       — previous date
+        N (integer)     — N days ago
+    """
+    local_tz = datetime.now().astimezone().tzinfo
+    today = datetime.now(tz=local_tz).replace(
+        hour=0, minute=0, second=0, microsecond=0,
+    )
+
+    lowered = value.strip().lower()
+    if lowered == "today":
+        return today
+    if lowered == "yesterday":
+        return today - timedelta(days=1)
+
+    # Integer → days ago
+    try:
+        days_ago = int(lowered)
+        if days_ago >= 0:
+            return today - timedelta(days=days_ago)
+    except ValueError:
+        pass
+
+    # YYYY-MM-DD
+    try:
+        naive = datetime.strptime(value.strip(), "%Y-%m-%d")
+        return naive.replace(tzinfo=local_tz)
+    except ValueError:
+        pass
+
+    print(f"Error: Cannot parse '{value}' as a date.", file=sys.stderr)
+    print(
+        "Accepted formats: YYYY-MM-DD, 'today', 'yesterday', or N (days ago).",
+        file=sys.stderr,
+    )
+    sys.exit(1)
+
+
+# ── GitHub helpers ───────────────────────────────────────────────────
+
+def gh_username() -> str:
+    """Detect the authenticated GitHub username via gh CLI."""
+    result = subprocess.run(
+        [GH, "api", "user", "--jq", ".login"],
+        capture_output=True,
+        text=True,
+        timeout=10,
+    )
+    if result.returncode != 0:
+        print(
+            f"Error: Could not detect GitHub username. Is `gh` authenticated?\n"
+            f"  {result.stderr.strip()}",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+    return result.stdout.strip()
+
+
+def gh_search_prs(args: list[str]) -> list[dict]:
+    """Run `gh search prs` with the given flags and return parsed JSON."""
+    cmd = [
+        GH, "search", "prs",
+        "--json", "title,repository,url,state,author,number",
+        "--limit", str(GH_SEARCH_LIMIT),
+        *args,
+    ]
+    result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+    if result.returncode != 0:
+        return []
+    try:
+        return json.loads(result.stdout)
+    except json.JSONDecodeError:
+        return []
+
+
+def gh_graphql_merged_by(pr_urls: list[str], username: str) -> dict[str, str]:
+    """Query the GraphQL API to get mergedBy for a list of PR URLs.
+
+    Returns a dict mapping PR URL → mergedBy login.
+    """
+    if not pr_urls:
+        return {}
+
+    # Build individual PR queries from URLs: extract owner/repo/number
+    fragments = []
+    for i, url in enumerate(pr_urls):
+        # URL format: https://github.com/owner/repo/pull/123
+        parts = url.rstrip("/").split("/")
+        if len(parts) < 5:
+            continue
+        owner, repo, number = parts[-4], parts[-3], parts[-1]
+        fragments.append(
+            f'pr{i}: repository(owner: "{owner}", name: "{repo}") {{'
+            f'  pullRequest(number: {number}) {{'
+            f'    url mergedBy {{ login }}'
+            f'  }}'
+            f'}}'
+        )
+
+    if not fragments:
+        return {}
+
+    # GraphQL has a complexity limit; batch in groups of 30
+    result_map: dict[str, str] = {}
+    batch_size = 30
+    for start in range(0, len(fragments), batch_size):
+        batch = fragments[start:start + batch_size]
+        query = "query { " + " ".join(batch) + " }"
+
+        proc = subprocess.run(
+            [GH, "api", "graphql", "-f", f"query={query}"],
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+        if proc.returncode != 0:
+            continue
+
+        try:
+            data = json.loads(proc.stdout).get("data", {})
+        except json.JSONDecodeError:
+            continue
+
+        for key, repo_data in data.items():
+            if not repo_data:
+                continue
+            pr_data = repo_data.get("pullRequest", {})
+            merged_by = pr_data.get("mergedBy", {})
+            url = pr_data.get("url", "")
+            if merged_by and url:
+                result_map[url] = merged_by.get("login", "")
+
+    return result_map
+
+
+def raw_to_pr(raw: dict) -> PullRequest:
+    """Convert a raw gh search JSON object to a PullRequest."""
+    repo_info = raw.get("repository", {})
+    return PullRequest(
+        title=raw.get("title", ""),
+        repo=repo_info.get("nameWithOwner", repo_info.get("name", "?")),
+        number=raw.get("number", 0),
+        url=raw.get("url", ""),
+        state=raw.get("state", "").lower(),
+        author=raw.get("author", {}).get("login", ""),
+    )
+
+
+def fetch_opened_prs(
+    username: str,
+    date_str: str,
+    end_str: str,
+) -> list[PullRequest]:
+    """Fetch PRs authored by the user in the given date range."""
+    raw = gh_search_prs([
+        f"--author={username}",
+        f"--created={date_str}..{end_str}",
+    ])
+    return [raw_to_pr(r) for r in raw]
+
+
+def fetch_reviewed_prs(
+    username: str,
+    date_str: str,
+    end_str: str,
+) -> list[PullRequest]:
+    """Fetch PRs reviewed by the user in the given date range.
+
+    Combines two searches to cover both merged and still-open PRs:
+      1. Merged PRs reviewed by user, merged in the range
+      2. Open PRs reviewed by user, updated in the range
+    """
+    merged_raw = gh_search_prs([
+        f"--reviewed-by={username}",
+        "--merged",
+        f"--merged-at={date_str}..{end_str}",
+    ])
+    open_raw = gh_search_prs([
+        f"--reviewed-by={username}",
+        "--state=open",
+        f"--updated={date_str}..{end_str}",
+    ])
+
+    # Deduplicate by URL
+    seen: set[str] = set()
+    prs: list[PullRequest] = []
+    for raw in merged_raw + open_raw:
+        url = raw.get("url", "")
+        if url not in seen:
+            seen.add(url)
+            prs.append(raw_to_pr(raw))
+    return prs
+
+
+# ── OpenCode sessions ────────────────────────────────────────────────
+
+def fetch_sessions(date_str: str, end_str: str) -> list[Session]:
+    """Query the OpenCode SQLite database for sessions in the given date range."""
+    if not OPENCODE_DB.exists():
+        return []
+
+    try:
+        conn = sqlite3.connect(
+            f"file:{OPENCODE_DB}?mode=ro",
+            uri=True,
+            timeout=5,
+        )
+    except sqlite3.Error:
+        return []
+
+    try:
+        cursor = conn.execute(
+            """
+            SELECT
+                s.title,
+                replace(s.directory, ?, '') AS project,
+                strftime('%H:%M', s.time_created / 1000, 'unixepoch', 'localtime') AS created,
+                COALESCE(s.summary_additions, 0) AS additions,
+                COALESCE(s.summary_deletions, 0) AS deletions,
+                COALESCE(s.summary_files, 0) AS files
+            FROM session s
+            WHERE date(s.time_created / 1000, 'unixepoch', 'localtime') >= ?
+              AND date(s.time_created / 1000, 'unixepoch', 'localtime') <= ?
+              AND s.parent_id IS NULL
+            ORDER BY s.time_created
+            """,
+            (str(Path.home()) + "/workspace/", date_str, end_str),
+        )
+        rows = cursor.fetchall()
+    except sqlite3.Error:
+        return []
+    finally:
+        conn.close()
+
+    return [
+        Session(
+            title=row[0] or "(untitled)",
+            project=row[1] or "~",
+            time=row[2] or "??:??",
+            additions=row[3],
+            deletions=row[4],
+            files=row[5],
+        )
+        for row in rows
+    ]
+
+
+# ── Jira helpers ─────────────────────────────────────────────────────
+
+def jira_server_url() -> Optional[str]:
+    """Read the Jira server URL from jira-cli's config file.
+
+    The config is a simple YAML file; we extract the 'server' field with
+    a regex to avoid a PyYAML dependency.
+    """
+    if not JIRA_CONFIG.exists():
+        return None
+    try:
+        text = JIRA_CONFIG.read_text(encoding="utf-8")
+    except OSError:
+        return None
+    match = re.search(r"^\s*server:\s*(.+?)\s*$", text, re.MULTILINE)
+    if not match:
+        return None
+    return match.group(1).strip().rstrip("/")
+
+
+def run_jira_query(jql: str) -> list[JiraIssue]:
+    """Run a JQL query via jira-cli and return parsed issues.
+
+    Uses --plain --no-headers --columns for machine-readable output.
+    Fields are separated by a custom '@@' delimiter to avoid ambiguity
+    with the default tab alignment that jira-cli uses.
+    """
+    cmd = [
+        JIRA, "issue", "list",
+        "-q", jql,
+        "--plain",
+        "--no-headers",
+        "--no-truncate",
+        "--columns", "type,key,summary,status",
+        "--delimiter", "@@",
+        "--paginate", "50",
+    ]
+    try:
+        result = subprocess.run(
+            cmd, capture_output=True, text=True, timeout=30,
+        )
+    except (subprocess.TimeoutExpired, FileNotFoundError):
+        return []
+    if result.returncode != 0:
+        return []
+
+    issues: list[JiraIssue] = []
+    for line in result.stdout.strip().splitlines():
+        parts = line.split("@@")
+        if len(parts) < 4:
+            continue
+        issues.append(JiraIssue(
+            issue_type=parts[0].strip(),
+            key=parts[1].strip(),
+            summary=parts[2].strip(),
+            status=parts[3].strip(),
+        ))
+    return issues
+
+
+def _dedup_issues(
+    issues: list[JiraIssue],
+    seen: set[str],
+) -> list[JiraIssue]:
+    """Return issues not already in *seen*, and add their keys to *seen*."""
+    result: list[JiraIssue] = []
+    for issue in issues:
+        if issue.key not in seen:
+            seen.add(issue.key)
+            result.append(issue)
+    return result
+
+
+def fetch_jira_activity(
+    date_str: str,
+    next_day_str: str,
+    todo_limit: int,
+) -> JiraActivity:
+    """Fetch Jira activity and current board state.
+
+    Runs six JQL queries in parallel:
+      - Date-scoped: transitioned, created, updated (what changed that day)
+      - Board state: In Progress, In Review, To Do (current snapshot)
+
+    Deduplicates across groups in priority order so each issue appears once.
+    """
+    if shutil.which(JIRA) is None:
+        return JiraActivity()
+
+    # NOTE: jira-cli appends its own ORDER BY (default: created DESC),
+    # so we must not include ORDER BY in the JQL — it causes a parse error.
+
+    # Date-scoped queries
+    jql_transitioned = (
+        f'status changed BY currentUser()'
+        f' DURING ("{date_str}", "{next_day_str}")'
+    )
+    jql_created = (
+        f'reporter = currentUser() AND created >= "{date_str}"'
+        f' AND created < "{next_day_str}"'
+    )
+    jql_updated = (
+        f'assignee = currentUser() AND updated >= "{date_str}"'
+        f' AND updated < "{next_day_str}"'
+    )
+
+    # Board state queries (not date-scoped)
+    jql_in_progress = 'assignee = currentUser() AND status = "In Progress"'
+    jql_in_review = 'assignee = currentUser() AND status = "In Review"'
+    jql_todo = 'assignee = currentUser() AND status = "To Do"'
+
+    # Run all six queries in parallel
+    with ThreadPoolExecutor(max_workers=6) as pool:
+        fut_trans = pool.submit(run_jira_query, jql_transitioned)
+        fut_created = pool.submit(run_jira_query, jql_created)
+        fut_in_progress = pool.submit(run_jira_query, jql_in_progress)
+        fut_in_review = pool.submit(run_jira_query, jql_in_review)
+        fut_todo = pool.submit(run_jira_query, jql_todo)
+        fut_updated = pool.submit(run_jira_query, jql_updated)
+
+        transitioned = fut_trans.result()
+        created = fut_created.result()
+        in_progress = fut_in_progress.result()
+        in_review = fut_in_review.result()
+        todo = fut_todo.result()
+        updated = fut_updated.result()
+
+    # Deduplicate in priority order:
+    # transitioned > created > in_progress > in_review > todo > updated
+    seen: set[str] = set()
+    for issue in transitioned:
+        seen.add(issue.key)
+
+    deduped_created = _dedup_issues(created, seen)
+    deduped_in_progress = _dedup_issues(in_progress, seen)
+    deduped_in_review = _dedup_issues(in_review, seen)
+    deduped_todo = _dedup_issues(todo, seen)
+    todo_total = len(deduped_todo)
+    deduped_updated = _dedup_issues(updated, seen)
+
+    return JiraActivity(
+        transitioned=transitioned,
+        created=deduped_created,
+        in_progress=deduped_in_progress,
+        in_review=deduped_in_review,
+        todo=deduped_todo[:todo_limit],
+        todo_total=todo_total,
+        updated=deduped_updated,
+    )
+
+
+# ── Output formatting ───────────────────────────────────────────────
+
+def section_header(title: str, count: int, c: _Colours) -> str:
+    """Format a section header line."""
+    label = f" {title} ({count}) "
+    line_len = max(60 - len(label), 4)
+    return f"\n{c.bold}──{label}{'─' * line_len}{c.reset}"
+
+
+def state_icon(state: str, c: _Colours) -> str:
+    """Return a coloured icon for a PR state."""
+    if state == "merged":
+        return f"{c.magenta}✓{c.reset}"
+    if state == "open":
+        return f"{c.green}●{c.reset}"
+    return f"{c.dim}✗{c.reset}"  # closed
+
+
+def state_label(state: str, c: _Colours) -> str:
+    """Return a coloured state label."""
+    if state == "merged":
+        return f"{c.magenta}merged{c.reset}"
+    if state == "open":
+        return f"{c.green}open  {c.reset}"
+    return f"{c.dim}closed{c.reset}"
+
+
+def short_repo(full_name: str) -> str:
+    """Shorten 'owner/repo' to just 'repo' for cleaner output."""
+    return full_name.split("/")[-1] if "/" in full_name else full_name
+
+
+def print_pr_section(
+    title: str,
+    prs: list[PullRequest],
+    c: _Colours,
+    show_author: bool = False,
+) -> None:
+    """Print a section of pull requests."""
+    print(section_header(title, len(prs), c))
+
+    if not prs:
+        print(f"  {c.dim}None{c.reset}")
+        return
+
+    # Calculate column widths for alignment
+    max_title_len = min(max(len(pr.title) for pr in prs), 62) if show_author else 0
+
+    # The indent for the second line aligns under the PR title:
+    # "  ✓ merged  " = 12 visible chars
+    url_indent = " " * 12
+
+    for pr in prs:
+        icon = state_icon(pr.state, c)
+        label = state_label(pr.state, c)
+
+        merged_tag = ""
+        if pr.merged_by:
+            merged_tag = f"  {c.yellow}(you merged){c.reset}"
+
+        if show_author:
+            pr_title = pr.title[:62]
+            print(
+                f"  {icon} {label}"
+                f"  {pr_title:<{max_title_len}}"
+                f"  {c.cyan}{pr.author}{c.reset}"
+            )
+        else:
+            print(f"  {icon} {label}  {pr.title}")
+
+        print(
+            f"{url_indent}{c.dim}{pr.url}{c.reset}"
+            f"{merged_tag}"
+        )
+
+
+def jira_status_icon(status: str, c: _Colours) -> str:
+    """Return a coloured icon for a Jira issue status."""
+    lower = status.lower()
+    if lower in ("done", "closed", "resolved"):
+        return f"{c.green}✓{c.reset}"
+    if "progress" in lower or "review" in lower or "test" in lower:
+        return f"{c.cyan}→{c.reset}"
+    return f"{c.blue}●{c.reset}"
+
+
+def jira_status_label(status: str, c: _Colours) -> str:
+    """Return a coloured, fixed-width status label for a Jira issue."""
+    lower = status.lower()
+    padded = status[:13]
+    if lower in ("done", "closed", "resolved"):
+        return f"{c.green}{padded:<13}{c.reset}"
+    if "progress" in lower or "review" in lower or "test" in lower:
+        return f"{c.cyan}{padded:<13}{c.reset}"
+    return f"{c.blue}{padded:<13}{c.reset}"
+
+
+def _print_jira_issues(
+    issues: list[JiraIssue],
+    server_url: Optional[str],
+    c: _Colours,
+) -> None:
+    """Print a list of Jira issues with status, key, summary, and URL."""
+    max_key_len = max(len(i.key) for i in issues) if issues else 6
+
+    for issue in issues:
+        icon = jira_status_icon(issue.status, c)
+        label = jira_status_label(issue.status, c)
+
+        print(
+            f"    {icon} {label}"
+            f"  {c.bold}{issue.key:<{max_key_len}}{c.reset}"
+            f"  {issue.summary}"
+        )
+        if server_url:
+            # "    ✓ Done          PLAT-123  " → indent under summary
+            url_indent = " " * (4 + 2 + 13 + 2 + max_key_len + 2)
+            print(
+                f"{url_indent}{c.dim}{server_url}/browse/{issue.key}{c.reset}"
+            )
+
+
+def print_jira_section(
+    activity: JiraActivity,
+    server_url: Optional[str],
+    c: _Colours,
+) -> None:
+    """Print the Jira section with date-based activity and board state."""
+    total = activity.total()
+    print(section_header("Jira", total, c))
+
+    if total == 0:
+        print(f"  {c.dim}None{c.reset}")
+        return
+
+    # Sub-groups in display order.
+    # To Do gets a special header showing "N of M" when truncated.
+    groups: list[tuple[str, list[JiraIssue]]] = [
+        ("Transitioned", activity.transitioned),
+        ("Created", activity.created),
+        ("In Progress", activity.in_progress),
+        ("In Review", activity.in_review),
+        ("To Do", activity.todo),
+        ("Updated", activity.updated),
+    ]
+
+    for label, issues in groups:
+        if not issues:
+            continue
+        if label == "To Do" and activity.todo_total > len(issues):
+            header = f"{len(issues)} of {activity.todo_total}"
+        else:
+            header = str(len(issues))
+        print(f"  {c.bold}{label}{c.reset} ({header}):")
+        _print_jira_issues(issues, server_url, c)
+
+
+def print_sessions_section(sessions: list[Session], c: _Colours) -> None:
+    """Print the OpenCode sessions section."""
+    print(section_header("OpenCode Sessions", len(sessions), c))
+
+    if not sessions:
+        print(f"  {c.dim}None{c.reset}")
+        return
+
+    max_title_len = min(max(len(s.title) for s in sessions), 42)
+    max_proj_len = min(max(len(s.project) for s in sessions), 24)
+
+    for s in sessions:
+        title = s.title[:42]
+        project = s.project[:24]
+
+        stats_parts: list[str] = []
+        if s.additions:
+            stats_parts.append(f"{c.green}+{s.additions}{c.reset}")
+        if s.deletions:
+            stats_parts.append(f"{c.magenta}-{s.deletions}{c.reset}")
+        if s.files:
+            stats_parts.append(f"{c.dim}{s.files} files{c.reset}")
+        stats = "  ".join(stats_parts)
+
+        print(
+            f"  {c.cyan}{s.time}{c.reset}"
+            f"  {title:<{max_title_len}}"
+            f"  {c.blue}{project:<{max_proj_len}}{c.reset}"
+            f"  {stats}"
+        )
+
+
+def print_report(
+    target_date: datetime,
+    data: StandupData,
+    c: _Colours,
+    extends_to_today: bool = False,
+) -> None:
+    """Print the full standup report."""
+    day_name = target_date.strftime("%A")
+    date_str = target_date.strftime("%Y-%m-%d")
+    suffix = f" → today" if extends_to_today else ""
+    print(f"\n{c.bold}Standup for {date_str} ({day_name}){suffix}{c.reset}")
+
+    if data.opened is not None:
+        print_pr_section("PRs Opened", data.opened, c)
+    if data.reviewed is not None:
+        print_pr_section("PRs Reviewed", data.reviewed, c, show_author=True)
+    if data.jira is not None:
+        server_url = jira_server_url()
+        print_jira_section(data.jira, server_url, c)
+    if data.sessions is not None:
+        print_sessions_section(data.sessions, c)
+
+    # Summary line
+    total = 0
+    for section in [data.opened, data.reviewed, data.sessions]:
+        if section is not None:
+            total += len(section)
+    if data.jira is not None:
+        total += data.jira.total()
+    if total == 0:
+        print(f"\n  {c.dim}No activity recorded for this day.{c.reset}")
+
+    print()
+
+
+# ── Main ─────────────────────────────────────────────────────────────
+
+def main() -> None:
+    parser = argparse.ArgumentParser(
+        description="Generate a standup summary of GitHub, Jira, and OpenCode activity.",
+    )
+    parser.add_argument(
+        "date",
+        nargs="?",
+        default="yesterday",
+        help=(
+            "Date to query: YYYY-MM-DD, 'today', 'yesterday', or N (days ago). "
+            "Defaults to yesterday."
+        ),
+    )
+    parser.add_argument(
+        "--no-prs",
+        action="store_true",
+        help="Skip GitHub PR sections.",
+    )
+    parser.add_argument(
+        "--no-jira",
+        action="store_true",
+        help="Skip Jira activity section.",
+    )
+    parser.add_argument(
+        "--no-sessions",
+        action="store_true",
+        help="Skip OpenCode sessions section.",
+    )
+    parser.add_argument(
+        "--todo-limit",
+        type=int,
+        default=5,
+        metavar="N",
+        help="Max Jira To Do tickets to show (default 5).",
+    )
+    parser.add_argument(
+        "--no-color",
+        action="store_true",
+        help="Disable coloured output.",
+    )
+    args = parser.parse_args()
+
+    use_colour = not args.no_color and sys.stdout.isatty()
+    c = _Colours(use_colour)
+
+    target_date = parse_date(args.date)
+    date_str = target_date.strftime("%Y-%m-%d")
+
+    # Default (yesterday) extends the window through today so you see
+    # this morning's work before standup. Explicit dates are single-day.
+    local_tz = target_date.tzinfo
+    today = datetime.now(tz=local_tz).replace(
+        hour=0, minute=0, second=0, microsecond=0,
+    )
+    is_default = args.date == "yesterday"
+    if is_default and target_date < today:
+        end_date = today
+    else:
+        end_date = target_date
+
+    end_str = end_date.strftime("%Y-%m-%d")
+    next_day_str = (end_date + timedelta(days=1)).strftime("%Y-%m-%d")
+    extends_to_today = end_date > target_date
+
+    data = StandupData()
+    progress = _Progress(
+        enabled=use_colour and sys.stderr.isatty(),
+    )
+
+    def track(name: str, future: Future) -> Future:
+        """Register a future with the progress spinner."""
+        progress.start(name)
+        future.add_done_callback(lambda _f: progress.complete(name))
+        return future
+
+    # Fetch data in parallel where possible
+    with ThreadPoolExecutor(max_workers=5) as pool:
+        username_future: Optional[Future[str]] = None
+        opened_future: Optional[Future[list[PullRequest]]] = None
+        reviewed_future: Optional[Future[list[PullRequest]]] = None
+        jira_future: Optional[Future[JiraActivity]] = None
+        sessions_future: Optional[Future[list[Session]]] = None
+
+        if not args.no_prs:
+            username_future = track(
+                "GitHub username",
+                pool.submit(gh_username),
+            )
+        if not args.no_jira:
+            jira_future = track(
+                "Jira activity",
+                pool.submit(
+                    fetch_jira_activity, date_str, next_day_str,
+                    args.todo_limit,
+                ),
+            )
+        if not args.no_sessions:
+            sessions_future = track(
+                "OpenCode sessions",
+                pool.submit(fetch_sessions, date_str, end_str),
+            )
+
+        # Wait for username before launching PR queries
+        username = ""
+        if username_future is not None:
+            username = username_future.result()
+            opened_future = track(
+                "PRs opened",
+                pool.submit(fetch_opened_prs, username, date_str, end_str),
+            )
+            reviewed_future = track(
+                "PRs reviewed",
+                pool.submit(fetch_reviewed_prs, username, date_str, end_str),
+            )
+
+        if opened_future is not None:
+            data.opened = opened_future.result()
+        if reviewed_future is not None:
+            data.reviewed = reviewed_future.result()
+        if jira_future is not None:
+            data.jira = jira_future.result()
+        if sessions_future is not None:
+            data.sessions = sessions_future.result()
+
+    # Enrich reviewed PRs with merged-by info
+    if data.reviewed is not None and data.reviewed and username:
+        progress.start("PR merge info")
+        merged_urls = [pr.url for pr in data.reviewed if pr.state == "merged"]
+        merged_by_map = gh_graphql_merged_by(merged_urls, username)
+        for pr in data.reviewed:
+            merger = merged_by_map.get(pr.url, "")
+            if merger == username:
+                pr.merged_by = username
+        progress.complete("PR merge info")
+
+    progress.stop()
+    print_report(target_date, data, c, extends_to_today)
+
+
+if __name__ == "__main__":
+    main()
