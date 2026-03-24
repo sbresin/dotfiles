@@ -1,0 +1,752 @@
+#!/usr/bin/env python3
+"""Enriched tmux session listing for fzf pickers and status bar indicators.
+
+Queries tmux sessions and enriches each with:
+  - Git branch for the session's working directory
+  - OpenCode status (idle, running, question, error) via SQLite DB
+  - Open GitHub PR for the current branch (via gh, cached with bkt)
+
+Subcommands:
+    tmux-sessions list          ANSI-coloured lines for an fzf picker
+    tmux-sessions indicator     Compact tmux status-bar segment (highest severity)
+    tmux-sessions switch LINE   Switch to the opencode window in session from LINE
+    tmux-sessions preview LINE  Capture the opencode pane for fzf preview
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import sqlite3
+import subprocess
+import sys
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Optional
+
+
+# ── Constants ────────────────────────────────────────────────────────
+
+OPENCODE_DB = Path.home() / ".local" / "share" / "opencode" / "opencode-stable.db"
+BKT_TTL = "5m"
+
+# OpenCode state priority: higher number = more severe
+OC_PRIORITY = {"idle": 0, "running": 1, "question": 2, "error": 3}
+
+# Nerd font icon for opencode
+OC_ICON = "󱜙"
+
+
+# ── Rose Pine colours (true-colour ANSI) ─────────────────────────────
+
+class _Colours:
+    """Rose Pine ANSI true-colour codes, degrading to empty when disabled."""
+
+    def __init__(self, enabled: bool) -> None:
+        self._on = enabled
+
+    def _fg(self, hex_colour: str) -> str:
+        if not self._on:
+            return ""
+        r, g, b = int(hex_colour[1:3], 16), int(hex_colour[3:5], 16), int(hex_colour[5:7], 16)
+        return f"\033[38;2;{r};{g};{b}m"
+
+    @property
+    def reset(self) -> str:
+        return "\033[0m" if self._on else ""
+
+    @property
+    def bold(self) -> str:
+        return "\033[1m" if self._on else ""
+
+    @property
+    def dim(self) -> str:
+        return "\033[2m" if self._on else ""
+
+    @property
+    def text(self) -> str:
+        return self._fg("#e0def4")
+
+    @property
+    def gold(self) -> str:
+        return self._fg("#f6c177")
+
+    @property
+    def rose(self) -> str:
+        return self._fg("#ebbcba")
+
+    @property
+    def love(self) -> str:
+        return self._fg("#eb6f92")
+
+    @property
+    def foam(self) -> str:
+        return self._fg("#9ccfd8")
+
+    @property
+    def iris(self) -> str:
+        return self._fg("#c4a7e7")
+
+    @property
+    def pine(self) -> str:
+        return self._fg("#31748f")
+
+    @property
+    def muted(self) -> str:
+        return self._fg("#6e6a86")
+
+    @property
+    def subtle(self) -> str:
+        return self._fg("#908caa")
+
+
+# ── Data types ───────────────────────────────────────────────────────
+
+@dataclass
+class PRInfo:
+    number: int
+    title: str
+    url: str
+    is_draft: bool
+
+
+@dataclass
+class SessionInfo:
+    name: str
+    directory: str
+    branch: Optional[str]
+    has_opencode: bool
+    opencode_state: Optional[str]  # "error" | "question" | "running" | "idle"
+    pr: Optional[PRInfo]
+
+
+# ── Tmux queries ─────────────────────────────────────────────────────
+
+@dataclass
+class TmuxSession:
+    name: str
+    path: str
+    windows: list[dict[str, str]]
+
+
+def tmux_all_sessions() -> list[TmuxSession]:
+    """Fetch all tmux sessions and their windows in two calls."""
+    # Get sessions
+    sess_result = subprocess.run(
+        ["tmux", "list-sessions", "-F", "#{session_name}\t#{session_path}"],
+        capture_output=True,
+        text=True,
+        timeout=5,
+    )
+    if sess_result.returncode != 0:
+        return []
+
+    sessions: dict[str, TmuxSession] = {}
+    for line in sess_result.stdout.strip().splitlines():
+        parts = line.split("\t", 1)
+        if len(parts) == 2:
+            sessions[parts[0]] = TmuxSession(name=parts[0], path=parts[1], windows=[])
+
+    if not sessions:
+        return []
+
+    # Get all windows across all sessions in a single call
+    win_result = subprocess.run(
+        [
+            "tmux",
+            "list-windows",
+            "-a",
+            "-F",
+            "#{session_name}\t#{window_index}\t#{window_name}\t#{pane_current_command}\t#{pane_current_path}",
+        ],
+        capture_output=True,
+        text=True,
+        timeout=5,
+    )
+    if win_result.returncode == 0:
+        for line in win_result.stdout.strip().splitlines():
+            parts = line.split("\t", 4)
+            if len(parts) == 5 and parts[0] in sessions:
+                sessions[parts[0]].windows.append(
+                    {
+                        "index": parts[1],
+                        "name": parts[2],
+                        "command": parts[3],
+                        "path": parts[4],
+                    }
+                )
+
+    return list(sessions.values())
+
+
+def session_has_opencode(windows: list[dict[str, str]]) -> bool:
+    """Check if any pane in the session is running opencode."""
+    return any(w["command"] == "opencode" for w in windows)
+
+
+def session_cwd(session_path: str, windows: list[dict[str, str]]) -> str:
+    """Get the working directory for the session (first window's pane path)."""
+    if windows:
+        return windows[0]["path"]
+    return session_path
+
+
+# ── Git helpers ──────────────────────────────────────────────────────
+
+@dataclass
+class GitInfo:
+    root: str
+    branch: Optional[str]
+
+
+def git_info(directory: str) -> Optional[GitInfo]:
+    """Get git root and branch in a single subprocess call."""
+    result = subprocess.run(
+        ["git", "-C", directory, "rev-parse", "--show-toplevel", "--abbrev-ref", "HEAD"],
+        capture_output=True,
+        text=True,
+        timeout=5,
+    )
+    if result.returncode != 0:
+        return None
+    lines = result.stdout.strip().splitlines()
+    root = lines[0] if lines else directory
+    branch = lines[1] if len(lines) > 1 and lines[1] != "HEAD" else None
+    return GitInfo(root=root, branch=branch)
+
+
+# ── OpenCode state detection ─────────────────────────────────────────
+
+def opencode_states(directories: list[str]) -> dict[str, str]:
+    """Query the OpenCode SQLite DB for session states, keyed by directory.
+
+    Returns a dict mapping directory -> state string.
+    States: "error", "question", "running", "idle".
+    """
+    if not OPENCODE_DB.exists() or not directories:
+        return {}
+
+    try:
+        conn = sqlite3.connect(
+            f"file:{OPENCODE_DB}?mode=ro",
+            uri=True,
+            timeout=5,
+        )
+    except sqlite3.Error:
+        return {}
+
+    states: dict[str, str] = {}
+
+    try:
+        for directory in directories:
+            state = _opencode_session_state(conn, directory)
+            if state is not None:
+                states[directory] = state
+    finally:
+        conn.close()
+
+    return states
+
+
+def _opencode_session_state(conn: sqlite3.Connection, directory: str) -> Optional[str]:
+    """Determine the opencode state for the latest session in a directory."""
+    try:
+        # Find the latest non-child session for this directory
+        session = conn.execute(
+            """
+            SELECT id FROM session
+            WHERE directory = ? AND parent_id IS NULL
+            ORDER BY time_updated DESC
+            LIMIT 1
+            """,
+            (directory,),
+        ).fetchone()
+
+        if not session:
+            return None
+
+        session_id = session[0]
+
+        # Check for running/pending tool parts (most recent first)
+        # A "question" tool with status=running means opencode asked the user something
+        active_tools = conn.execute(
+            """
+            SELECT
+                json_extract(data, '$.tool') AS tool,
+                json_extract(data, '$.state.status') AS status
+            FROM part
+            WHERE session_id = ?
+              AND json_extract(data, '$.type') = 'tool'
+              AND json_extract(data, '$.state.status') IN ('running', 'pending')
+            ORDER BY time_updated DESC
+            LIMIT 10
+            """,
+            (session_id,),
+        ).fetchall()
+
+        if active_tools:
+            # Check for question tool (needs attention)
+            for tool, status in active_tools:
+                if tool == "question" and status == "running":
+                    return "question"
+            # Check for error (shouldn't be running/pending, but just in case)
+            return "running"
+
+        # Check for recent error tool parts in the latest assistant message
+        latest_assistant = conn.execute(
+            """
+            SELECT id, json_extract(data, '$.finish') AS finish
+            FROM message
+            WHERE session_id = ?
+              AND json_extract(data, '$.role') = 'assistant'
+            ORDER BY time_updated DESC
+            LIMIT 1
+            """,
+            (session_id,),
+        ).fetchone()
+
+        if not latest_assistant:
+            return "idle"
+
+        msg_id, finish = latest_assistant
+
+        # Check for genuine error parts (exclude dismissed questions)
+        real_errors = conn.execute(
+            """
+            SELECT COUNT(*) FROM part
+            WHERE message_id = ?
+              AND json_extract(data, '$.type') = 'tool'
+              AND json_extract(data, '$.state.status') = 'error'
+              AND json_extract(data, '$.tool') != 'question'
+            """,
+            (msg_id,),
+        ).fetchone()
+
+        if real_errors and real_errors[0] > 0:
+            return "error"
+
+        # Determine state from assistant message finish reason
+        if finish is None:
+            return "running"  # still generating
+
+        if finish == "tool-calls":
+            # Check whether all tool parts for this message have resolved.
+            # Unwritten parts (race) or still-running parts mean active work.
+            tool_counts = conn.execute(
+                """
+                SELECT
+                    COUNT(*) AS total,
+                    SUM(CASE WHEN json_extract(data, '$.state.status')
+                                  IN ('completed', 'error')
+                             THEN 1 ELSE 0 END) AS resolved
+                FROM part
+                WHERE message_id = ?
+                  AND json_extract(data, '$.type') = 'tool'
+                """,
+                (msg_id,),
+            ).fetchone()
+
+            total, resolved = tool_counts if tool_counts else (0, 0)
+            resolved = resolved or 0
+            if total == 0 or resolved < total:
+                return "running"  # parts pending or not yet written
+            return "idle"  # all tool parts resolved
+
+        return "idle"
+
+    except sqlite3.Error:
+        return None
+
+
+# ── GitHub PR lookup ─────────────────────────────────────────────────
+
+def fetch_pr(directory: str, branch: str) -> Optional[PRInfo]:
+    """Check for an open PR on the given branch using gh, cached with bkt."""
+    try:
+        result = subprocess.run(
+            [
+                "bkt",
+                "--ttl",
+                BKT_TTL,
+                "--cwd",
+                "--discard-failures",
+                "--",
+                "gh",
+                "pr",
+                "view",
+                "--json",
+                "number,title,url,isDraft,state",
+            ],
+            capture_output=True,
+            text=True,
+            timeout=15,
+            cwd=directory,
+        )
+        if result.returncode != 0:
+            return None
+
+        data = json.loads(result.stdout)
+        if data.get("state") != "OPEN":
+            return None
+
+        return PRInfo(
+            number=data["number"],
+            title=data["title"],
+            url=data["url"],
+            is_draft=data.get("isDraft", False),
+        )
+    except (subprocess.TimeoutExpired, json.JSONDecodeError, KeyError, OSError):
+        return None
+
+
+# ── Session enrichment ───────────────────────────────────────────────
+
+def enrich_sessions(
+    tmux_sessions: list[TmuxSession],
+    include_pr: bool = False,
+) -> list[SessionInfo]:
+    """Enrich tmux sessions with git, opencode, and PR info."""
+    # Step 1: Determine directories, branches, and opencode presence
+    enriched: list[dict] = []
+    oc_dirs: list[str] = []
+
+    for ts in tmux_sessions:
+        cwd = session_cwd(ts.path, ts.windows)
+        has_oc = session_has_opencode(ts.windows)
+        gi = git_info(cwd)
+
+        info = {
+            "name": ts.name,
+            "directory": cwd,
+            "git_root": gi.root if gi else None,
+            "branch": gi.branch if gi else None,
+            "has_opencode": has_oc,
+        }
+        enriched.append(info)
+
+        if has_oc:
+            oc_dirs.append(gi.root if gi else cwd)
+
+    # Step 2: Query opencode states (single DB connection for all)
+    oc_states = opencode_states(oc_dirs)
+
+    # Step 3: Fetch PRs in parallel (only for list mode)
+    pr_results: dict[str, Optional[PRInfo]] = {}
+    if include_pr:
+        pr_tasks: list[tuple[str, str, str]] = []
+        for info in enriched:
+            if info["branch"] and info["git_root"]:
+                pr_tasks.append((info["name"], info["git_root"], info["branch"]))
+
+        if pr_tasks:
+            with ThreadPoolExecutor(max_workers=8) as pool:
+                futures = {
+                    pool.submit(fetch_pr, git_root, branch): name
+                    for name, git_root, branch in pr_tasks
+                }
+                for future in as_completed(futures):
+                    name = futures[future]
+                    try:
+                        pr_results[name] = future.result()
+                    except Exception:
+                        pr_results[name] = None
+
+    # Step 4: Build final SessionInfo objects
+    result: list[SessionInfo] = []
+    for info in enriched:
+        oc_key = info["git_root"] or info["directory"]
+
+        result.append(
+            SessionInfo(
+                name=info["name"],
+                directory=info["directory"],
+                branch=info["branch"],
+                has_opencode=info["has_opencode"],
+                opencode_state=oc_states.get(oc_key) if info["has_opencode"] else None,
+                pr=pr_results.get(info["name"]),
+            )
+        )
+
+    return result
+
+
+# ── Formatting: list mode ────────────────────────────────────────────
+
+def format_list(sessions: list[SessionInfo], c: _Colours) -> str:
+    """Format sessions as ANSI-coloured lines for fzf.
+
+    Sessions are sorted by opencode severity (error > question > running >
+    idle > not running) so the ones needing attention appear first.
+    """
+    if not sessions:
+        return ""
+
+    # Sort: highest opencode severity first, then alphabetical
+    sessions = sorted(
+        sessions,
+        key=lambda s: (
+            -OC_PRIORITY.get(s.opencode_state or "", -1) if s.has_opencode else 1,
+            s.name,
+        ),
+    )
+
+    # Calculate column widths
+    max_name = max(len(s.name) for s in sessions)
+    max_branch = max(len(s.branch or "—") for s in sessions)
+
+    lines: list[str] = []
+    for s in sessions:
+        oc_col = _format_oc_state(s.opencode_state, s.has_opencode, c)
+        name_col = f"{c.text}{s.name:<{max_name}}{c.reset}"
+
+        branch_str = s.branch or "—"
+        if s.branch:
+            branch_col = f"{c.iris}{branch_str:<{max_branch}}{c.reset}"
+        else:
+            branch_col = f"{c.muted}{branch_str:<{max_branch}}{c.reset}"
+
+        # PR info
+        pr_col = ""
+        if s.pr:
+            draft = f"{c.muted}draft " if s.pr.is_draft else ""
+            title = s.pr.title
+            if len(title) > 40:
+                title = title[:37] + "..."
+            pr_col = f"  {draft}{c.foam}#{s.pr.number} {c.subtle}{title}{c.reset}"
+
+        line = f" {oc_col}\t{name_col}  {branch_col}{pr_col}"
+        lines.append(line)
+
+    return "\n".join(lines)
+
+
+def _format_oc_state(
+    state: Optional[str],
+    has_opencode: bool,
+    c: _Colours,
+) -> str:
+    """Format the opencode state as a coloured icon.
+
+    All states produce exactly 6 terminal columns:
+    icon (2 cols) + 4 chars of status/padding.
+    """
+    if not has_opencode:
+        return "      "  # 6 spaces
+
+    if state == "error":
+        return f"{c.love}{OC_ICON} err{c.reset}"
+    if state == "question":
+        return f"{c.gold}{OC_ICON} ?  {c.reset}"
+    if state == "running":
+        return f"{c.foam}{OC_ICON} .. {c.reset}"
+    # idle or unknown
+    return f"{c.muted}{OC_ICON}    {c.reset}"
+
+
+# ── Formatting: indicator mode ───────────────────────────────────────
+
+def format_indicator(sessions: list[SessionInfo]) -> str:
+    """Format a compact tmux status bar segment.
+
+    Shows the highest-severity opencode state across all sessions.
+    Uses tmux #[] colour codes (not ANSI escapes).
+    """
+    # Collect states for sessions that actually have opencode running
+    states: list[str] = []
+    for s in sessions:
+        if s.has_opencode and s.opencode_state:
+            states.append(s.opencode_state)
+
+    if not states:
+        return ""
+
+    # Find highest severity
+    worst = max(states, key=lambda st: OC_PRIORITY.get(st, -1))
+
+    # Count sessions at that severity
+    count = sum(1 for st in states if st == worst)
+
+    # tmux colour codes (Rose Pine)
+    tmux_colours = {
+        "error": "#eb6f92",    # love
+        "question": "#f6c177", # gold
+        "running": "#9ccfd8",  # foam
+        "idle": "#6e6a86",     # muted
+    }
+
+    colour = tmux_colours.get(worst, "#6e6a86")
+    count_str = f" {count}" if count > 1 else ""
+
+    return f"#[fg={colour}]{OC_ICON}{count_str}#[fg=default]"
+
+
+# ── Commands ─────────────────────────────────────────────────────────
+
+def cmd_list(args: argparse.Namespace) -> None:
+    """List enriched tmux sessions for fzf."""
+    raw_sessions = tmux_all_sessions()
+    if not raw_sessions:
+        return
+
+    sessions = enrich_sessions(raw_sessions, include_pr=not args.no_pr)
+    c = _Colours(enabled=sys.stdout.isatty() or args.ansi)
+    output = format_list(sessions, c)
+    if output:
+        print(output)
+
+
+def cmd_indicator(args: argparse.Namespace) -> None:
+    """Print a compact tmux status bar indicator."""
+    raw_sessions = tmux_all_sessions()
+    if not raw_sessions:
+        return
+
+    sessions = enrich_sessions(raw_sessions, include_pr=False)
+    output = format_indicator(sessions)
+    if output:
+        print(output, end="")
+
+
+def _extract_session_name(raw: str) -> str:
+    """Extract the session name from a raw fzf selection line.
+
+    Lines use a tab delimiter between the opencode status column and the
+    session info.  Takes the first word from the second tab-delimited field,
+    falling back to the first word overall.
+    """
+    import re
+
+    clean = re.sub(r"\x1b\[[0-9;]*m", "", raw)
+    parts = clean.split("\t")
+    field = parts[1] if len(parts) >= 2 else parts[0]
+    field = field.strip()
+    return field.split()[0] if field else ""
+
+
+def _find_opencode_window(session_name: str) -> Optional[str]:
+    """Return the window index running opencode in the given session."""
+    result = subprocess.run(
+        [
+            "tmux",
+            "list-windows",
+            "-t",
+            session_name,
+            "-F",
+            "#{window_index}\t#{pane_current_command}",
+        ],
+        capture_output=True,
+        text=True,
+        timeout=5,
+    )
+    if result.returncode != 0:
+        return None
+    for line in result.stdout.strip().splitlines():
+        parts = line.split("\t", 1)
+        if len(parts) == 2 and parts[1] == "opencode":
+            return parts[0]
+    return None
+
+
+def cmd_switch(args: argparse.Namespace) -> None:
+    """Switch to the opencode window in the given tmux session."""
+    session_name = _extract_session_name(args.session)
+    if not session_name:
+        return
+
+    window = _find_opencode_window(session_name)
+    if window:
+        subprocess.run(
+            ["tmux", "switch-client", "-t", f"{session_name}:{window}"],
+            timeout=5,
+        )
+    else:
+        subprocess.run(["tmux", "switch-client", "-t", session_name], timeout=5)
+
+
+def cmd_preview(args: argparse.Namespace) -> None:
+    """Capture the bottom of the opencode pane for fzf preview.
+
+    Uses $FZF_PREVIEW_LINES (set by fzf in the preview subprocess) to
+    grab only the bottom N lines of the pane, showing the status area,
+    input box, and any pending question.
+    """
+    session_name = _extract_session_name(args.session)
+    if not session_name:
+        return
+
+    window = _find_opencode_window(session_name)
+    if not window:
+        print(f"No opencode window in session '{session_name}'")
+        return
+
+    target = f"{session_name}:{window}"
+
+    # Get pane height to calculate the start line for bottom capture
+    height_result = subprocess.run(
+        ["tmux", "display-message", "-t", target, "-p", "#{pane_height}"],
+        capture_output=True,
+        text=True,
+        timeout=5,
+    )
+    pane_height = int(height_result.stdout.strip()) if height_result.returncode == 0 else 80
+
+    preview_lines = int(os.environ.get("FZF_PREVIEW_LINES", "40"))
+    start_line = max(0, pane_height - preview_lines)
+
+    result = subprocess.run(
+        ["tmux", "capture-pane", "-e", "-p", "-t", target, "-S", str(start_line)],
+        capture_output=True,
+        text=True,
+        timeout=5,
+    )
+    if result.returncode == 0:
+        print(result.stdout, end="")
+
+
+# ── Main ─────────────────────────────────────────────────────────────
+
+def main() -> None:
+    parser = argparse.ArgumentParser(
+        description="Enriched tmux session listing and status indicator.",
+    )
+    sub = parser.add_subparsers(dest="command")
+
+    list_parser = sub.add_parser("list", help="ANSI-coloured session list for fzf")
+    list_parser.add_argument(
+        "--ansi",
+        action="store_true",
+        help="Force ANSI colour output (useful when piping to fzf --ansi)",
+    )
+    list_parser.add_argument(
+        "--no-pr",
+        action="store_true",
+        help="Skip GitHub PR lookups for fast initial rendering",
+    )
+
+    sub.add_parser("indicator", help="Compact tmux status bar segment")
+
+    switch_parser = sub.add_parser("switch", help="Switch to opencode window in a session")
+    switch_parser.add_argument("session", help="Raw fzf line or session name")
+
+    preview_parser = sub.add_parser("preview", help="Capture opencode pane for fzf preview")
+    preview_parser.add_argument("session", help="Raw fzf line or session name")
+
+    args = parser.parse_args()
+
+    if args.command == "list":
+        cmd_list(args)
+    elif args.command == "indicator":
+        cmd_indicator(args)
+    elif args.command == "switch":
+        cmd_switch(args)
+    elif args.command == "preview":
+        cmd_preview(args)
+    else:
+        parser.print_help()
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()
