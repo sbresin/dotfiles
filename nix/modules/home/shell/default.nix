@@ -424,6 +424,7 @@ in
       luaformatter
       efm-langserver
       marksman
+      typescript-go
       # stacks
       gcc
       nodejs
@@ -481,6 +482,7 @@ in
       # pkgs.sebe.git-amnesia
       # LLM stuff
       pkgs.sebe.opencode
+      claude-code
       github-mcp-server
       terraform-mcp-server
       mcp-nixos

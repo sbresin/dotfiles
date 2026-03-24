@@ -92,7 +92,7 @@
         "1password"
         "1password-cli"
         "1password-gui"
-        "crush"
+        "claude-code"
       ];
 
       # Shared nixpkgs config (allowUnfree + ROCm for Linux)

@@ -81,8 +81,18 @@ return {
     {
         "neovim/nvim-lspconfig",
         ---@class PluginLspOpts
+        init = function()
+            -- tsgo (TypeScript native Go port) for TS/JS files
+            -- vtsls is restricted to Vue files only (see below)
+            vim.lsp.enable("tsgo")
+        end,
         opts = {
             servers = {
+                -- tsgo is enabled via vim.lsp.enable above (installed via Mason)
+                -- restrict vtsls to Vue files only so it doesn't overlap with tsgo on TS/JS
+                vtsls = {
+                    filetypes = { "vue" },
+                },
                 -- automatically installed with mason and loaded with lspconfig
                 apex_ls = {
                     apex_jar_path = vim.fn.stdpath('data') ..

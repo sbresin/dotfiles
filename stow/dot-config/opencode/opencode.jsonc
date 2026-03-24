@@ -1,70 +1,92 @@
 {
   "$schema": "https://opencode.ai/config.json",
-	"default_agent": "plan",
-	"plugin": ["opencode-anthropic-auth@0.0.13"],
-	"provider": {
-		"ollama": {
-			"models": {
-				"glm-4.7-flash:latest": {
-					"_launch": true,
-					"name": "glm-4.7-flash:latest",
-				},
-			},
-			"name": "Ollama (local)",
-			"npm": "@ai-sdk/openai-compatible",
-			"options": {
-				"baseURL": "http://localhost:11434/v1",
-			},
-		},
-	},
-	"permission": {
-		"external_directory": {
-			"~/workspace/**": "allow",
-			"/tmp/opencode-*/**": "allow",
-		},
-		"edit": {
-			"/tmp/opencode-*/**": "allow",
-		},
-	},
-	"agent": {
-		"build": {
-			"prompt": "You are Claude Code, Anthropic's official CLI for Claude.",
-		},
-		"plan": {
-			"prompt": "You are Claude Code, Anthropic's official CLI for Claude.",
-		},
-	},
-	"mcp": {
-		"github": {
-			"type": "local",
-			"command": ["github-mcp-server", "stdio", "--dynamic-toolsets"],
-			"enabled": true,
-			"environment": {
-				"GITHUB_PERSONAL_ACCESS_TOKEN": "{env:GITHUB_MCP_PAT}",
-			},
-		},
-		"terraform": {
-			"type": "local",
-			"command": ["terraform-mcp-server"],
-			"enabled": true,
-		},
-		"nixos": {
-			"type": "local",
-			"command": ["mcp-nixos"],
-			"enabled": true,
-		},
-		"chrome-devtools": {
-			"type": "local",
-			"command": [
-				"chrome-devtools-mcp",
-				"--browser-url=http://127.0.0.1:9222",
-			],
-			"enabled": false,
-		},
-		"atlassian": {
-			"type": "remote",
-			"url": "https://mcp.atlassian.com/v1/mcp",
-			"enabled": false,
-		}
-	},
+  "default_agent": "plan",
+  "plugin": ["opencode-claude-auth"],
+  "provider": {
+    "ollama": {
+      "models": {
+        "glm-4.7-flash:latest": {
+          "_launch": true,
+          "name": "glm-4.7-flash:latest",
+        },
+      },
+      "name": "Ollama (local)",
+      "npm": "@ai-sdk/openai-compatible",
+      "options": {
+        "baseURL": "http://localhost:11434/v1",
+      },
+    },
+  },
+  "lsp": {
+    "typescript": {
+      "command": ["tsgo", "--lsp", "--stdio"],
+      "extensions": [
+        ".ts",
+        ".tsx",
+        ".js",
+        ".jsx",
+        ".mjs",
+        ".cjs",
+        ".mts",
+        ".cts",
+      ],
+    },
+  },
+  "permission": {
+    "external_directory": {
+      "~/workspace/**": "allow",
+      "/tmp/opencode-*/**": "allow",
+    },
+    "edit": {
+      "/tmp/opencode-*/**": "allow",
+    },
+  },
+  "agent": {
+    "build": {
+      "prompt": "You are Claude Code, Anthropic's official CLI for Claude.",
+    },
+    "plan": {
+      "prompt": "You are Claude Code, Anthropic's official CLI for Claude.",
+    },
+  },
+  "mcp": {
+    "github": {
+      "type": "local",
+      "command": ["github-mcp-server", "stdio", "--dynamic-toolsets"],
+      "enabled": true,
+      "environment": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "{env:GITHUB_MCP_PAT}",
+      },
+    },
+    "terraform": {
+      "type": "local",
+      "command": ["terraform-mcp-server"],
+      "enabled": true,
+    },
+    "nixos": {
+      "type": "local",
+      "command": ["mcp-nixos"],
+      "enabled": true,
+    },
+    "chrome-devtools": {
+      "type": "local",
+      "command": ["chrome-devtools-mcp", "--browser-url=http://127.0.0.1:9222"],
+      "enabled": false,
+    },
+    "atlassian": {
+      "type": "remote",
+      "url": "https://mcp.atlassian.com/v1/mcp",
+      "enabled": false,
+    },
+    "google-workspace": {
+      "type": "local",
+      "command": ["workspace-mcp", "--single-user"],
+      "enabled": false,
+      "environment": {
+        "GOOGLE_OAUTH_CLIENT_ID": "{env:WORKSPACE_MCP_OAUTH_CLIENT_ID}",
+        "GOOGLE_OAUTH_CLIENT_SECRET": "{env:WORKSPACE_MCP_OAUTH_CLIENT_SECRET}",
+        "USER_GOOGLE_EMAIL": "{env:WORKSPACE_MCP_GOOGLE_EMAIL}",
+      },
+    },
+  },
 }
