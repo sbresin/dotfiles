@@ -486,6 +486,7 @@ in
       mcp-nixos
       pkgs.sebe.docs-mcp-server
       pkgs.sebe.chrome-devtools-mcp
+      pkgs.sebe.workspace-mcp
       # platform tools
       act
       caddy

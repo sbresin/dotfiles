@@ -39,6 +39,7 @@ in
     threedstool = pkg ../../packages/threedstool;
     vial-udev-rules = pkg ../../packages/vial-udev-rules;
     wezterm = pkgFull ../../packages/wezterm;
+    workspace-mcp = pkgFull ../../packages/workspace-mcp;
     xonsh = pkgFull ../../packages/xonsh;
     zsh-fzf-tab-patched = pkgFull ../../packages/zsh-fzf-tab-patched;
   };
