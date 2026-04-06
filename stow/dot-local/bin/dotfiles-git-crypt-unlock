@@ -1,0 +1,71 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+item_name="${BW_GIT_CRYPT_ITEM_NAME:-dotfiles git-crypt key}"
+key_file="${DOTFILES_GIT_CRYPT_KEY_FILE:-$HOME/.local/share/git-crypt/dotfiles.key}"
+repo_dir="${DOTFILES_REPO_DIR:-$HOME/workspace/dotfiles}"
+
+need_cmd() {
+  if ! command -v "$1" >/dev/null 2>&1; then
+    printf '%s is required\n' "$1" >&2
+    exit 1
+  fi
+}
+
+decode_base64() {
+  if base64 --decode >/dev/null 2>&1 <<<""; then
+    base64 --decode
+  elif base64 -d >/dev/null 2>&1 <<<""; then
+    base64 -d
+  else
+    base64 -D
+  fi
+}
+
+need_cmd git
+need_cmd git-crypt
+
+if [[ ! -f "$key_file" ]]; then
+  need_cmd bw
+  need_cmd jq
+  need_cmd base64
+
+  if [[ -z "${BW_SESSION:-}" ]]; then
+    export BW_SESSION="$(bw unlock --raw)"
+  fi
+
+  bw sync --session "$BW_SESSION" --nointeraction >/dev/null
+
+  key_b64="$({
+    bw list items --search "$item_name" --session "$BW_SESSION" --nointeraction |
+      jq -er --arg name "$item_name" '
+        map(select(.name == $name)) as $items |
+        if ($items | length) == 1 then
+          $items[0].notes // error("Bitwarden item has no notes: " + $name)
+        elif ($items | length) == 0 then
+          error("Bitwarden item not found: " + $name)
+        else
+          error("Multiple Bitwarden items matched: " + $name)
+        end
+      '
+  })"
+
+  mkdir -p "$(dirname "$key_file")"
+  umask 077
+  printf '%s' "$key_b64" | tr -d '\n' | decode_base64 > "$key_file"
+  chmod 600 "$key_file"
+fi
+
+if [[ ! -d "$repo_dir/.git" ]]; then
+  printf 'Repository not found: %s\n' "$repo_dir" >&2
+  exit 1
+fi
+
+cd "$repo_dir"
+
+if [[ -n "$(git status --porcelain)" ]]; then
+  printf 'Repository has uncommitted changes; git-crypt unlock requires a clean worktree\n' >&2
+  exit 1
+fi
+
+git-crypt unlock "$key_file"
