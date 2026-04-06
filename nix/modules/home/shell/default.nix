@@ -455,6 +455,7 @@ in
       # twiggy
       # CLI tools
       bkt
+      bitwarden-cli
       file
       btop
       chafa
