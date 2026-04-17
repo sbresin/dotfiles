@@ -46,6 +46,7 @@ center = ["WindowTitle"]
 # The nested modules array will form a group sharing the same element in the status bar
 right = [
 	"Tray",
+	"ClaudeUsage",
 	"SystemInfo",
 	"GpuUsage",
 	[
@@ -173,6 +174,13 @@ listen_cmd = "swaync-client -swb"
 icons.'dnd.*' = ""
 # Another regex can optionally show a red "alert" dot on the icon
 alert = ".*notification"
+
+[[CustomModule]]
+name = "ClaudeUsage"
+icon = "✦"
+listen_cmd = "~/.local/bin/claude-usage --listen"
+command = "pkill -USR1 -f 'claude-usage --listen'"
+alert = "alert|error"
 
 [[CustomModule]]
 name = "GpuUsage"
