@@ -3,7 +3,7 @@
 
 Queries tmux sessions and enriches each with:
   - Git branch for the session's working directory
-  - OpenCode status (idle, running, question, error) via SQLite DB
+  - OpenCode status (idle, running, question, error) via runtime files
   - Open GitHub PR for the current branch (via gh, cached with bkt)
 
 Subcommands:
@@ -18,7 +18,6 @@ from __future__ import annotations
 import argparse
 import json
 import os
-import sqlite3
 import subprocess
 import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -29,11 +28,22 @@ from typing import Optional
 
 # ── Constants ────────────────────────────────────────────────────────
 
-OPENCODE_DB = Path.home() / ".local" / "share" / "opencode" / "opencode-stable.db"
+OPENCODE_STATE_DIR = Path(
+    os.environ.get("XDG_RUNTIME_DIR", f"/run/user/{os.getuid()}")
+) / "opencode" / "session-state"
 BKT_TTL = "5m"
 
-# OpenCode state priority: higher number = more severe
-OC_PRIORITY = {"idle": 0, "running": 1, "question": 2, "error": 3}
+# OpenCode state priority for indicator rendering (higher = more severe)
+OC_PRIORITY = {"idle": 0, "running": 1, "done": 2, "question": 3, "error": 4}
+
+# States that need user attention always beat states that don't
+OC_NEEDS_ATTENTION = {
+    "question": True, "error": True, "done": True,
+    "running": False, "idle": False,
+}
+
+# Within the same attention tier, prefer the more urgent/informative state
+OC_WITHIN_TIER = {"question": 3, "error": 2, "done": 1, "running": 1, "idle": 0}
 
 # Nerd font icon for opencode
 OC_ICON = "󱜙"
@@ -119,7 +129,37 @@ class SessionInfo:
     branch: Optional[str]
     has_opencode: bool
     opencode_state: Optional[str]  # "error" | "question" | "running" | "idle"
+    last_activity: int
     pr: Optional[PRInfo]
+
+
+@dataclass
+class OpenCodeRuntimeState:
+    session_id: str
+    directory: str
+    worktree: str
+    state: str
+    updated_at: int
+
+
+def _prefer_runtime_state(candidate: OpenCodeRuntimeState, current: OpenCodeRuntimeState) -> bool:
+    """Choose the state that best represents what needs attention now.
+
+    States needing user attention (question, error) always beat states that
+    don't (running, idle), regardless of timestamp.  Within the same attention
+    tier, prefer the more urgent state, then the newer timestamp.
+    """
+    c_attn = OC_NEEDS_ATTENTION.get(candidate.state, False)
+    r_attn = OC_NEEDS_ATTENTION.get(current.state, False)
+    if c_attn != r_attn:
+        return c_attn
+
+    c_tier = OC_WITHIN_TIER.get(candidate.state, 0)
+    r_tier = OC_WITHIN_TIER.get(current.state, 0)
+    if c_tier != r_tier:
+        return c_tier > r_tier
+
+    return candidate.updated_at > current.updated_at
 
 
 # ── Tmux queries ─────────────────────────────────────────────────────
@@ -128,6 +168,7 @@ class SessionInfo:
 class TmuxSession:
     name: str
     path: str
+    last_activity: int
     windows: list[dict[str, str]]
 
 
@@ -135,7 +176,7 @@ def tmux_all_sessions() -> list[TmuxSession]:
     """Fetch all tmux sessions and their windows in two calls."""
     # Get sessions
     sess_result = subprocess.run(
-        ["tmux", "list-sessions", "-F", "#{session_name}\t#{session_path}"],
+        ["tmux", "list-sessions", "-F", "#{session_name}\t#{session_path}\t#{session_activity}"],
         capture_output=True,
         text=True,
         timeout=5,
@@ -145,9 +186,12 @@ def tmux_all_sessions() -> list[TmuxSession]:
 
     sessions: dict[str, TmuxSession] = {}
     for line in sess_result.stdout.strip().splitlines():
-        parts = line.split("\t", 1)
-        if len(parts) == 2:
-            sessions[parts[0]] = TmuxSession(name=parts[0], path=parts[1], windows=[])
+        parts = line.split("\t", 2)
+        if len(parts) == 3:
+            activity = int(parts[2]) if parts[2].isdigit() else 0
+            sessions[parts[0]] = TmuxSession(
+                name=parts[0], path=parts[1], last_activity=activity, windows=[],
+            )
 
     if not sessions:
         return []
@@ -219,145 +263,116 @@ def git_info(directory: str) -> Optional[GitInfo]:
 
 # ── OpenCode state detection ─────────────────────────────────────────
 
-def opencode_states(directories: list[str]) -> dict[str, str]:
-    """Query the OpenCode SQLite DB for session states, keyed by directory.
+def _canonical_path(path: str) -> str:
+    """Normalise a path so runtime state files match tmux/git paths reliably."""
+    return os.path.realpath(os.path.expanduser(path))
 
-    Returns a dict mapping directory -> state string.
-    States: "error", "question", "running", "idle".
-    """
-    if not OPENCODE_DB.exists() or not directories:
-        return {}
 
-    try:
-        conn = sqlite3.connect(
-            f"file:{OPENCODE_DB}?mode=ro",
-            uri=True,
-            timeout=5,
-        )
-    except sqlite3.Error:
-        return {}
+def _load_opencode_runtime_states() -> list[OpenCodeRuntimeState]:
+    """Load session state files written by the OpenCode session-state plugin."""
+    if not OPENCODE_STATE_DIR.exists():
+        return []
 
-    states: dict[str, str] = {}
+    states: list[OpenCodeRuntimeState] = []
+    for path in OPENCODE_STATE_DIR.glob("*.json"):
+        try:
+            data = json.loads(path.read_text())
+            session_id = data.get("session_id")
+            directory = data.get("directory")
+            worktree = data.get("worktree")
+            state = data.get("state")
+            updated_at = data.get("updated_at")
 
-    try:
-        for directory in directories:
-            state = _opencode_session_state(conn, directory)
-            if state is not None:
-                states[directory] = state
-    finally:
-        conn.close()
+            if not isinstance(session_id, str):
+                continue
+            if not isinstance(directory, str) or not isinstance(worktree, str):
+                continue
+            if state not in OC_PRIORITY:
+                continue
+            if not isinstance(updated_at, int):
+                continue
+
+            states.append(
+                OpenCodeRuntimeState(
+                    session_id=session_id,
+                    directory=_canonical_path(directory),
+                    worktree=_canonical_path(worktree),
+                    state=state,
+                    updated_at=updated_at,
+                )
+            )
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError, TypeError, ValueError):
+            continue
 
     return states
 
 
-def _opencode_session_state(conn: sqlite3.Connection, directory: str) -> Optional[str]:
-    """Determine the opencode state for the latest session in a directory."""
+def opencode_states(directories: list[str]) -> dict[str, str]:
+    """Load OpenCode runtime state, keyed by tmux session directory or git root."""
+    if not directories:
+        return {}
+
+    runtime_states = _load_opencode_runtime_states()
+    if not runtime_states:
+        return {}
+
+    latest_by_path: dict[str, OpenCodeRuntimeState] = {}
+    for state in runtime_states:
+        for key in {state.directory, state.worktree}:
+            current = latest_by_path.get(key)
+            if current is None or _prefer_runtime_state(state, current):
+                latest_by_path[key] = state
+
+    results: dict[str, str] = {}
+    for directory in directories:
+        match = latest_by_path.get(_canonical_path(directory))
+        if match is not None:
+            results[directory] = match.state
+
+    return results
+
+
+def _dismiss_done_session(state: OpenCodeRuntimeState) -> None:
+    """Dismiss a done session by rewriting its state file to idle and
+    leaving a .dismiss marker for the plugin to clear its in-memory set.
+    """
     try:
-        # Find the latest non-child session for this directory
-        session = conn.execute(
-            """
-            SELECT id FROM session
-            WHERE directory = ? AND parent_id IS NULL
-            ORDER BY time_updated DESC
-            LIMIT 1
-            """,
-            (directory,),
-        ).fetchone()
+        OPENCODE_STATE_DIR.mkdir(parents=True, exist_ok=True)
 
-        if not session:
-            return None
+        # Rewrite the state file directly for immediate effect
+        idle_data = json.dumps({
+            "version": 1,
+            "session_id": state.session_id,
+            "directory": state.directory,
+            "worktree": state.worktree,
+            "state": "idle",
+            "updated_at": state.updated_at,
+        })
+        state_path = OPENCODE_STATE_DIR / f"{state.session_id}.json"
+        state_path.write_text(idle_data + "\n")
 
-        session_id = session[0]
+        # Also leave a .dismiss marker so the plugin clears doneSessions
+        (OPENCODE_STATE_DIR / f"{state.session_id}.dismiss").touch()
+    except OSError:
+        pass
 
-        # Check for running/pending tool parts (most recent first)
-        # A "question" tool with status=running means opencode asked the user something
-        active_tools = conn.execute(
-            """
-            SELECT
-                json_extract(data, '$.tool') AS tool,
-                json_extract(data, '$.state.status') AS status
-            FROM part
-            WHERE session_id = ?
-              AND json_extract(data, '$.type') = 'tool'
-              AND json_extract(data, '$.state.status') IN ('running', 'pending')
-            ORDER BY time_updated DESC
-            LIMIT 10
-            """,
-            (session_id,),
-        ).fetchall()
 
-        if active_tools:
-            # Check for question tool (needs attention)
-            for tool, status in active_tools:
-                if tool == "question" and status == "running":
-                    return "question"
-            # Check for error (shouldn't be running/pending, but just in case)
-            return "running"
+def _dismiss_done_for_tmux_session(session_name: str) -> None:
+    """Dismiss all done OpenCode sessions matching a tmux session's directory."""
+    sessions = tmux_all_sessions()
+    target = next((s for s in sessions if s.name == session_name), None)
+    if not target:
+        return
 
-        # Check for recent error tool parts in the latest assistant message
-        latest_assistant = conn.execute(
-            """
-            SELECT id, json_extract(data, '$.finish') AS finish
-            FROM message
-            WHERE session_id = ?
-              AND json_extract(data, '$.role') = 'assistant'
-            ORDER BY time_updated DESC
-            LIMIT 1
-            """,
-            (session_id,),
-        ).fetchone()
+    cwd = session_cwd(target.path, target.windows)
+    gi = git_info(cwd)
+    lookup_dir = _canonical_path(gi.root if gi else cwd)
 
-        if not latest_assistant:
-            return "idle"
-
-        msg_id, finish = latest_assistant
-
-        # Check for genuine error parts (exclude dismissed questions)
-        real_errors = conn.execute(
-            """
-            SELECT COUNT(*) FROM part
-            WHERE message_id = ?
-              AND json_extract(data, '$.type') = 'tool'
-              AND json_extract(data, '$.state.status') = 'error'
-              AND json_extract(data, '$.tool') != 'question'
-            """,
-            (msg_id,),
-        ).fetchone()
-
-        if real_errors and real_errors[0] > 0:
-            return "error"
-
-        # Determine state from assistant message finish reason
-        if finish is None:
-            return "running"  # still generating
-
-        if finish == "tool-calls":
-            # Check whether all tool parts for this message have resolved.
-            # Unwritten parts (race) or still-running parts mean active work.
-            tool_counts = conn.execute(
-                """
-                SELECT
-                    COUNT(*) AS total,
-                    SUM(CASE WHEN json_extract(data, '$.state.status')
-                                  IN ('completed', 'error')
-                             THEN 1 ELSE 0 END) AS resolved
-                FROM part
-                WHERE message_id = ?
-                  AND json_extract(data, '$.type') = 'tool'
-                """,
-                (msg_id,),
-            ).fetchone()
-
-            total, resolved = tool_counts if tool_counts else (0, 0)
-            resolved = resolved or 0
-            if total == 0 or resolved < total:
-                return "running"  # parts pending or not yet written
-            return "idle"  # all tool parts resolved
-
-        return "idle"
-
-    except sqlite3.Error:
-        return None
+    for state in _load_opencode_runtime_states():
+        if state.state != "done":
+            continue
+        if _canonical_path(state.directory) == lookup_dir or _canonical_path(state.worktree) == lookup_dir:
+            _dismiss_done_session(state)
 
 
 # ── GitHub PR lookup ─────────────────────────────────────────────────
@@ -423,13 +438,14 @@ def enrich_sessions(
             "git_root": gi.root if gi else None,
             "branch": gi.branch if gi else None,
             "has_opencode": has_oc,
+            "last_activity": ts.last_activity,
         }
         enriched.append(info)
 
         if has_oc:
             oc_dirs.append(gi.root if gi else cwd)
 
-    # Step 2: Query opencode states (single DB connection for all)
+    # Step 2: Query runtime state files written by the OpenCode plugin
     oc_states = opencode_states(oc_dirs)
 
     # Step 3: Fetch PRs in parallel (only for list mode)
@@ -465,6 +481,7 @@ def enrich_sessions(
                 branch=info["branch"],
                 has_opencode=info["has_opencode"],
                 opencode_state=oc_states.get(oc_key) if info["has_opencode"] else None,
+                last_activity=info["last_activity"],
                 pr=pr_results.get(info["name"]),
             )
         )
@@ -483,11 +500,12 @@ def format_list(sessions: list[SessionInfo], c: _Colours) -> str:
     if not sessions:
         return ""
 
-    # Sort: highest opencode severity first, then alphabetical
+    # Sort: highest opencode severity first, then most recent, then alphabetical
     sessions = sorted(
         sessions,
         key=lambda s: (
-            -OC_PRIORITY.get(s.opencode_state or "", -1) if s.has_opencode else 1,
+            -OC_PRIORITY.get(s.opencode_state or "", -1) if s.has_opencode else 10,
+            -s.last_activity,
             s.name,
         ),
     )
@@ -539,6 +557,8 @@ def _format_oc_state(
         return f"{c.love}{OC_ICON} err{c.reset}"
     if state == "question":
         return f"{c.gold}{OC_ICON} ?  {c.reset}"
+    if state == "done":
+        return f"{c.rose}{OC_ICON} ✓  {c.reset}"
     if state == "running":
         return f"{c.foam}{OC_ICON} .. {c.reset}"
     # idle or unknown
@@ -572,6 +592,7 @@ def format_indicator(sessions: list[SessionInfo]) -> str:
     tmux_colours = {
         "error": "#eb6f92",    # love
         "question": "#f6c177", # gold
+        "done": "#ebbcba",     # rose
         "running": "#9ccfd8",  # foam
         "idle": "#6e6a86",     # muted
     }
@@ -664,6 +685,21 @@ def cmd_switch(args: argparse.Namespace) -> None:
     else:
         subprocess.run(["tmux", "switch-client", "-t", session_name], timeout=5)
 
+    _dismiss_done_for_tmux_session(session_name)
+
+
+def cmd_seen(args: argparse.Namespace) -> None:
+    """Dismiss done state for all OpenCode sessions in the given tmux session."""
+    _dismiss_done_for_tmux_session(args.session)
+
+
+def cmd_dismiss(args: argparse.Namespace) -> None:
+    """Dismiss done state without switching to the session."""
+    session_name = _extract_session_name(args.session)
+    if not session_name:
+        return
+    _dismiss_done_for_tmux_session(session_name)
+
 
 def cmd_preview(args: argparse.Namespace) -> None:
     """Capture the bottom of the opencode pane for fzf preview.
@@ -733,6 +769,12 @@ def main() -> None:
     preview_parser = sub.add_parser("preview", help="Capture opencode pane for fzf preview")
     preview_parser.add_argument("session", help="Raw fzf line or session name")
 
+    seen_parser = sub.add_parser("seen", help="Dismiss done state for a tmux session")
+    seen_parser.add_argument("session", help="Tmux session name")
+
+    dismiss_parser = sub.add_parser("dismiss", help="Dismiss done state from fzf picker")
+    dismiss_parser.add_argument("session", help="Raw fzf line or session name")
+
     args = parser.parse_args()
 
     if args.command == "list":
@@ -743,6 +785,10 @@ def main() -> None:
         cmd_switch(args)
     elif args.command == "preview":
         cmd_preview(args)
+    elif args.command == "seen":
+        cmd_seen(args)
+    elif args.command == "dismiss":
+        cmd_dismiss(args)
     else:
         parser.print_help()
         sys.exit(1)
