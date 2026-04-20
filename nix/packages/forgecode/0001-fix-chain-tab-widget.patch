@@ -1,0 +1,26 @@
+--- a/shell-plugin/lib/bindings.zsh
++++ b/shell-plugin/lib/bindings.zsh
+@@ -27,5 +27,10 @@
+ # Bind Enter to our custom accept-line that transforms :commands
+ bindkey '^M' forge-accept-line
+ bindkey '^J' forge-accept-line
+-# Update the Tab binding to use the new completion widget
+-bindkey '^I' forge-completion  # Tab for both @ and :command completion
++# Save the current ^I binding (e.g. fzf-tab-complete) and chain through it
++# so that other Tab-completing plugins (fzf-tab, etc.) keep working.
++typeset -g _FORGE_ORIG_TAB_WIDGET="${${$(bindkey '^I')##* }:-expand-or-complete}"
++if (( ! ${+widgets[.forge-orig-tab]} )); then
++    zle -A "$_FORGE_ORIG_TAB_WIDGET" .forge-orig-tab
++fi
++bindkey '^I' forge-completion
+--- a/shell-plugin/lib/completion.zsh
++++ b/shell-plugin/lib/completion.zsh
+@@ -61,6 +61,6 @@
+         return 0
+     fi
+     
+-    # Fall back to default completion
+-    zle expand-or-complete
++    # Fall back to previous Tab widget (e.g. fzf-tab-complete)
++    zle .forge-orig-tab
+ }

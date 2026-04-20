@@ -2,7 +2,7 @@
   pkgs,
   lib,
   config,
-
+  inputs,
   ...
 }:
 let
@@ -125,6 +125,11 @@ in
         src = pkgs.unstable.zsh-you-should-use;
         file = "share/zsh/plugins/you-should-use/you-should-use.plugin.zsh";
       }
+      # {
+      #   name = "forge";
+      #   src = pkgs.sebe.forge-zsh-plugin;
+      #   file = "share/forge-zsh-plugin/forge.plugin.zsh";
+      # }
     ];
     sessionVariables = {
       CARAPACE_BRIDGES = "zsh,fish,bash,inshellisense";
@@ -484,7 +489,8 @@ in
       # pkgs.sebe.git-amnesia
       # LLM stuff
       pkgs.sebe.opencode
-      claude-code
+      # claude-code
+      # inputs.forgecode.packages.${pkgs.system}.forge
       github-mcp-server
       terraform-mcp-server
       mcp-nixos

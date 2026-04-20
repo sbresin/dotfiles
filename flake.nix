@@ -57,6 +57,11 @@
       inputs.nixpkgs.follows = "nixpkgs-unstable";
     };
 
+    forgecode = {
+      url = "github:antinomyhq/forgecode";
+      inputs.nixpkgs.follows = "nixpkgs-unstable";
+    };
+
     peek-a-meet = {
       url = "git+https://github.com/sbresin/peek-a-meet.git";
       inputs.nixpkgs.follows = "nixpkgs-unstable";
