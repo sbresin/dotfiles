@@ -30,7 +30,6 @@
       "com.github.tchx84.Flatseal"
       # desktop apps
       "org.telegram.desktop"
-      "com.mastermindzh.tidal-hifi"
       # browsers
       "org.mozilla.firefox"
       "io.github.zen_browser.zen"

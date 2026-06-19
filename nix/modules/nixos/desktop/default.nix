@@ -260,6 +260,7 @@ in
       gnome-maps
       resources
       mission-center
+      tidal-hifi
       decibels
       file-roller
       gnome-calculator
