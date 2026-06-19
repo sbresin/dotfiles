@@ -17,7 +17,7 @@ check:
 
 # update all flake inputs
 update-flake:
-	nix flake update
+	nix flake update --accept-flake-config
 
 # update nixpkgs-unstable to newest rev where PACKAGES are cached
 update-flake-cached +PACKAGES:
@@ -28,7 +28,7 @@ update-flake-cached +PACKAGES:
 # snowfall-lib puts nix sources in a separate store path, so nix-update
 # can't locate the file to patch. --override-filename fixes this.
 # format: "attr:relative/path/to/file.nix"
-_nix_update_pkgs := "chrome-devtools-mcp:nix/packages/chrome-devtools-mcp/package.nix docs-mcp-server:nix/packages/docs-mcp-server/package.nix sfp-cli:nix/packages/sfp-cli/default.nix rusty-psn:nix/packages/rusty-psn/default.nix oclif:nix/packages/oclif/default.nix razer-cli:nix/packages/razer-cli/default.nix es-de:nix/packages/es-de/default.nix apple-emoji-linux:nix/packages/apple-emoji-linux/default.nix"
+_nix_update_pkgs := "chrome-devtools-mcp:nix/packages/chrome-devtools-mcp/package.nix docs-mcp-server:nix/packages/docs-mcp-server/package.nix rusty-psn:nix/packages/rusty-psn/default.nix oclif:nix/packages/oclif/default.nix razer-cli:nix/packages/razer-cli/default.nix es-de:nix/packages/es-de/default.nix apple-emoji-linux:nix/packages/apple-emoji-linux/default.nix"
 
 # update a single package via nix-update (pass extra args after name)
 [no-exit-message]
@@ -46,6 +46,14 @@ update-opencode:
 # update sf-cli (custom script)
 update-sf-cli:
 	./nix/packages/sf-cli/update.sh
+
+# update xrt + xrt-plugin-amdxdna (custom script)
+update-xrt:
+	./nix/packages/xrt/update.sh
+
+# update fastflowlm (custom script)
+update-fastflowlm:
+	./nix/packages/fastflowlm/update.sh
 
 # update all packages that support nix-update
 [no-exit-message]
@@ -92,7 +100,7 @@ update-packages:
 	succeeded=()
 	skipped=()
 	# ── custom update scripts ──
-	for entry in "opencode:./nix/packages/opencode/update.sh" "sf-cli:./nix/packages/sf-cli/update.sh"; do
+	for entry in "opencode:./nix/packages/opencode/update.sh" "sf-cli:./nix/packages/sf-cli/update.sh" "xrt:./nix/packages/xrt/update.sh" "fastflowlm:./nix/packages/fastflowlm/update.sh"; do
 	    pkg="${entry%%:*}"
 	    script="${entry#*:}"
 	    echo "── updating $pkg (custom) ──"
