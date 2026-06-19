@@ -30,7 +30,7 @@ in
         name = "foot.ini";
         text = ''
           [main]
-          shell=${tuigreet} --remember --remember-session --time --window-padding 2 --theme '${theme}'
+          shell=${tuigreet} --remember --remember-session --time --window-padding 2 --sessions /run/current-system/sw/share/wayland-sessions --theme '${theme}'
 
           font=Dank Mono:size=18, Symbols Nerd Font Mono:size=18, Apple Color Emoji:size=18
           font-bold=Dank Mono:size=18:weight=bold, Symbols Nerd Font Mono:size=18, Apple Color Emoji:size=18
