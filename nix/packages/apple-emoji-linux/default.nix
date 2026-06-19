@@ -5,7 +5,7 @@
 }:
 stdenvNoCC.mkDerivation rec {
   pname = "apple-emoji-linux";
-  version = "macos-26-20260219-2aa12422";
+  version = "macos-26-20260613-3d9d9ff2";
 
   src = fetchurl {
     url = "https://github.com/samuelngs/apple-emoji-ttf/releases/download/${version}/AppleColorEmoji-Linux.ttf";

@@ -20,7 +20,7 @@ pkgs.python3Packages.buildPythonApplication rec {
 
   dependencies = with pkgs; [
     python3Packages.openrazer
-    xorg.xrdb
+    xrdb
   ];
 
   # rename to avoid conflict with razer-laptop-config

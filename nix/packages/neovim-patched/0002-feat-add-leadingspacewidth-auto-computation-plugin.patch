@@ -1,6 +1,6 @@
-From 37c874a77404a348107d94b0024ed1ac6ac734b0 Mon Sep 17 00:00:00 2001
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Sebastian Bresin <sebastian.bresin@gmail.com>
-Date: Tue, 17 Feb 2026 13:21:03 +0100
+Date: Tue, 7 Apr 2026 12:05:00 +0200
 Subject: [PATCH 2/2] feat: add leadingspacewidth auto-computation plugin
 
 Add runtime/plugin/leadingspacewidth.lua that automatically computes
@@ -11,29 +11,19 @@ Formula: lsw = tabstop / shiftwidth (when expandtab is set and tabstop
 is evenly divisible by shiftwidth). If lsw would be 1 (no visual
 expansion), lsw is set to 0 (disabled).
 
-Fires on BufReadPost (after editorconfig/ftplugin have set indent
-options) and on OptionSet for shiftwidth/expandtab/tabstop to react
-to mid-session changes (e.g. vim-sleuth re-detecting on FileType).
+Fires on BufReadPost and on OptionSet for shiftwidth/expandtab/tabstop
+to react to mid-session indent changes.
 
 Per-buffer override via vim.b.leadingspacewidth_auto = false.
-Compatible with EditorConfig, vim-sleuth, guess-indent.nvim, and
-any plugin that sets shiftwidth + expandtab.
-
-12 functional tests covering auto-computation, OptionSet reactivity,
-per-buffer disable, and editorconfig integration.
+Compatible with EditorConfig and other plugins that set shiftwidth,
+tabstop, and expandtab.
 ---
- runtime/plugin/leadingspacewidth.lua          |  54 +++++++
- .../plugin/leadingspacewidth_spec.lua         | 151 ++++++++++++++++++
- 2 files changed, 205 insertions(+)
- create mode 100644 runtime/plugin/leadingspacewidth.lua
- create mode 100644 test/functional/plugin/leadingspacewidth_spec.lua
-
 diff --git a/runtime/plugin/leadingspacewidth.lua b/runtime/plugin/leadingspacewidth.lua
 new file mode 100644
-index 0000000000..19d43fe05e
+index 0000000000..e3f98f100f
 --- /dev/null
 +++ b/runtime/plugin/leadingspacewidth.lua
-@@ -0,0 +1,54 @@
+@@ -0,0 +1,50 @@
 +local group = vim.api.nvim_create_augroup('nvim.leadingspacewidth', {})
 +
 +--- Compute and set 'leadingspacewidth' for the given buffer.
@@ -44,7 +34,6 @@ index 0000000000..19d43fe05e
 +---
 +--- @param bufnr integer
 +local function compute_lsw(bufnr)
-+  -- Buffer-local flag overrides global; default is false (opt-in).
 +  local enable = vim.F.if_nil(
 +    vim.b[bufnr].leadingspacewidth_auto,
 +    vim.g.leadingspacewidth_auto,
@@ -54,13 +43,12 @@ index 0000000000..19d43fe05e
 +    return
 +  end
 +
-+  -- Only for space-indented buffers.
 +  if not vim.bo[bufnr].expandtab then
 +    vim.bo[bufnr].leadingspacewidth = 0
 +    return
 +  end
 +
-+  local sw = vim.fn.shiftwidth() -- resolves 0 → tabstop
++  local sw = vim.fn.shiftwidth()
 +  local ts = vim.bo[bufnr].tabstop
 +
 +  if sw <= 0 or ts <= 0 or ts % sw ~= 0 then
@@ -72,7 +60,6 @@ index 0000000000..19d43fe05e
 +  vim.bo[bufnr].leadingspacewidth = (lsw > 1) and lsw or 0
 +end
 +
-+-- After file read (editorconfig fires on BufRead, so BufReadPost is after).
 +vim.api.nvim_create_autocmd('BufReadPost', {
 +  group = group,
 +  callback = function(args)
@@ -80,7 +67,6 @@ index 0000000000..19d43fe05e
 +  end,
 +})
 +
-+-- React to mid-session option changes (e.g. vim-sleuth re-detecting on FileType).
 +vim.api.nvim_create_autocmd('OptionSet', {
 +  group = group,
 +  pattern = { 'shiftwidth', 'expandtab', 'tabstop' },
@@ -90,10 +76,10 @@ index 0000000000..19d43fe05e
 +})
 diff --git a/test/functional/plugin/leadingspacewidth_spec.lua b/test/functional/plugin/leadingspacewidth_spec.lua
 new file mode 100644
-index 0000000000..dc72c1e130
+index 0000000000..55cd47818b
 --- /dev/null
 +++ b/test/functional/plugin/leadingspacewidth_spec.lua
-@@ -0,0 +1,151 @@
+@@ -0,0 +1,134 @@
 +local t = require('test.testutil')
 +local n = require('test.functional.testnvim')()
 +
@@ -105,7 +91,6 @@ index 0000000000..dc72c1e130
 +
 +local testdir = 'Xtest-leadingspacewidth'
 +
-+--- Helper: get lsw value for current buffer.
 +local function get_lsw()
 +  return api.nvim_get_option_value('leadingspacewidth', { buf = 0 })
 +end
@@ -113,13 +98,10 @@ index 0000000000..dc72c1e130
 +setup(function()
 +  n.mkdir_p(testdir)
 +
-+  -- Create test files (content doesn't matter, just need real files to :edit)
 +  t.write_file(testdir .. pathsep .. 'space2.py', '  x = 1\n')
 +  t.write_file(testdir .. pathsep .. 'space4.py', '    x = 1\n')
 +  t.write_file(testdir .. pathsep .. 'tab.py', '\tx = 1\n')
 +
-+  -- EditorConfig that sets 2-space indent with tab_width=4
-+  -- (tab_width controls tabstop separately from indent_size/shiftwidth)
 +  t.write_file(
 +    testdir .. pathsep .. '.editorconfig',
 +    [[
@@ -144,7 +126,6 @@ index 0000000000..dc72c1e130
 +
 +describe('leadingspacewidth auto-computation', function()
 +  before_each(function()
-+    -- Remove -u NONE so that runtime plugins load (leadingspacewidth.lua, editorconfig.lua)
 +    clear({ args_rm = { '-u' } })
 +  end)
 +
@@ -188,7 +169,6 @@ index 0000000000..dc72c1e130
 +    command('set tabstop=4 shiftwidth=4 expandtab')
 +    eq(0, get_lsw())
 +
-+    -- Change shiftwidth → lsw should update
 +    command('set shiftwidth=2')
 +    eq(2, get_lsw())
 +  end)
@@ -198,11 +178,9 @@ index 0000000000..dc72c1e130
 +    command('set tabstop=4 shiftwidth=2 expandtab')
 +    eq(2, get_lsw())
 +
-+    -- Switch to noexpandtab → lsw should reset
 +    command('set noexpandtab')
 +    eq(0, get_lsw())
 +
-+    -- Switch back → lsw should recompute
 +    command('set expandtab')
 +    eq(2, get_lsw())
 +  end)
@@ -212,15 +190,12 @@ index 0000000000..dc72c1e130
 +    command('set tabstop=4 shiftwidth=2 expandtab')
 +    eq(2, get_lsw())
 +
-+    -- Change tabstop → lsw should update
 +    command('set tabstop=8')
 +    eq(4, get_lsw())
 +  end)
 +
 +  it('can be disabled per-buffer with vim.b flag', function()
 +    api.nvim_set_var('leadingspacewidth_auto', true)
-+
-+    -- Disable auto for this specific buffer
 +    api.nvim_buf_set_var(0, 'leadingspacewidth_auto', false)
 +    command('set tabstop=4 shiftwidth=2 expandtab')
 +    eq(0, get_lsw())
@@ -228,9 +203,6 @@ index 0000000000..dc72c1e130
 +
 +  it('works with editorconfig integration', function()
 +    api.nvim_set_var('leadingspacewidth_auto', true)
-+
-+    -- Open file with .editorconfig setting indent_style=space, indent_size=2, tab_width=4
-+    -- EditorConfig sets sw=2, et=true, ts=4 → auto-lsw computes lsw = 4/2 = 2
 +    command('edit ' .. testdir .. pathsep .. 'ec_space2.py')
 +    eq(2, get_lsw())
 +  end)
@@ -238,13 +210,7 @@ index 0000000000..dc72c1e130
 +  it('skips tab-indented files via editorconfig', function()
 +    api.nvim_set_var('leadingspacewidth_auto', true)
 +    command('set tabstop=4')
-+
-+    -- Open file with .editorconfig setting indent_style=tab
-+    -- EditorConfig sets et=false → auto-lsw skips, lsw=0
 +    command('edit ' .. testdir .. pathsep .. 'ec_tab.py')
 +    eq(0, get_lsw())
 +  end)
 +end)
--- 
-2.51.2
-

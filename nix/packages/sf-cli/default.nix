@@ -1,6 +1,6 @@
 {
   lib,
-  nodejs_22,
+  nodejs_24,
   fetchurl,
   stdenvNoCC,
   writeShellScript,
@@ -24,7 +24,7 @@ let
       SF_REDIRECTED=1
     fi
 
-    NODE="${nodejs_22}/bin/node"
+    NODE="${nodejs_24}/bin/node"
 
     if [ "$DEBUG" == "*" ]; then
       echoerr "$NODE" "$DIR/run" "$@"
@@ -35,12 +35,12 @@ let
 in
 stdenvNoCC.mkDerivation {
   pname = "sf-cli";
-  version = "2.75.5";
+  version = "2.138.6";
 
   # TODO: install from npm instead, but set SF_INSTALLER, so auto updates work
   src = fetchurl {
-    url = "https://developer.salesforce.com/media/salesforce-cli/sf/versions/2.75.5/eef8ca4/sf-v2.75.5-eef8ca4-linux-x64.tar.xz";
-    hash = "sha256-3BRrVF+tY2jOAFWtz3PsnVki23YgjT5Kgzenb1kzDoo=";
+    url = "https://developer.salesforce.com/media/salesforce-cli/sf/versions/2.138.6/fab2b4f/sf-v2.138.6-fab2b4f-linux-x64.tar.xz";
+    hash = "sha256-jNW/9YuCfGyi7xM5R8upnZSh/sCTqR4rBlIRkXbEdcg=";
   };
 
   installPhase = ''

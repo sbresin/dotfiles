@@ -37,7 +37,7 @@ fi
 
 # Prefetch to get the Nix SRI hash
 echo "Prefetching tarball..."
-SRI_HASH=$(nix-prefetch-url --type sha256 --unpack "$URL" 2>/dev/null | xargs nix hash convert --hash-algo sha256 --to sri)
+SRI_HASH=$(nix-prefetch-url --type sha256 "$URL" 2>/dev/null | xargs nix hash to-sri --type sha256)
 echo "Hash: $SRI_HASH"
 
 # Update default.nix via sed

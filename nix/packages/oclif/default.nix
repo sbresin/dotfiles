@@ -5,18 +5,18 @@
   fetchYarnDeps,
   makeWrapper,
   fixup-yarn-lock,
-  nodejs_20,
+  nodejs_24,
   yarn,
 }:
 stdenv.mkDerivation rec {
   pname = "oclif";
-  version = "4.22.87";
+  version = "4.23.16";
 
   src = fetchFromGitHub {
     owner = "oclif";
     repo = "oclif";
     rev = "refs/tags/${version}";
-    hash = "sha256-EY+qMR6R4UcDK5TDrV3NVmiwOGO7HKzm6527Pm9X+Ak=";
+    hash = "sha256-KVN56fbxQiyBw6+AqdUb1RjRMHdeZNsXD1c7uh397iM=";
   };
 
   nativeBuildInputs = [
@@ -24,11 +24,11 @@ stdenv.mkDerivation rec {
     yarn
     fixup-yarn-lock
   ];
-  buildInputs = [ nodejs_20 ];
+  buildInputs = [ nodejs_24 ];
 
   yarnOfflineCache = fetchYarnDeps {
     yarnLock = "${src}/yarn.lock";
-    hash = "sha256-jO+U4ZOVemanx9Bg5AqRNcT0eLKbj+LXUIsKeca0+48=";
+    hash = "sha256-5Nk2UaQUcNDVOkCartrnNwY0Z4lR3dKmPSZJcZMHQrI=";
   };
 
   configurePhase = ''
@@ -59,7 +59,7 @@ stdenv.mkDerivation rec {
     node_modules=$out/share/oclif/node_modules
     bin=$out/share/oclif/bin
 
-    makeWrapper ${nodejs_20}/bin/node $out/bin/oclif \
+    makeWrapper ${nodejs_24}/bin/node $out/bin/oclif \
       --add-flags $bin/run.js \
       --set NODE_ENV production \
       --set NODE_PATH $node_modules \

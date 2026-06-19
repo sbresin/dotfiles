@@ -11,8 +11,11 @@
   gtk3,
   freetype,
   openssl,
-  xorg,
   libGL,
+  libxcursor,
+  libxrandr,
+  libxi,
+  libx11,
   wayland,
   libxkbcommon,
   withGui ? true, # build gui version
@@ -61,12 +64,12 @@ rustPlatform.buildRustPackage rec {
     wayland
 
     # x11 libraries
-    xorg.libXcursor
-    xorg.libXrandr
-    xorg.libXi
-    xorg.libX11
+    libxcursor
+    libxrandr
+    libxi
+    libx11
 
-    # xorg.libxcb
+    # libxcb
   ];
 
   buildNoDefaultFeatures = true;
