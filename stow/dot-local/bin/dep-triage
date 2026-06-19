@@ -1,0 +1,1377 @@
+#!/usr/bin/env python3
+"""Triage and bulk merge assigned/approved dependency PRs.
+
+Loads open Dependabot and Renovate PRs that are either assigned to the
+authenticated GitHub user for review or already approved by that user.
+The tool groups matching updates across repositories and provides a curses TUI
+to plan Approve+Merge actions in bulk.
+
+Usage:
+    dep-triage
+    dep-triage --limit 300
+    dep-triage --workers 12
+
+Requires: gh authenticated, glow installed, Python 3.11+ stdlib.
+"""
+
+from __future__ import annotations
+
+import argparse
+import curses
+import json
+import os
+import re
+import shutil
+import subprocess
+import sys
+import tempfile
+import threading
+import time
+import unicodedata
+from collections import defaultdict
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from dataclasses import dataclass
+from typing import Any, Optional
+
+
+GH = "gh"
+GLOW = "glow"
+BOT_LOGINS = {"dependabot[bot]", "renovate[bot]"}
+
+DEFAULT_LIMIT = 200
+DEFAULT_WORKERS = 12
+SEARCH_TIMEOUT = 45
+VIEW_TIMEOUT = 45
+ACTION_TIMEOUT = 90
+REPO_DELAY_SECONDS = 2.0
+
+FAIL_CHECK_STATES = {"FAILURE", "ERROR", "TIMED_OUT", "ACTION_REQUIRED", "CANCELLED", "STARTUP_FAILURE"}
+PENDING_CHECK_STATES = {"IN_PROGRESS", "QUEUED", "PENDING", "REQUESTED", "WAITING"}
+STATEFUL_REVIEW_STATES = {"APPROVED", "CHANGES_REQUESTED", "DISMISSED"}
+PATCH_RANK = {"major": 0, "minor": 1, "patch": 2, "unknown": 3}
+
+DEPENDABOT_BUMP_RE = re.compile(
+    r"(?i)\bbump (?P<package>.+?) from (?P<source>\S+) to (?P<target>\S+)"
+)
+RENOVATE_TERRAFORM_RE = re.compile(
+    r"(?i)\bupdate terraform (?P<package>[a-z0-9._/-]+) to v?(?P<target>\S+)"
+)
+RENOVATE_GENERIC_RE = re.compile(
+    r"(?i)\bupdate (?:dependency |package |github action )?(?P<package>.+?) to v?(?P<target>\S+)"
+)
+
+ICON_DISCLOSURE_COLLAPSED = "▸"
+ICON_DISCLOSURE_EXPANDED = "▾"
+ICON_TREE_BRANCH = "│"
+ICON_TREE_LAST = "└"
+
+ICON_CHECKBOX_OFF = "󰄱"
+ICON_CHECKBOX_PARTIAL = "󰄴"
+ICON_CHECKBOX_ON = "󰄵"
+
+ICON_CHECK_OK = "󰄬"
+ICON_CHECK_PENDING = "󱋩"
+ICON_CHECK_FAILED = "󰅙"
+
+
+class GhError(RuntimeError):
+    """Raised when a gh command fails."""
+
+
+@dataclass
+class CheckSummary:
+    total: int = 0
+    failed: int = 0
+    pending: int = 0
+    successful: int = 0
+    skipped: int = 0
+
+    @property
+    def severity(self) -> str:
+        if self.failed:
+            return "failed"
+        if self.pending:
+            return "pending"
+        return "ok"
+
+    @property
+    def label(self) -> str:
+        parts: list[str] = []
+        if self.failed:
+            parts.append(f"F{self.failed}")
+        if self.pending:
+            parts.append(f"P{self.pending}")
+        if not parts:
+            return "OK" if self.total else "--"
+        return "/".join(parts)
+
+
+@dataclass
+class PullRequest:
+    repo: str
+    number: int
+    title: str
+    url: str
+    author: str
+    body: str
+    requested_for_review: bool
+    seen_in_reviewed_search: bool
+    approved_by_viewer: bool
+    package_display: str
+    package_key: str
+    source_version: str
+    target_version: str
+    patch_type: str
+    check_summary: CheckSummary
+    merge_state_status: str
+    mergeable: str
+    auto_merge_enabled: bool
+    head_ref_oid: str
+    selected: bool = False
+
+    @property
+    def ref(self) -> str:
+        return f"{self.repo}#{self.number}"
+
+    @property
+    def scope_label(self) -> str:
+        return "approved" if self.approved_by_viewer else "review"
+
+    @property
+    def update_label(self) -> str:
+        if self.package_display == self.title and not self.target_version:
+            return self.title
+
+        parts = [self.package_display]
+        if self.target_version:
+            parts.append(f"-> {self.target_version}")
+        parts.append(f"[{self.patch_type}]")
+        return " ".join(parts)
+
+    @property
+    def version_label(self) -> str:
+        if self.source_version and self.target_version:
+            return f"{self.source_version} -> {self.target_version}"
+        if self.target_version:
+            return f"-> {self.target_version}"
+        return self.title
+
+
+@dataclass
+class Group:
+    package_display: str
+    package_key: str
+    target_version: str
+    patch_type: str
+    prs: list[PullRequest]
+    expanded: bool = False
+
+    @property
+    def selected_count(self) -> int:
+        return sum(1 for pr in self.prs if pr.selected)
+
+    @property
+    def selection_marker(self) -> str:
+        if self.selected_count == 0:
+            return "[ ]"
+        if self.selected_count == len(self.prs):
+            return "[x]"
+        return "[~]"
+
+    @property
+    def check_summary(self) -> CheckSummary:
+        summary = CheckSummary()
+        for pr in self.prs:
+            summary.total += 1
+            if pr.check_summary.severity == "failed":
+                summary.failed += 1
+            elif pr.check_summary.severity == "pending":
+                summary.pending += 1
+            else:
+                summary.successful += 1
+        return summary
+
+    @property
+    def label(self) -> str:
+        parts = [self.package_display]
+        if self.target_version:
+            parts.append(f"-> {self.target_version}")
+        parts.append(f"[{self.patch_type}]")
+        parts.append(f"({len(self.prs)} PRs)")
+        return " ".join(parts)
+
+
+@dataclass
+class VisibleRow:
+    kind: str
+    pr: Optional[PullRequest] = None
+    group: Optional[Group] = None
+    tree_icon: str = " "
+
+
+@dataclass
+class ListRow:
+    kind: str
+    text: str
+    pr: Optional[PullRequest] = None
+    attr: int = 0
+
+
+@dataclass
+class ActionResult:
+    status: str
+    pr: PullRequest
+    message: str
+
+
+def clean_token(value: str) -> str:
+    return value.strip().strip("`'\"").rstrip(",.;:")
+
+
+def normalize_package(package: str) -> str:
+    return re.sub(r"\s+", " ", package.strip().lower())
+
+
+def parse_version_segments(version: str) -> Optional[tuple[int, ...]]:
+    cleaned = clean_token(version).lstrip("vV")
+    match = re.match(r"\d+(?:\.\d+)*", cleaned)
+    if not match:
+        return None
+    return tuple(int(part) for part in match.group(0).split("."))
+
+
+def classify_patch_type(source: str, target: str) -> str:
+    source_parts = parse_version_segments(source)
+    target_parts = parse_version_segments(target)
+    if not source_parts or not target_parts:
+        return "unknown"
+
+    size = max(3, len(source_parts), len(target_parts))
+    left = source_parts + (0,) * (size - len(source_parts))
+    right = target_parts + (0,) * (size - len(target_parts))
+    for index, (lhs, rhs) in enumerate(zip(left, right)):
+        if lhs == rhs:
+            continue
+        if index == 0:
+            return "major"
+        if index == 1:
+            return "minor"
+        return "patch"
+    return "patch"
+
+
+def parse_update_title(title: str) -> tuple[str, str, str, str, str]:
+    match = DEPENDABOT_BUMP_RE.search(title)
+    if match:
+        package = clean_token(match.group("package"))
+        source = clean_token(match.group("source"))
+        target = clean_token(match.group("target"))
+        return package, normalize_package(package), source, target, classify_patch_type(source, target)
+
+    match = RENOVATE_TERRAFORM_RE.search(title)
+    if match:
+        package = clean_token(match.group("package"))
+        display = package if "/" in package else f"hashicorp/{package}"
+        target = clean_token(match.group("target"))
+        return display, normalize_package(display), "", target, "unknown"
+
+    match = RENOVATE_GENERIC_RE.search(title)
+    if match:
+        package = clean_token(match.group("package"))
+        target = clean_token(match.group("target"))
+        package = re.sub(r"\s+action$", "", package, flags=re.IGNORECASE)
+        return package, normalize_package(package), "", target, "unknown"
+
+    fallback = title.strip()
+    return fallback, normalize_package(fallback), "", "", "unknown"
+
+
+def summarize_checks(rollup: list[dict[str, Any]]) -> CheckSummary:
+    summary = CheckSummary()
+    for item in rollup:
+        summary.total += 1
+        typename = item.get("__typename")
+        if typename == "CheckRun":
+            status = (item.get("status") or "").upper()
+            conclusion = (item.get("conclusion") or "").upper()
+            if status and status != "COMPLETED":
+                summary.pending += 1
+            elif conclusion in FAIL_CHECK_STATES:
+                summary.failed += 1
+            elif conclusion == "SUCCESS":
+                summary.successful += 1
+            else:
+                summary.skipped += 1
+            continue
+
+        state = (item.get("state") or "").upper()
+        if state in FAIL_CHECK_STATES:
+            summary.failed += 1
+        elif state in PENDING_CHECK_STATES:
+            summary.pending += 1
+        elif state == "SUCCESS":
+            summary.successful += 1
+        else:
+            summary.skipped += 1
+    return summary
+
+
+def viewer_approved(reviews: list[dict[str, Any]], username: str) -> bool:
+    latest_state = ""
+    latest_time = ""
+    for review in reviews:
+        author = ((review.get("author") or {}).get("login") or "").strip()
+        if author != username:
+            continue
+        state = (review.get("state") or "").upper()
+        if state not in STATEFUL_REVIEW_STATES:
+            continue
+        submitted_at = review.get("submittedAt") or ""
+        if submitted_at >= latest_time:
+            latest_time = submitted_at
+            latest_state = state
+    return latest_state == "APPROVED"
+
+
+def run_command(command: list[str], timeout: int) -> subprocess.CompletedProcess[str]:
+    try:
+        return subprocess.run(command, capture_output=True, text=True, timeout=timeout)
+    except FileNotFoundError as exc:
+        raise GhError(f"Command not found: {command[0]}") from exc
+    except subprocess.TimeoutExpired as exc:
+        joined = " ".join(command)
+        raise GhError(f"Command timed out after {timeout}s: {joined}") from exc
+
+
+def run_command_interactive(command: list[str], timeout: int) -> subprocess.CompletedProcess[str]:
+    try:
+        return subprocess.run(command, timeout=timeout)
+    except FileNotFoundError as exc:
+        raise GhError(f"Command not found: {command[0]}") from exc
+    except subprocess.TimeoutExpired as exc:
+        joined = " ".join(command)
+        raise GhError(f"Command timed out after {timeout}s: {joined}") from exc
+
+
+def run_gh_json(args: list[str], timeout: int) -> Any:
+    result = run_command([GH, *args], timeout)
+    if result.returncode != 0:
+        message = result.stderr.strip() or result.stdout.strip() or "gh command failed"
+        raise GhError(message)
+    try:
+        return json.loads(result.stdout)
+    except json.JSONDecodeError as exc:
+        raise GhError("gh returned invalid JSON") from exc
+
+
+def run_gh_text(args: list[str], timeout: int) -> str:
+    result = run_command([GH, *args], timeout)
+    if result.returncode != 0:
+        message = result.stderr.strip() or result.stdout.strip() or "gh command failed"
+        raise GhError(message)
+    return result.stdout.strip()
+
+
+def require_dependencies() -> None:
+    if not shutil.which(GH):
+        raise GhError("`gh` is required but was not found on PATH")
+    if not shutil.which(GLOW):
+        raise GhError("`glow` is required but was not found on PATH")
+
+
+def gh_username() -> str:
+    return run_gh_text(["api", "user", "--jq", ".login"], timeout=15)
+
+
+def search_prs(limit: int, review_requested: bool) -> list[dict[str, Any]]:
+    args = [
+        "search",
+        "prs",
+        "--state=open",
+        "--draft=false",
+        "--archived=false",
+        f"--limit={limit}",
+        "--json",
+        "title,author,repository,number,url",
+    ]
+    if review_requested:
+        args.append("--review-requested=@me")
+    else:
+        args.append("--reviewed-by=@me")
+    data = run_gh_json(args, timeout=SEARCH_TIMEOUT)
+    return data if isinstance(data, list) else []
+
+
+def fetch_candidates(limit: int) -> list[dict[str, Any]]:
+    merged: dict[tuple[str, int], dict[str, Any]] = {}
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        requested_future = pool.submit(search_prs, limit, True)
+        reviewed_future = pool.submit(search_prs, limit, False)
+        requested = requested_future.result()
+        reviewed = reviewed_future.result()
+
+    for raw in requested:
+        author = (raw.get("author") or {}).get("login") or ""
+        if author not in BOT_LOGINS:
+            continue
+        repo = ((raw.get("repository") or {}).get("nameWithOwner") or "").strip()
+        number = raw.get("number") or 0
+        key = (repo, number)
+        entry = merged.setdefault(key, {
+            "repo": repo,
+            "number": number,
+            "title": raw.get("title") or "",
+            "url": raw.get("url") or "",
+            "author": author,
+            "requested_for_review": False,
+            "seen_in_reviewed_search": False,
+        })
+        entry["requested_for_review"] = True
+
+    for raw in reviewed:
+        author = (raw.get("author") or {}).get("login") or ""
+        if author not in BOT_LOGINS:
+            continue
+        repo = ((raw.get("repository") or {}).get("nameWithOwner") or "").strip()
+        number = raw.get("number") or 0
+        key = (repo, number)
+        entry = merged.setdefault(key, {
+            "repo": repo,
+            "number": number,
+            "title": raw.get("title") or "",
+            "url": raw.get("url") or "",
+            "author": author,
+            "requested_for_review": False,
+            "seen_in_reviewed_search": False,
+        })
+        entry["seen_in_reviewed_search"] = True
+
+    return sorted(merged.values(), key=lambda item: (item["repo"], item["number"]))
+
+
+def fetch_pr_details(candidate: dict[str, Any], username: str) -> Optional[PullRequest]:
+    data = run_gh_json(
+        [
+            "pr",
+            "view",
+            str(candidate["number"]),
+            "-R",
+            candidate["repo"],
+            "--json",
+            (
+                "title,url,body,state,isDraft,closed,reviews,mergeStateStatus,mergeable,"
+                "autoMergeRequest,statusCheckRollup,headRefOid"
+            ),
+        ],
+        timeout=VIEW_TIMEOUT,
+    )
+
+    if data.get("closed") or data.get("isDraft") or (data.get("state") or "").upper() != "OPEN":
+        return None
+
+    approved_by_viewer = viewer_approved(data.get("reviews") or [], username)
+    if not candidate["requested_for_review"] and not approved_by_viewer:
+        return None
+
+    title = data.get("title") or candidate["title"]
+    package_display, package_key, source_version, target_version, patch_type = parse_update_title(title)
+    return PullRequest(
+        repo=candidate["repo"],
+        number=candidate["number"],
+        title=title,
+        url=(data.get("url") or candidate["url"]),
+        author=candidate["author"],
+        body=data.get("body") or "",
+        requested_for_review=bool(candidate["requested_for_review"]),
+        seen_in_reviewed_search=bool(candidate["seen_in_reviewed_search"]),
+        approved_by_viewer=approved_by_viewer,
+        package_display=package_display,
+        package_key=package_key,
+        source_version=source_version,
+        target_version=target_version,
+        patch_type=patch_type,
+        check_summary=summarize_checks(data.get("statusCheckRollup") or []),
+        merge_state_status=(data.get("mergeStateStatus") or "").upper(),
+        mergeable=(data.get("mergeable") or "").upper(),
+        auto_merge_enabled=data.get("autoMergeRequest") is not None,
+        head_ref_oid=data.get("headRefOid") or "",
+    )
+
+
+def load_pull_requests(limit: int, workers: int, username: str) -> tuple[list[PullRequest], list[str]]:
+    candidates = fetch_candidates(limit)
+    warnings: list[str] = []
+    if not candidates:
+        return [], warnings
+
+    prs: list[PullRequest] = []
+    max_workers = max(1, min(workers, len(candidates)))
+    with ThreadPoolExecutor(max_workers=max_workers) as pool:
+        future_map = {pool.submit(fetch_pr_details, candidate, username): candidate for candidate in candidates}
+        for future in as_completed(future_map):
+            candidate = future_map[future]
+            try:
+                pr = future.result()
+            except GhError as exc:
+                warnings.append(f"Skipped {candidate['repo']}#{candidate['number']}: {exc}")
+                continue
+            if pr is not None:
+                prs.append(pr)
+
+    infer_patch_types(prs)
+    prs.sort(key=lambda pr: (pr.package_key, pr.target_version, PATCH_RANK.get(pr.patch_type, 99), pr.repo, pr.number))
+    return prs, warnings
+
+
+def infer_patch_types(prs: list[PullRequest]) -> None:
+    known_by_target: dict[tuple[str, str], set[str]] = defaultdict(set)
+    for pr in prs:
+        if not pr.target_version or pr.patch_type == "unknown":
+            continue
+        known_by_target[(pr.package_key, pr.target_version)].add(pr.patch_type)
+
+    for pr in prs:
+        if pr.patch_type != "unknown" or not pr.target_version:
+            continue
+        matches = known_by_target.get((pr.package_key, pr.target_version), set())
+        if len(matches) == 1:
+            pr.patch_type = next(iter(matches))
+
+
+def build_entries(prs: list[PullRequest]) -> list[Group | PullRequest]:
+    grouped: dict[tuple[str, str, str], list[PullRequest]] = defaultdict(list)
+    for pr in prs:
+        grouped[(pr.package_key, pr.target_version, pr.patch_type)].append(pr)
+
+    entries: list[Group | PullRequest] = []
+    for _, items in sorted(
+        grouped.items(),
+        key=lambda entry: (
+            entry[1][0].package_key,
+            entry[1][0].target_version,
+            PATCH_RANK.get(entry[1][0].patch_type, 99),
+            entry[1][0].repo,
+            entry[1][0].number,
+        ),
+    ):
+        items.sort(key=lambda pr: (pr.repo, pr.number))
+        if len(items) == 1:
+            entries.append(items[0])
+            continue
+        leader = items[0]
+        entries.append(
+            Group(
+                package_display=leader.package_display,
+                package_key=leader.package_key,
+                target_version=leader.target_version,
+                patch_type=leader.patch_type,
+                prs=items,
+            )
+        )
+    return entries
+
+
+def selected_prs(entries: list[Group | PullRequest]) -> list[PullRequest]:
+    selected: list[PullRequest] = []
+    for entry in entries:
+        if isinstance(entry, Group):
+            selected.extend(pr for pr in entry.prs if pr.selected)
+        elif entry.selected:
+            selected.append(entry)
+    return selected
+
+
+def char_width(char: str) -> int:
+    if char in "\n\r":
+        return 0
+    if char == "\t":
+        return 4
+    if unicodedata.combining(char):
+        return 0
+    if unicodedata.east_asian_width(char) in {"W", "F"}:
+        return 2
+    return 1
+
+
+def display_width(text: str) -> int:
+    return sum(char_width(char) for char in text)
+
+
+def slice_display_text(text: str, width: int) -> str:
+    if width <= 0:
+        return ""
+    used = 0
+    parts: list[str] = []
+    for char in text:
+        char_size = char_width(char)
+        if used + char_size > width:
+            break
+        parts.append(char)
+        used += char_size
+    return "".join(parts)
+
+
+def clip_text(text: str, width: int) -> str:
+    if width <= 0:
+        return ""
+    if display_width(text) <= width:
+        return text
+    if width <= 3:
+        return slice_display_text(text, width)
+    return slice_display_text(text, width - 3) + "..."
+
+
+def non_header_index(rows: list[ListRow], start: int, direction: int) -> int:
+    if not rows:
+        return 0
+    index = max(0, min(start, len(rows) - 1))
+    while 0 <= index < len(rows) and rows[index].kind == "header":
+        index += direction
+    if 0 <= index < len(rows):
+        return index
+    for index, row in enumerate(rows):
+        if row.kind != "header":
+            return index
+    return 0
+
+
+class DepTriageApp:
+    def __init__(self, username: str, entries: list[Group | PullRequest], warnings: list[str]) -> None:
+        self.username = username
+        self.entries = entries
+        self.initial_status = warnings[0] if warnings else ""
+        self.status_message = self.initial_status or "Space toggles Approve+Merge for the focused row."
+        self.main_cursor = 0
+        self.main_scroll = 0
+        self.interrupted = False
+
+    def run(self) -> None:
+        curses.wrapper(self.curses_main)
+
+    def curses_main(self, stdscr: curses.window) -> None:
+        curses.curs_set(0)
+        curses.start_color()
+        curses.use_default_colors()
+        curses.init_pair(1, curses.COLOR_RED, -1)
+        curses.init_pair(2, curses.COLOR_YELLOW, -1)
+        curses.init_pair(3, curses.COLOR_GREEN, -1)
+        curses.init_pair(4, curses.COLOR_CYAN, -1)
+
+        try:
+            while True:
+                proceed = self.main_screen(stdscr)
+                if not proceed:
+                    return
+                confirmed = self.confirmation_screen(stdscr)
+                if confirmed is None:
+                    return
+                if not confirmed:
+                    continue
+                results = self.execute_selected(stdscr)
+                self.results_screen(stdscr, results)
+                return
+        except KeyboardInterrupt:
+            self.interrupted = True
+            return
+
+    def build_visible_rows(self) -> list[VisibleRow]:
+        rows: list[VisibleRow] = []
+        for entry in self.entries:
+            if isinstance(entry, Group):
+                rows.append(VisibleRow(kind="group", group=entry))
+                if entry.expanded:
+                    last_index = len(entry.prs) - 1
+                    for index, pr in enumerate(entry.prs):
+                        rows.append(
+                            VisibleRow(
+                                kind="pr",
+                                pr=pr,
+                                group=entry,
+                                tree_icon=ICON_TREE_LAST if index == last_index else ICON_TREE_BRANCH,
+                            )
+                        )
+            else:
+                rows.append(VisibleRow(kind="pr", pr=entry))
+        return rows
+
+    def selection_summary(self) -> tuple[int, int]:
+        all_prs = 0
+        selected = 0
+        for entry in self.entries:
+            if isinstance(entry, Group):
+                all_prs += len(entry.prs)
+                selected += sum(1 for pr in entry.prs if pr.selected)
+            else:
+                all_prs += 1
+                selected += int(entry.selected)
+        return selected, all_prs
+
+    def set_status(self, message: str) -> None:
+        self.status_message = message
+
+    def check_attr(self, summary: CheckSummary) -> int:
+        if summary.severity == "failed":
+            return curses.color_pair(1) | curses.A_BOLD
+        if summary.severity == "pending":
+            return curses.color_pair(2) | curses.A_BOLD
+        return 0
+
+    def checkbox_icon(self, selected: bool, partial: bool = False) -> str:
+        if partial:
+            return ICON_CHECKBOX_PARTIAL
+        return ICON_CHECKBOX_ON if selected else ICON_CHECKBOX_OFF
+
+    def check_badge(self, summary: CheckSummary) -> tuple[str, int]:
+        if summary.severity == "failed":
+            return f"{ICON_CHECK_FAILED} {summary.failed}", self.check_attr(summary)
+        if summary.severity == "pending":
+            return f"{ICON_CHECK_PENDING} {summary.pending}", self.check_attr(summary)
+        return ICON_CHECK_OK, self.check_attr(summary)
+
+    def draw_text(
+        self,
+        stdscr: curses.window,
+        y: int,
+        x: int,
+        max_width: int,
+        text: str,
+        attr: int,
+    ) -> int:
+        if max_width <= 0 or not text:
+            return x
+        clipped = slice_display_text(text, max_width)
+        if not clipped:
+            return x
+        try:
+            stdscr.addstr(y, x, clipped, attr)
+        except curses.error:
+            pass
+        return x + display_width(clipped)
+
+    def row_tint(self, summary: CheckSummary) -> int:
+        if summary.severity == "failed":
+            return curses.color_pair(1) | curses.A_DIM
+        if summary.severity == "pending":
+            return curses.color_pair(2) | curses.A_DIM
+        return 0
+
+    def draw_main_row(
+        self,
+        stdscr: curses.window,
+        y: int,
+        width: int,
+        lead: tuple[str, int],
+        checkbox: tuple[str, int],
+        body: list[tuple[str, int]],
+        badges: list[tuple[str, int]],
+        focused: bool,
+        tint: int = 0,
+    ) -> None:
+        base_attr = (curses.A_REVERSE if focused else 0) | tint
+        badge_width = 0
+        if badges:
+            badge_width = sum(display_width(text) for text, _ in badges)
+            badge_width += 2 * (len(badges) - 1)
+
+        x = 0
+        x = self.draw_text(stdscr, y, x, width - x, lead[0], base_attr | lead[1])
+        x = self.draw_text(stdscr, y, x, width - x, " ", base_attr)
+        x = self.draw_text(stdscr, y, x, width - x, checkbox[0], base_attr | checkbox[1])
+        x = self.draw_text(stdscr, y, x, width - x, " ", base_attr)
+
+        badge_start = width - badge_width if badge_width else width
+        gap = 1 if badges else 0
+        body_width = max(0, badge_start - x - gap)
+        body_x = x
+        for index, (text, attr) in enumerate(body):
+            remaining = body_width - (body_x - x)
+            if remaining <= 0:
+                break
+            if index == len(body) - 1:
+                chunk = clip_text(text, remaining)
+            else:
+                chunk = slice_display_text(text, remaining)
+            body_x = self.draw_text(stdscr, y, body_x, remaining, chunk, base_attr | attr)
+
+        if badges and body_x < badge_start:
+            try:
+                stdscr.addnstr(y, body_x, " " * (badge_start - body_x), badge_start - body_x, base_attr)
+            except curses.error:
+                pass
+
+        if badges:
+            cursor = badge_start
+            for index, (text, attr) in enumerate(badges):
+                if index:
+                    cursor = self.draw_text(stdscr, y, cursor, width - cursor, "  ", base_attr)
+                cursor = self.draw_text(stdscr, y, cursor, width - cursor, text, base_attr | attr)
+
+        fill_from = min(width, badge_start + badge_width if badges else body_x)
+        if fill_from < width:
+            try:
+                stdscr.addnstr(y, fill_from, " " * (width - fill_from), width - fill_from, base_attr)
+            except curses.error:
+                pass
+
+    def draw_group_row(self, stdscr: curses.window, y: int, width: int, group: Group, focused: bool) -> None:
+        summary = group.check_summary
+        badges = [
+            (f"sel {group.selected_count}/{len(group.prs)}", curses.A_DIM),
+            (self.check_badge(summary)[0], self.check_badge(summary)[1]),
+        ]
+        self.draw_main_row(
+            stdscr,
+            y,
+            width,
+            (ICON_DISCLOSURE_EXPANDED if group.expanded else ICON_DISCLOSURE_COLLAPSED, curses.A_BOLD),
+            (self.checkbox_icon(group.selected_count == len(group.prs), partial=0 < group.selected_count < len(group.prs)), 0),
+            [(group.label, curses.A_BOLD)],
+            badges,
+            focused,
+            tint=self.row_tint(summary),
+        )
+
+    def draw_pr_row(self, stdscr: curses.window, y: int, width: int, row: VisibleRow, focused: bool) -> None:
+        pr = row.pr
+        if pr is None:
+            return
+        summary = pr.check_summary
+        badges = [
+            (pr.scope_label, curses.A_DIM),
+            (self.check_badge(summary)[0], self.check_badge(summary)[1]),
+        ]
+        body = [(pr.ref, curses.A_BOLD)]
+        if row.group is not None:
+            body.append(("  ", 0))
+            body.append((pr.version_label, curses.A_DIM))
+        else:
+            body.append(("  ", 0))
+            body.append((pr.update_label, 0))
+        self.draw_main_row(
+            stdscr,
+            y,
+            width,
+            (row.tree_icon if row.group is not None else " ", curses.A_DIM if row.group is not None else 0),
+            (self.checkbox_icon(pr.selected), 0),
+            body,
+            badges,
+            focused,
+            tint=self.row_tint(summary),
+        )
+
+    def adjust_scroll(self, cursor: int, scroll: int, visible_height: int, total_rows: int) -> int:
+        if total_rows <= visible_height:
+            return 0
+        if cursor < scroll:
+            return cursor
+        if cursor >= scroll + visible_height:
+            return cursor - visible_height + 1
+        max_scroll = max(0, total_rows - visible_height)
+        return max(0, min(scroll, max_scroll))
+
+    def main_screen(self, stdscr: curses.window) -> bool:
+        while True:
+            rows = self.build_visible_rows()
+            if not rows:
+                self.set_status("No matching PR rows to render.")
+                return False
+
+            height, width = stdscr.getmaxyx()
+            if height < 6 or width < 40:
+                stdscr.erase()
+                stdscr.addnstr(0, 0, "Terminal too small for dep-triage.", width - 1, curses.color_pair(1))
+                stdscr.refresh()
+                key = stdscr.getch()
+                if key in (ord("q"), 27):
+                    return False
+                continue
+
+            self.main_cursor = max(0, min(self.main_cursor, len(rows) - 1))
+            visible_height = height - 3
+            self.main_scroll = self.adjust_scroll(self.main_cursor, self.main_scroll, visible_height, len(rows))
+            selected_count, total_count = self.selection_summary()
+
+            stdscr.erase()
+            summary = f"dep-triage | {selected_count}/{total_count} selected | user {self.username}"
+            keys = "j/k move  Enter expand  Space select  o open  d describe  c confirm  q quit"
+            stdscr.addnstr(0, 0, clip_text(summary, width - 1), width - 1, curses.A_BOLD)
+            stdscr.addnstr(1, 0, clip_text(keys, width - 1), width - 1, curses.A_DIM)
+
+            window_rows = rows[self.main_scroll : self.main_scroll + visible_height]
+            for index, row in enumerate(window_rows, start=2):
+                focused = (self.main_scroll + index - 2) == self.main_cursor
+                if row.kind == "group" and row.group is not None:
+                    self.draw_group_row(stdscr, index, width - 1, row.group, focused)
+                elif row.pr is not None:
+                    self.draw_pr_row(stdscr, index, width - 1, row, focused)
+
+            stdscr.addnstr(height - 1, 0, clip_text(self.status_message, width - 1), width - 1, curses.A_DIM)
+            stdscr.refresh()
+
+            key = stdscr.getch()
+            if key in (ord("q"), 27):
+                return False
+            if key in (ord("j"), curses.KEY_DOWN):
+                self.main_cursor = min(self.main_cursor + 1, len(rows) - 1)
+                continue
+            if key in (ord("k"), curses.KEY_UP):
+                self.main_cursor = max(self.main_cursor - 1, 0)
+                continue
+            if key in (10, 13, curses.KEY_ENTER):
+                row = rows[self.main_cursor]
+                if row.group is not None and row.kind == "group":
+                    row.group.expanded = not row.group.expanded
+                    continue
+                self.set_status("Enter expands or collapses grouped rows.")
+                continue
+            if key == ord(" "):
+                self.toggle_main_row(rows[self.main_cursor])
+                continue
+            if key == ord("o"):
+                row = rows[self.main_cursor]
+                if row.kind != "pr" or row.pr is None:
+                    self.set_status("Open works on PR rows only.")
+                    continue
+                self.open_pr_in_browser(stdscr, row.pr)
+                continue
+            if key == ord("d"):
+                row = rows[self.main_cursor]
+                if row.kind != "pr" or row.pr is None:
+                    self.set_status("Description view works on PR rows only.")
+                    continue
+                self.show_pr_description(stdscr, row.pr)
+                continue
+            if key == ord("c"):
+                if not selected_prs(self.entries):
+                    self.set_status("Select at least one PR before confirming.")
+                    continue
+                return True
+
+    def toggle_main_row(self, row: VisibleRow) -> None:
+        if row.kind == "group" and row.group is not None:
+            should_select = row.group.selected_count != len(row.group.prs)
+            for pr in row.group.prs:
+                pr.selected = should_select
+            self.set_status(f"{'Selected' if should_select else 'Cleared'} {len(row.group.prs)} PRs in the group.")
+            return
+
+        if row.pr is None:
+            return
+        row.pr.selected = not row.pr.selected
+        self.set_status(f"{'Selected' if row.pr.selected else 'Cleared'} {row.pr.ref} for Approve+Merge.")
+
+    def open_pr_in_browser(self, stdscr: curses.window, pr: PullRequest) -> None:
+        error = self.run_external(stdscr, [GH, "browse", str(pr.number), "-R", pr.repo], timeout=ACTION_TIMEOUT)
+        if error:
+            self.set_status(f"Browser open failed for {pr.ref}: {error}")
+            return
+        self.set_status(f"Opened {pr.ref} in the browser.")
+
+    def show_pr_description(self, stdscr: curses.window, pr: PullRequest) -> None:
+        body = pr.body.strip() or "_No description provided._"
+        markdown = f"# {pr.title}\n\n{pr.ref}\n\n{pr.url}\n\n---\n\n{body}\n"
+        with tempfile.NamedTemporaryFile("w", suffix=".md", delete=False) as handle:
+            handle.write(markdown)
+            path = handle.name
+        try:
+            columns = max(80, shutil.get_terminal_size(fallback=(100, 40)).columns)
+            error = self.run_external_interactive(
+                stdscr,
+                [GLOW, "-t", "-w", str(columns), path],
+                timeout=3600,
+            )
+        finally:
+            try:
+                os.unlink(path)
+            except FileNotFoundError:
+                pass
+        if error:
+            self.set_status(f"Description view failed for {pr.ref}: {error}")
+            return
+        self.set_status(f"Viewed description for {pr.ref}.")
+
+    def run_external_interactive(self, stdscr: curses.window, command: list[str], timeout: int) -> str:
+        curses.def_prog_mode()
+        curses.endwin()
+        try:
+            result = run_command_interactive(command, timeout=timeout)
+        except GhError as exc:
+            error = str(exc)
+        else:
+            error = ""
+            if result.returncode != 0:
+                error = f"command failed with exit code {result.returncode}"
+        finally:
+            curses.reset_prog_mode()
+            curses.curs_set(0)
+            stdscr.erase()
+            stdscr.refresh()
+        return error
+
+    def run_external(self, stdscr: curses.window, command: list[str], timeout: int) -> str:
+        curses.def_prog_mode()
+        curses.endwin()
+        try:
+            result = run_command(command, timeout=timeout)
+        except GhError as exc:
+            error = str(exc)
+        else:
+            error = ""
+            if result.returncode != 0:
+                error = result.stderr.strip() or result.stdout.strip() or "command failed"
+        finally:
+            curses.reset_prog_mode()
+            curses.curs_set(0)
+            stdscr.erase()
+            stdscr.refresh()
+        return error
+
+    def build_confirmation_rows(self) -> list[ListRow]:
+        rows: list[ListRow] = []
+        by_repo: dict[str, list[PullRequest]] = defaultdict(list)
+        for pr in selected_prs(self.entries):
+            by_repo[pr.repo].append(pr)
+
+        for repo in sorted(by_repo):
+            rows.append(ListRow(kind="header", text=repo, attr=curses.A_BOLD | curses.color_pair(4)))
+            for pr in sorted(by_repo[repo], key=lambda item: item.number):
+                rows.append(ListRow(kind="item", text=f"{pr.number}  approve+merge  {pr.update_label}", pr=pr))
+        return rows
+
+    def list_screen(
+        self,
+        stdscr: curses.window,
+        title: str,
+        subtitle: str,
+        rows: list[ListRow],
+        empty_message: str,
+        allow_enter: bool = True,
+    ) -> Optional[bool]:
+        cursor = non_header_index(rows, 0, 1)
+        scroll = 0
+        status = "o opens the focused PR. d shows the description in glow."
+
+        while True:
+            height, width = stdscr.getmaxyx()
+            if height < 6 or width < 40:
+                return False
+            stdscr.erase()
+            stdscr.addnstr(0, 0, clip_text(title, width - 1), width - 1, curses.A_BOLD)
+            stdscr.addnstr(1, 0, clip_text(subtitle, width - 1), width - 1, curses.A_DIM)
+
+            if not rows:
+                stdscr.addnstr(3, 0, clip_text(empty_message, width - 1), width - 1, curses.A_DIM)
+                stdscr.addnstr(height - 1, 0, "q back", width - 1, curses.A_DIM)
+                stdscr.refresh()
+                key = stdscr.getch()
+                if key in (ord("q"), 27):
+                    return False
+                continue
+
+            visible_height = height - 3
+            cursor = non_header_index(rows, cursor, 1)
+            scroll = self.adjust_scroll(cursor, scroll, visible_height, len(rows))
+            window_rows = rows[scroll : scroll + visible_height]
+            for index, row in enumerate(window_rows, start=2):
+                focused = (scroll + index - 2) == cursor
+                attr = row.attr | (curses.A_REVERSE if focused else 0)
+                text = row.text if row.kind == "header" else f"  {row.text}"
+                stdscr.addnstr(index, 0, clip_text(text, width - 1), width - 1, attr)
+
+            stdscr.addnstr(height - 1, 0, clip_text(status, width - 1), width - 1, curses.A_DIM)
+            stdscr.refresh()
+
+            key = stdscr.getch()
+            if key in (ord("q"), 27):
+                return False
+            if key in (ord("j"), curses.KEY_DOWN):
+                cursor = non_header_index(rows, min(cursor + 1, len(rows) - 1), 1)
+                continue
+            if key in (ord("k"), curses.KEY_UP):
+                cursor = non_header_index(rows, max(cursor - 1, 0), -1)
+                continue
+            if allow_enter and key in (10, 13, curses.KEY_ENTER):
+                return True
+            if key == ord("o"):
+                pr = rows[cursor].pr
+                if pr is None:
+                    status = "Open works on PR rows only."
+                    continue
+                self.open_pr_in_browser(stdscr, pr)
+                status = self.status_message
+                continue
+            if key == ord("d"):
+                pr = rows[cursor].pr
+                if pr is None:
+                    status = "Description view works on PR rows only."
+                    continue
+                self.show_pr_description(stdscr, pr)
+                status = self.status_message
+                continue
+
+    def confirmation_screen(self, stdscr: curses.window) -> Optional[bool]:
+        rows = self.build_confirmation_rows()
+        selected_count = len(selected_prs(self.entries))
+        return self.list_screen(
+            stdscr,
+            "Confirm planned actions",
+            f"{selected_count} PRs selected. Enter executes. q returns to triage.",
+            rows,
+            "No planned actions.",
+        )
+
+    def draw_execution(self, stdscr: curses.window, logs: list[str], done: int, total: int, finished: bool) -> None:
+        height, width = stdscr.getmaxyx()
+        stdscr.erase()
+        title = f"Executing {done}/{total}" if not finished else f"Done {done}/{total}"
+        stdscr.addnstr(0, 0, clip_text(title, width - 1), width - 1, curses.A_BOLD)
+        log_height = max(1, height - 3)
+        start = max(0, len(logs) - log_height)
+        for index, line in enumerate(logs[start:], start=1):
+            if index >= height - 1:
+                break
+            stdscr.addnstr(index, 0, clip_text(line, width - 1), width - 1)
+        footer = "Done. Press any key to continue." if finished else "Working..."
+        stdscr.addnstr(height - 1, 0, clip_text(footer, width - 1), width - 1, curses.A_DIM)
+        stdscr.refresh()
+
+    def refresh_pr(self, pr: PullRequest) -> Optional[PullRequest]:
+        candidate = {
+            "repo": pr.repo,
+            "number": pr.number,
+            "title": pr.title,
+            "url": pr.url,
+            "author": pr.author,
+            "requested_for_review": pr.requested_for_review,
+            "seen_in_reviewed_search": pr.seen_in_reviewed_search,
+        }
+        return fetch_pr_details(candidate, self.username)
+
+    def run_action(self, args: list[str]) -> tuple[bool, str]:
+        result = run_command([GH, *args], timeout=ACTION_TIMEOUT)
+        if result.returncode == 0:
+            return True, result.stdout.strip()
+        message = result.stderr.strip() or result.stdout.strip() or "gh command failed"
+        return False, message
+
+    def merge_pr(self, pr: PullRequest) -> tuple[bool, str]:
+        match_args = ["--match-head-commit", pr.head_ref_oid] if pr.head_ref_oid else []
+        attempts = [
+            (["pr", "merge", "-R", pr.repo, str(pr.number), "--auto", *match_args], "auto-merge enabled"),
+            (["pr", "merge", "-R", pr.repo, str(pr.number), "--auto", "--squash", *match_args], "auto-merge enabled with squash"),
+            (["pr", "merge", "-R", pr.repo, str(pr.number), "--squash", *match_args], "merged with squash"),
+        ]
+        last_error = ""
+        for args, success_message in attempts:
+            ok, output = self.run_action(args)
+            if ok:
+                return True, success_message
+            last_error = output
+        return False, last_error or "merge failed"
+
+    def _process_repo_queue(
+        self,
+        repo: str,
+        repo_prs: list[PullRequest],
+        lock: threading.Lock,
+        logs: list[str],
+        results: list[ActionResult],
+        done_counter: list[int],
+    ) -> None:
+        short_repo = repo.split("/")[-1] if "/" in repo else repo
+
+        def log(message: str) -> None:
+            with lock:
+                logs.append(f"[{short_repo}] {message}")
+
+        for index, pr in enumerate(repo_prs):
+            log(f"Refreshing #{pr.number}...")
+            try:
+                refreshed = self.refresh_pr(pr)
+            except GhError as exc:
+                with lock:
+                    results.append(ActionResult(status="failed", pr=pr, message=str(exc)))
+                    done_counter[0] += 1
+                log(f"FAILED #{pr.number}: {exc}")
+                continue
+
+            if refreshed is None:
+                with lock:
+                    results.append(ActionResult(status="skipped", pr=pr, message="PR is no longer open or eligible"))
+                    done_counter[0] += 1
+                log(f"SKIPPED #{pr.number}: no longer open or eligible")
+                continue
+
+            pr.title = refreshed.title
+            pr.url = refreshed.url
+            pr.body = refreshed.body
+            pr.approved_by_viewer = refreshed.approved_by_viewer
+            pr.check_summary = refreshed.check_summary
+            pr.merge_state_status = refreshed.merge_state_status
+            pr.mergeable = refreshed.mergeable
+            pr.auto_merge_enabled = refreshed.auto_merge_enabled
+            pr.head_ref_oid = refreshed.head_ref_oid
+
+            if not pr.approved_by_viewer:
+                log(f"Approving #{pr.number}...")
+                ok, output = self.run_action(["pr", "review", "-R", pr.repo, str(pr.number), "--approve"])
+                if not ok:
+                    with lock:
+                        results.append(ActionResult(status="failed", pr=pr, message=f"approve failed: {output}"))
+                        done_counter[0] += 1
+                    log(f"FAILED #{pr.number}: approve failed")
+                    continue
+                pr.approved_by_viewer = True
+                log(f"Approved #{pr.number}")
+
+            if pr.auto_merge_enabled:
+                with lock:
+                    results.append(ActionResult(status="success", pr=pr, message="auto-merge already enabled"))
+                    done_counter[0] += 1
+                log(f"OK #{pr.number}: auto-merge already enabled")
+                continue
+
+            log(f"Merging #{pr.number}...")
+            ok, output = self.merge_pr(pr)
+            if ok:
+                with lock:
+                    results.append(ActionResult(status="success", pr=pr, message=output))
+                    done_counter[0] += 1
+                log(f"OK #{pr.number}: {output}")
+            else:
+                with lock:
+                    results.append(ActionResult(status="failed", pr=pr, message=output))
+                    done_counter[0] += 1
+                log(f"FAILED #{pr.number}: {output}")
+
+            if index != len(repo_prs) - 1:
+                log(f"Waiting {int(REPO_DELAY_SECONDS)}s...")
+                time.sleep(REPO_DELAY_SECONDS)
+
+    def execute_selected(self, stdscr: curses.window) -> list[ActionResult]:
+        grouped: dict[str, list[PullRequest]] = defaultdict(list)
+        for pr in selected_prs(self.entries):
+            grouped[pr.repo].append(pr)
+
+        total = sum(len(prs) for prs in grouped.values())
+        logs: list[str] = []
+        results: list[ActionResult] = []
+        done_counter: list[int] = [0]
+        lock = threading.Lock()
+
+        max_workers = max(1, min(DEFAULT_WORKERS, len(grouped)))
+        pool = ThreadPoolExecutor(max_workers=max_workers)
+        futures = []
+        for repo in sorted(grouped):
+            repo_prs = sorted(grouped[repo], key=lambda item: item.number)
+            futures.append(pool.submit(self._process_repo_queue, repo, repo_prs, lock, logs, results, done_counter))
+
+        stdscr.nodelay(True)
+        try:
+            while True:
+                all_done = all(future.done() for future in futures)
+                with lock:
+                    snapshot_logs = list(logs)
+                    snapshot_done = done_counter[0]
+                self.draw_execution(stdscr, snapshot_logs, snapshot_done, total, all_done)
+                if all_done:
+                    break
+                time.sleep(0.15)
+        except KeyboardInterrupt:
+            self.interrupted = True
+        finally:
+            stdscr.nodelay(False)
+            pool.shutdown(wait=False, cancel_futures=True)
+
+        for future in futures:
+            try:
+                future.result(timeout=0)
+            except Exception:
+                pass
+
+        with lock:
+            snapshot_logs = list(logs)
+            snapshot_done = done_counter[0]
+        self.draw_execution(stdscr, snapshot_logs, snapshot_done, total, True)
+
+        if not self.interrupted:
+            stdscr.getch()
+
+        results.sort(key=lambda r: (r.pr.repo, r.pr.number))
+        return results
+
+    def build_result_rows(self, results: list[ActionResult]) -> list[ListRow]:
+        rows: list[ListRow] = []
+        sections = [
+            ("Failures", [result for result in results if result.status == "failed"], curses.color_pair(1) | curses.A_BOLD),
+            ("Skipped", [result for result in results if result.status == "skipped"], curses.color_pair(2) | curses.A_BOLD),
+            ("Succeeded", [result for result in results if result.status == "success"], curses.color_pair(3) | curses.A_BOLD),
+        ]
+        for title, items, attr in sections:
+            rows.append(ListRow(kind="header", text=f"{title} ({len(items)})", attr=attr))
+            if not items:
+                rows.append(ListRow(kind="header", text="  none", attr=curses.A_DIM))
+                continue
+            for item in items:
+                rows.append(ListRow(kind="item", text=f"{item.pr.ref}  {item.message}", pr=item.pr))
+        return rows
+
+    def results_screen(self, stdscr: curses.window, results: list[ActionResult]) -> None:
+        rows = self.build_result_rows(results)
+        self.list_screen(
+            stdscr,
+            "Execution results",
+            "o opens the focused PR. d shows the description. q exits.",
+            rows,
+            "No results to display.",
+            allow_enter=False,
+        )
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Triage and bulk merge dependency PRs in a curses TUI.")
+    parser.add_argument("--limit", type=int, default=DEFAULT_LIMIT, help=f"Maximum PRs to fetch per search (default: {DEFAULT_LIMIT})")
+    parser.add_argument("--workers", type=int, default=DEFAULT_WORKERS, help=f"Concurrent gh workers for PR enrichment (default: {DEFAULT_WORKERS})")
+    return parser.parse_args()
+
+
+def main() -> int:
+    args = parse_args()
+    try:
+        require_dependencies()
+        username = gh_username()
+    except GhError as exc:
+        print(f"Error: {exc}", file=sys.stderr)
+        return 1
+
+    print("Loading dependency PRs...", file=sys.stderr)
+    try:
+        prs, warnings = load_pull_requests(limit=args.limit, workers=args.workers, username=username)
+    except GhError as exc:
+        print(f"Error: {exc}", file=sys.stderr)
+        return 1
+
+    if not prs:
+        print("No matching Dependabot or Renovate PRs found.", file=sys.stderr)
+        for warning in warnings:
+            print(f"Warning: {warning}", file=sys.stderr)
+        return 0
+
+    entries = build_entries(prs)
+    grouped_count = sum(1 for entry in entries if isinstance(entry, Group))
+    print(f"Loaded {len(prs)} PRs across {len(entries)} entries ({grouped_count} grouped).", file=sys.stderr)
+    if warnings:
+        print(f"Skipped {len(warnings)} PRs while loading metadata.", file=sys.stderr)
+
+    app = DepTriageApp(username=username, entries=entries, warnings=warnings)
+    try:
+        app.run()
+    except KeyboardInterrupt:
+        return 130
+    if app.interrupted:
+        return 130
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
