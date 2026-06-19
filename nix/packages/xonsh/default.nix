@@ -14,7 +14,7 @@ pkgs.unstable.xonsh.override {
       xontrib-clp
       xontrib-cmd-durations
       xontrib-fzf-completions
-      xontrib-jedi
+      # xontrib-jedi
       xontrib-prompt-bar
       xontrib-prompt-starship
       # xontrib-readable-traceback
