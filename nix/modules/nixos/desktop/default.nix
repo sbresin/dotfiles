@@ -25,30 +25,19 @@ let
       --why="Post-suspend recovery" --mode=block sleep 60 &
     log "Idle/sleep inhibited for 60s"
 
-    # 2. Force DPMS on (retry up to 3 times — hyprctl can fail if the
-    #    socket isn't ready immediately after resume)
-    for attempt in 1 2 3; do
-      if ${hyprctl} dispatch dpms on 2>/dev/null; then
-        log "DPMS on succeeded (attempt $attempt)"
-        break
-      fi
-      log "DPMS on failed (attempt $attempt), retrying in 1s..."
-      sleep 1
-    done
-
-    # 3. Force the internal display on unconditionally as a safety net.
+    # 2. Force the internal display on unconditionally as a safety net.
     #    monitor_toggle.sh may later disable it (e.g., lid closed + external),
     #    but we always want *something* visible first.
-    ${hyprctl} keyword monitor "eDP-1, preferred, auto, auto" 2>/dev/null || true
+    ${hyprctl} eval "hl.monitor({ output = 'eDP-1', mode = 'preferred', position = 'auto', scale = 'auto' })" 2>/dev/null || true
     log "Internal display force-enabled"
 
-    # 4. Restore brightness (in case brightnessctl saved a dim state)
+    # 3. Restore brightness (in case brightnessctl saved a dim state)
     ${pkgs.brightnessctl}/bin/brightnessctl -r 2>/dev/null || true
 
-    # 5. Wait for UCSI/MST DP Alt Mode renegotiation on USB-C
+    # 4. Wait for UCSI/MST DP Alt Mode renegotiation on USB-C
     sleep 5
 
-    # 6. Apply proper lid/external monitor logic
+    # 5. Apply proper lid/external monitor logic
     ${pkgs.bash}/bin/bash ~/.config/hypr/scripts/monitor_toggle.sh
     log "monitor_toggle.sh completed"
 
@@ -179,7 +168,8 @@ in
             general = {
               lock_cmd = "pidof hyprlock || hyprlock";
               before_sleep_cmd = "loginctl lock-session";
-              after_sleep_cmd = "~/.config/hypr/scripts/monitor_toggle.sh && hyprctl dispatch dpms on";
+              after_sleep_cmd = "${resume-script}";
+              inhibit_sleep = 3; # lock notify mode - wait for hyprlock to signal locked before sleep
             };
             listener = [
               {
@@ -193,8 +183,8 @@ in
               }
               {
                 timeout = 330; # 5.5min
-                on-timeout = "hyprctl dispatch dpms off";
-                on-resume = "hyprctl dispatch dpms on && brightnessctl -r";
+                on-timeout = "hyprctl eval 'hl.dispatch(hl.dsp.dpms(\"off\"))'";
+                on-resume = "brightnessctl -r";
               }
               {
                 timeout = 450; # 7.5min
