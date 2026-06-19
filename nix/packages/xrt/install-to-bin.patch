@@ -1,0 +1,26 @@
+diff --git a/src/runtime_src/core/pcie/tools/xbflash.qspi/CMakeLists.txt b/src/runtime_src/core/pcie/tools/xbflash.qspi/CMakeLists.txt
+index 3cf16d3ac..d0641f6e0 100644
+--- a/src/runtime_src/core/pcie/tools/xbflash.qspi/CMakeLists.txt
++++ b/src/runtime_src/core/pcie/tools/xbflash.qspi/CMakeLists.txt
+@@ -15,7 +15,7 @@ file(GLOB XBFLASH_QSPI_FILES
+ set(XBFLASH_QSPI_SRC ${XBFLASH_QSPI_FILES})
+ set(XBFLASH_NAME "xbflash.qspi")
+ set(XBFLASH_NAME_NEW "xbflash")
+-set(XBFLASH_INSTALL_DEST "/usr/local/bin")
++set(XBFLASH_INSTALL_DEST "/usr/bin")
+ set(XBFLASH_COMPONENT "xbflash")
+ 
+ add_executable(${XBFLASH_NAME} ${XBFLASH_QSPI_SRC})
+diff --git a/src/runtime_src/core/tools/xbflash2/CMakeLists.txt b/src/runtime_src/core/tools/xbflash2/CMakeLists.txt
+index dce47786d..f0a5a9e66 100755
+--- a/src/runtime_src/core/tools/xbflash2/CMakeLists.txt
++++ b/src/runtime_src/core/tools/xbflash2/CMakeLists.txt
+@@ -30,7 +30,7 @@ file(GLOB XBFLASH_QSPI_FILES
+ 
+ set(XBFLASH_QSPI_SRC ${XBFLASH_BASE_FILES} ${XBFLASH_QSPI_FILES})
+ set(XBFLASH_NAME "xbflash2")
+-set(XBFLASH_INSTALL_DEST "/usr/local/bin")
++set(XBFLASH_INSTALL_DEST "/usr/bin")
+ set(XBFLASH_COMPONENT "xbflash2")
+ 
+ add_executable(${XBFLASH_NAME} ${XBFLASH_QSPI_SRC})

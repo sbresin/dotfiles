@@ -109,12 +109,15 @@
       "dialout"
       "docker"
       "input"
+      "kvm"
       "lp"
       "networkmanager"
       "plugdev"
+      "render"
       "scanner"
       "storage"
       "uinput"
+      "video"
       "wheel"
       config.hardware.i2c.group
     ];
@@ -200,7 +203,14 @@
     # ROCm tools for GPU monitoring
     pkgs.rocmPackages.rocm-smi
     pkgs.rocmPackages.rocminfo
+    # AMD Ryzen AI NPU
+    pkgs.sebe.xrt
+    pkgs.sebe.xrt-plugin-amdxdna
+    pkgs.sebe.fastflowlm
   ]);
+
+  # XDNA driver needs to lock large DMA buffers for NPU communication
+  systemd.settings.Manager.DefaultLimitMEMLOCK = "infinity";
 
   # link zsh completions, so they are available globally TODO: same for fish/bash?
   environment.pathsToLink = [ "/share/zsh" ];

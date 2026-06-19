@@ -41,6 +41,8 @@ in
     wezterm = pkgFull ../../packages/wezterm;
     workspace-mcp = pkgFull ../../packages/workspace-mcp;
     xonsh = pkgFull ../../packages/xonsh;
+    xrt = pkgFull ../../packages/xrt;
+    xrt-plugin-amdxdna = pkgFull ../../packages/xrt-plugin-amdxdna;
     zsh-fzf-tab-patched = pkgFull ../../packages/zsh-fzf-tab-patched;
   };
 }

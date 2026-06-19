@@ -97,7 +97,10 @@
         "1password"
         "1password-cli"
         "1password-gui"
+        "castlabs-electron"
         "claude-code"
+        "xrt-plugin-amdxdna"
+        "fastflowlm"
       ];
 
       # Shared nixpkgs config (allowUnfree + ROCm for Linux)
