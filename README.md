@@ -58,6 +58,16 @@ TODO: document bios hack for unlocking secure boot key management
 ### enroll secureboot keys using sbctl
 
 TODO: document for future reference
+```shell
+nix shell nixpkgs#sbctl
+sudo sbctl create-keys
+
+# edit flake and enable secureboot module
+nh os switch -a . -- --accept-flake-config
+
+# enter secureboot setup mode
+sudo sbctl enroll-keys --append --firmware-builtin --microsoft
+```
 
 ### enroll tpm to auto unlock LUKS volume if secureboot checks out
 
