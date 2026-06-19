@@ -61,21 +61,19 @@ in
 
     programs.hyprland = {
       enable = true;
-      # TODO: withUWSM should use start-hyprland, not Hyprland directly
-      # waiting for upstream fix, using programs.uwsm directly instead
-      # withUWSM = true;
+      withUWSM = true;
       xwayland.enable = true;
       package = pkgs.unstable.hyprland;
       portalPackage = pkgs.unstable.xdg-desktop-portal-hyprland;
     };
 
-    programs.uwsm = {
-      enable = true;
-      waylandCompositors.hyprland = {
-        prettyName = "Hyprland";
-        comment = "Hyprland compositor managed by UWSM";
-        binPath = "${pkgs.unstable.hyprland}/bin/start-hyprland";
-      };
+    # Override the uwsm compositor entry to use start-hyprland
+    # The upstream module uses /run/current-system/sw/bin/Hyprland which
+    # triggers a warning from Hyprland about not using start-hyprland
+    programs.uwsm.waylandCompositors.hyprland = {
+      binPath = lib.mkForce "/run/current-system/sw/bin/start-hyprland";
+      prettyName = "Hyprland";
+      comment = "Hyprland compositor managed by UWSM";
     };
 
     programs.xwayland = {
@@ -83,8 +81,7 @@ in
       package = pkgs.unstable.xwayland;
     };
 
-    # needed by uwsm
-    services.dbus.implementation = "broker";
+
 
     # fix localctl xkb layout listing
     services.xserver.exportConfiguration = true;
