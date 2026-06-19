@@ -70,7 +70,7 @@ local sqruff = {formatCommand = "sqruff fix - || true", formatStdin = true}
 -- TODO: compose language server
 -- TODO: checkout dprint
 -- TODO: digestif
--- TODO: eslint, html, css, json
+-- TODO: html, css, json
 -- TODO: xml
 -- TODO: yaml
 -- TODO: latex
@@ -85,6 +85,12 @@ return {
             -- tsgo (TypeScript native Go port) for TS/JS files
             -- vtsls is restricted to Vue files only (see below)
             vim.lsp.enable("tsgo")
+            -- oxlint - only starts if project has oxlint configured
+            -- (e.g., .oxlintrc.json, or oxlint in package.json dependencies)
+            vim.lsp.enable("oxlint")
+            -- oxfmt - only starts if project has oxfmt configured
+            -- (e.g., .oxfmtrc.json, or oxfmt in package.json dependencies)
+            vim.lsp.enable("oxfmt")
         end,
         opts = {
             servers = {
@@ -101,8 +107,36 @@ return {
                     apex_enable_completion_statistics = false -- Disable telemetry
                 },
                 eslint = {settings = {codeActionOnSave = {enable = false}}},
+                oxlint = {
+                    settings = {
+                        typeAware = true, -- Enable type-aware linting when tsgolint available
+                    },
+                    on_attach = function(client, bufnr)
+                        -- LspOxlintFixAll command
+                        vim.api.nvim_buf_create_user_command(bufnr, 'LspOxlintFixAll', function()
+                            client:exec_cmd({
+                                title = 'Apply Oxlint automatic fixes',
+                                command = 'oxc.fixAll',
+                                arguments = { { uri = vim.uri_from_bufnr(bufnr) } },
+                            })
+                        end, { desc = 'Apply Oxlint automatic fixes' })
+
+                        -- Auto-fix on save
+                        vim.api.nvim_create_autocmd("BufWritePre", {
+                            buffer = bufnr,
+                            callback = function()
+                                client:exec_cmd({
+                                    title = 'Apply Oxlint automatic fixes',
+                                    command = 'oxc.fixAll',
+                                    arguments = { { uri = vim.uri_from_bufnr(bufnr) } },
+                                })
+                            end,
+                        })
+                    end,
+                },
                 jsonls = {init_options = {provideFormatter = false}},
                 tailwindcss = {},
+                oxfmt = {}, -- uses nvim-lspconfig defaults; only starts if project has oxfmt configured
                 efm = {
                     init_options = {
                         documentFormatting = true,
@@ -153,16 +187,25 @@ return {
                 }
             },
             setup = {
+                oxfmt = function()
+                    -- Register oxfmt as primary formatter with higher priority than efm
+                    -- oxfmt will be used when available, efm/prettierd as fallback
+                    local formatter = LazyVim.lsp.formatter({
+                        name = "oxfmt: lsp",
+                        primary = true,
+                        priority = 1000,
+                        filter = "oxfmt"
+                    })
+                    LazyVim.format.register(formatter)
+                end,
                 efm = function()
-                    -- register efm formatting and override eslint formatting (no FixAll on save)
+                    -- register efm formatting as fallback (lower priority than oxfmt)
                     local formatter = LazyVim.lsp.formatter({
                         name = "efm: lsp",
                         primary = true,
                         priority = 900,
                         filter = "efm"
                     })
-
-                    -- register the formatter with LazyVim
                     LazyVim.format.register(formatter)
                 end
             }
