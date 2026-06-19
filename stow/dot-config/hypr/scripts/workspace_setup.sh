@@ -2,17 +2,16 @@
 # Sets up the default workspace layout.
 # Already-running apps get moved immediately.
 # Missing apps are launched in parallel, then moved via socket2 event monitoring.
-# Temporary no_focus rules prevent apps from stealing focus during setup.
 
 SOCKET="$XDG_RUNTIME_DIR/hypr/$HYPRLAND_INSTANCE_SIGNATURE/.socket2.sock"
 
 # App definitions: class -> workspace, desktop_entry
-declare -A CLASS_TO_WS=([app.zen_browser.zen]=1 [foot]=2 [com.slack.Slack]=3 [com.mastermindzh.tidal-hifi]=4)
+declare -A CLASS_TO_WS=([app.zen_browser.zen]=1 [foot]=2 [com.slack.Slack]=3 [tidal-hifi]=4)
 declare -A CLASS_TO_DESKTOP=(
 	[app.zen_browser.zen]="app.zen_browser.zen.desktop"
 	[foot]="foot.desktop"
 	[com.slack.Slack]="com.slack.Slack.desktop"
-	[com.mastermindzh.tidal-hifi]="com.mastermindzh.tidal-hifi.desktop"
+	[tidal-hifi]="tidal-hifi.desktop"
 )
 
 # Track which classes still need a window to appear
@@ -24,20 +23,15 @@ for class in "${!CLASS_TO_WS[@]}"; do
 
 	if [[ -n "$address" ]]; then
 		# Already running — move immediately
-		hyprctl dispatch movetoworkspacesilent "$ws,address:$address"
+		hyprctl eval "hl.dispatch(hl.dsp.window.move({ workspace = $ws, address = '$address', silent = true }))"
 	else
 		# Mark as pending
 		PENDING[$class]="$ws"
 	fi
 done
 
-# If anything needs launching, set up temporary no_focus rules, launch, and listen
+# If anything needs launching, launch and listen for windows
 if [[ ${#PENDING[@]} -gt 0 ]]; then
-	# Suppress focus stealing during setup
-	for class in "${!PENDING[@]}"; do
-		hyprctl keyword "windowrule[ws-setup-$class] = match:class ^(${class//./\\.})$, no_focus on"
-	done
-
 	# Launch all pending apps
 	for class in "${!PENDING[@]}"; do
 		app2unit -s a -- "${CLASS_TO_DESKTOP[$class]}" &
@@ -50,10 +44,10 @@ if [[ ${#PENDING[@]} -gt 0 ]]; then
 			IFS=',' read -r addr _ws class _title <<<"$data"
 
 			if [[ -n "${PENDING[$class]}" ]]; then
-				hyprctl dispatch movetoworkspacesilent "${PENDING[$class]},address:0x$addr"
+				hyprctl eval "hl.dispatch(hl.dsp.window.move({ workspace = ${PENDING[$class]}, address = '0x$addr', silent = true }))"
 				unset 'PENDING[$class]'
 				if [[ ${#PENDING[@]} -le 0 ]]; then
-					hyprctl dispatch workspace 1
+					hyprctl eval 'hl.dispatch(hl.dsp.focus({ workspace = 1 }))'
 					break
 				fi
 			fi
@@ -67,12 +61,7 @@ if [[ ${#PENDING[@]} -gt 0 ]]; then
 
 	wait "$LISTENER_PID" 2>/dev/null
 	kill "$TIMEOUT_PID" 2>/dev/null
-
-	# Clean up temporary no_focus rules
-	for class in "${!CLASS_TO_WS[@]}"; do
-		hyprctl keyword "windowrule[ws-setup-$class]:enable false" 2>/dev/null
-	done
 fi
 
 # Ensure we're on workspace 1 (covers the case where all apps were already running)
-hyprctl dispatch workspace 1
+hyprctl eval 'hl.dispatch(hl.dsp.focus({ workspace = 1 }))'

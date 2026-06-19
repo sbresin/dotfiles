@@ -14,14 +14,14 @@ if [[ "$IS_FLOATING" == "true" && "$IS_PINNED" == "true" ]]; then
 	hyprctl setprop active no_blur -1
 	hyprctl setprop active no_shadow -1
 	hyprctl setprop active no_dim -1
-	hyprctl dispatch pin active
-	hyprctl dispatch togglefloating active
+	hyprctl eval 'hl.dispatch(hl.dsp.window.pin())'
+	hyprctl eval 'hl.dispatch(hl.dsp.window.float({ action = "toggle" }))'
 else
 	# Enter PiP mode: float, pin, clean styling, move to bottom-right
 	if [[ "$IS_FLOATING" != "true" ]]; then
-		hyprctl dispatch togglefloating active
+		hyprctl eval 'hl.dispatch(hl.dsp.window.float({ action = "toggle" }))'
 	fi
-	hyprctl dispatch pin active
+	hyprctl eval 'hl.dispatch(hl.dsp.window.pin())'
 	hyprctl setprop active bordersize 0
 	hyprctl setprop active no_blur 1
 	hyprctl setprop active no_shadow 1
@@ -39,6 +39,6 @@ else
 	POS_X=$((MON_W - WIN_W - MARGIN))
 	POS_Y=$((MON_H - WIN_H - MARGIN))
 
-	hyprctl dispatch resizewindowpixel exact "${WIN_W}" "${WIN_H}",activewindow
-	hyprctl dispatch movewindowpixel exact "${POS_X}" "${POS_Y}",activewindow
+	hyprctl eval "hl.dispatch(hl.dsp.window.resize({ exact = true, x = ${WIN_W}, y = ${WIN_H} }))"
+	hyprctl eval "hl.dispatch(hl.dsp.window.move_pixel({ exact = true, x = ${POS_X}, y = ${POS_Y} }))"
 fi

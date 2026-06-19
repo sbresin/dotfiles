@@ -214,7 +214,7 @@ windowrule = match:float false, match:workspace f[1]s[false], rounding 0
 
 # See https://wiki.hyprland.org/Configuring/Dwindle-Layout/ for more
 dwindle {
-    pseudotile = true # Master switch for pseudotiling. Enabling is bound to mainMod + P in the keybinds section below
+    # pseudotile = true # Master switch for pseudotiling. Enabling is bound to mainMod + P in the keybinds section below
     preserve_split = true # You probably want this
 }
 
@@ -294,7 +294,7 @@ bind = $mainMod SHIFT, V, exec, ~/.config/hypr/scripts/toggle_pip.sh # float + p
 bind = $mainMod, F, fullscreen,
 bind = $mainMod, R, exec, $menu
 bind = $mainMod, P, pseudo, # dwindle
-bind = $mainMod, O, togglesplit, # dwindle
+# bind = $mainMod, O, togglesplit, # dwindle
 bind = $mainMod, T, exec, ~/.config/hypr/scripts/toggle_transparency.sh
 bind = $mainMod Control, Space, exec, $emojiPicker
 
@@ -365,6 +365,9 @@ bindl = , XF86AudioPrev, exec, playerctl previous
 bindl = , code:163, exec, playerctl next
 bindl = , code:164, exec, playerctl play-pause
 bindl = , code:165, exec, playerctl previous
+
+# Debug: log timestamp when display freeze is observed
+bind = $mainMod SHIFT, F, exec, ~/.config/hypr/scripts/freeze_debug.sh
 
 # Screenshots
 bind = $mainMod, p, exec, hyprshot -m window

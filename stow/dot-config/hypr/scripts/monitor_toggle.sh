@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/run/current-system/sw/bin/bash
 
 # --- Configuration ---
 INTERNAL_MONITOR="eDP-1"
@@ -42,9 +42,9 @@ fi
 
 if [ "$TARGET" = "enable" ]; then
 	# Only apply if not already enabled (optional optimization, but hyprctl is fast)
-	hyprctl keyword monitor "$INTERNAL_MONITOR, preferred, auto, auto"
+	hyprctl eval "hl.monitor({ output = '$INTERNAL_MONITOR', mode = 'preferred', position = 'auto', scale = 'auto' })"
 	echo "Enabling Internal Monitor" # Debug
 else
-	hyprctl keyword monitor "$INTERNAL_MONITOR, disabled"
+	hyprctl eval "hl.monitor({ output = '$INTERNAL_MONITOR', disabled = true })"
 	echo "Disabling Internal Monitor" # Debug
 fi
