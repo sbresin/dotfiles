@@ -15,12 +15,12 @@
   };
 
   inputs = {
-    nixpkgs.url = "github:nixos/nixpkgs?ref=nixos-25.11";
+    nixpkgs.url = "github:nixos/nixpkgs?ref=nixos-26.05";
     nixpkgs-unstable.url = "github:nixos/nixpkgs?ref=nixos-unstable";
 
     # use home-manager
     home-manager = {
-      url = "github:nix-community/home-manager?ref=release-25.11";
+      url = "github:nix-community/home-manager?ref=release-26.05";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
@@ -32,7 +32,7 @@
     };
 
     # secureboot for nixOS
-    lanzaboote.url = "github:nix-community/lanzaboote/v0.4.3";
+    lanzaboote.url = "github:nix-community/lanzaboote/v1.0.0";
 
     # CachyOS kernel (BORE scheduler, cachyos perf patches, sched-ext)
     # replaces chaotic-cx/nyx which was archived Dec 2025
@@ -49,7 +49,7 @@
     nix-flatpak.url = "github:gmodena/nix-flatpak/?ref=latest";
 
     # nice little emoji picker
-    simplemoji.url = "github:SergioRibera/Simplemoji?ref=v1.2.3";
+    simplemoji.url = "github:SergioRibera/Simplemoji?ref=v1.2.4";
 
     # Qt6 theme engine for Hyprland (replaces qt6ct)
     hyprqt6engine = {
