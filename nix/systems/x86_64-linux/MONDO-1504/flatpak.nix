@@ -29,10 +29,11 @@
       "com.github.tchx84.Flatseal"
       # desktop apps
       "org.telegram.desktop"
-      # browsers
-      "org.mozilla.firefox"
-      "io.github.zen_browser.zen"
-      "io.github.ungoogled_software.ungoogled_chromium"
+    # browsers
+    "org.mozilla.firefox"
+    "io.github.zen_browser.zen"
+    "io.github.ungoogled_software.ungoogled_chromium"
+    "com.google.Chrome"
       # proprietary
       "com.slack.Slack"
     ];
