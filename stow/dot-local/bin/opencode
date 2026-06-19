@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+# Shadow the real opencode binary to ensure the TUI always exposes
+# its HTTP server on a discoverable port.
+#
+# Picks a random free port for TUI mode.  The session-state plugin
+# captures the actual URL via serverUrl and writes it to the runtime
+# state files so external tools can call the API.
+
+# Find the real opencode binary (skip this wrapper).
+real=$(type -ap opencode | grep -v "$0" | head -1)
+
+# Configure subprocess-friendly defaults for tools invoked by the agent.
+# SF_CONTENT_TYPE=JSON makes Salesforce CLI output JSON by default (no spinners/timers).
+# NO_COLOR=1 disables ANSI color codes in tool output.
+export SF_CONTENT_TYPE=JSON
+export NO_COLOR=1
+if [[ -z "$real" ]]; then
+  echo "opencode: real binary not found" >&2
+  exit 1
+fi
+
+# Subcommands that should NOT get --port injected.
+case "${1:-}" in
+  serve|session|debug|export|import|run|mcp|providers|auth|agent|upgrade|uninstall|models|stats|github|pr|plugin|plug|db|completion|acp|web)
+    exec "$real" "$@"
+    ;;
+  *)
+    # TUI mode (default, attach, or positional project path).
+    port=$(python3 -c "import socket; s=socket.socket(); s.bind(('',0)); print(s.getsockname()[1]); s.close()")
+    exec "$real" --port "$port" "$@"
+    ;;
+esac

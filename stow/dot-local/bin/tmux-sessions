@@ -3,7 +3,9 @@
 
 Queries tmux sessions and enriches each with:
   - Git branch for the session's working directory
-  - OpenCode status (idle, running, question, error) via runtime files
+  - OpenCode sessions grouped under their owning tmux session, with
+    live status (idle, running, question, error, done) and titles
+    from runtime state files written by the session-state plugin
   - Open GitHub PR for the current branch (via gh, cached with bkt)
 
 Subcommands:
@@ -21,7 +23,8 @@ import os
 import subprocess
 import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
@@ -62,6 +65,12 @@ class _Colours:
             return ""
         r, g, b = int(hex_colour[1:3], 16), int(hex_colour[3:5], 16), int(hex_colour[5:7], 16)
         return f"\033[38;2;{r};{g};{b}m"
+
+    def _bg(self, hex_colour: str) -> str:
+        if not self._on:
+            return ""
+        r, g, b = int(hex_colour[1:3], 16), int(hex_colour[3:5], 16), int(hex_colour[5:7], 16)
+        return f"\033[48;2;{r};{g};{b}m"
 
     @property
     def reset(self) -> str:
@@ -111,6 +120,15 @@ class _Colours:
     def subtle(self) -> str:
         return self._fg("#908caa")
 
+    # Background colors
+    @property
+    def bg_base(self) -> str:
+        return self._bg("#191724")
+
+    @property
+    def bg_overlay(self) -> str:
+        return self._bg("#26233a")
+
 
 # ── Data types ───────────────────────────────────────────────────────
 
@@ -131,6 +149,7 @@ class SessionInfo:
     opencode_state: Optional[str]  # "error" | "question" | "running" | "idle"
     last_activity: int
     pr: Optional[PRInfo]
+    opencode_sessions: list[OpenCodeRuntimeState] = field(default_factory=list)
 
 
 @dataclass
@@ -140,6 +159,9 @@ class OpenCodeRuntimeState:
     worktree: str
     state: str
     updated_at: int
+    title: str = ""
+    time_updated: int = 0
+    server_url: str = ""
 
 
 def _prefer_runtime_state(candidate: OpenCodeRuntimeState, current: OpenCodeRuntimeState) -> bool:
@@ -292,6 +314,10 @@ def _load_opencode_runtime_states() -> list[OpenCodeRuntimeState]:
             if not isinstance(updated_at, int):
                 continue
 
+            title = data.get("title", "")
+            time_updated = data.get("time_updated", updated_at)
+            server_url = data.get("server_url", "")
+
             states.append(
                 OpenCodeRuntimeState(
                     session_id=session_id,
@@ -299,6 +325,9 @@ def _load_opencode_runtime_states() -> list[OpenCodeRuntimeState]:
                     worktree=_canonical_path(worktree),
                     state=state,
                     updated_at=updated_at,
+                    title=title if isinstance(title, str) else "",
+                    time_updated=time_updated if isinstance(time_updated, int) else updated_at,
+                    server_url=server_url if isinstance(server_url, str) else "",
                 )
             )
         except (OSError, UnicodeDecodeError, json.JSONDecodeError, TypeError, ValueError):
@@ -307,29 +336,407 @@ def _load_opencode_runtime_states() -> list[OpenCodeRuntimeState]:
     return states
 
 
-def opencode_states(directories: list[str]) -> dict[str, str]:
-    """Load OpenCode runtime state, keyed by tmux session directory or git root."""
-    if not directories:
+def _today_cutoff_ms() -> int:
+    """Midnight local time today, as milliseconds since epoch."""
+    return int(datetime.today().replace(hour=0, minute=0, second=0, microsecond=0).timestamp() * 1000)
+
+
+def opencode_sessions_by_worktree() -> dict[str, list[OpenCodeRuntimeState]]:
+    """Load all OpenCode runtime states and group by canonical worktree path.
+
+    Only includes sessions that are non-idle or were last active today.
+    Sessions within each group are sorted: non-idle first (by severity),
+    then by time_updated descending.
+    """
+    all_states = _load_opencode_runtime_states()
+    if not all_states:
         return {}
 
-    runtime_states = _load_opencode_runtime_states()
-    if not runtime_states:
-        return {}
+    cutoff = _today_cutoff_ms()
 
-    latest_by_path: dict[str, OpenCodeRuntimeState] = {}
-    for state in runtime_states:
-        for key in {state.directory, state.worktree}:
-            current = latest_by_path.get(key)
-            if current is None or _prefer_runtime_state(state, current):
-                latest_by_path[key] = state
+    # Deduplicate by session_id (keep the one with the best state)
+    by_id: dict[str, OpenCodeRuntimeState] = {}
+    for s in all_states:
+        existing = by_id.get(s.session_id)
+        if existing is None or _prefer_runtime_state(s, existing):
+            by_id[s.session_id] = s
 
-    results: dict[str, str] = {}
-    for directory in directories:
-        match = latest_by_path.get(_canonical_path(directory))
-        if match is not None:
-            results[directory] = match.state
+    # Filter: non-idle, or idle but updated today
+    filtered = [
+        s for s in by_id.values()
+        if s.state != "idle" or s.time_updated >= cutoff
+    ]
 
-    return results
+    # Group by worktree
+    grouped: dict[str, list[OpenCodeRuntimeState]] = {}
+    for s in filtered:
+        grouped.setdefault(s.worktree, []).append(s)
+
+    # Sort within each group
+    for sessions in grouped.values():
+        sessions.sort(key=lambda s: (
+            -OC_PRIORITY.get(s.state, -1),
+            -s.time_updated,
+        ))
+
+    return grouped
+
+
+def _load_session_state(session_id: str) -> Optional[dict]:
+    """Load runtime state file for a session."""
+    state_path = OPENCODE_STATE_DIR / f"{session_id}.json"
+    try:
+        return json.loads(state_path.read_text())
+    except (OSError, json.JSONDecodeError):
+        return None
+
+
+# ── OpenCode API helpers ─────────────────────────────────────────────
+
+def _api_get(server_url: str, path: str, timeout: float = 2.0) -> Optional[dict | list]:
+    """Make a GET request to the opencode API."""
+    from urllib.request import Request, urlopen
+    from urllib.error import URLError
+
+    url = f"{server_url.rstrip('/')}{path}"
+    try:
+        req = Request(url, headers={"Accept": "application/json"})
+        with urlopen(req, timeout=timeout) as resp:
+            if resp.status == 200:
+                return json.loads(resp.read().decode())
+    except (URLError, OSError, json.JSONDecodeError, ValueError):
+        pass
+    return None
+
+
+def _fetch_session_info(server_url: str, session_id: str) -> Optional[dict]:
+    """Fetch session details from the opencode API."""
+    return _api_get(server_url, f"/session/{session_id}")
+
+
+def _fetch_session_messages(server_url: str, session_id: str, limit: int = 10) -> list[dict]:
+    """Fetch recent messages for a session."""
+    result = _api_get(server_url, f"/session/{session_id}/message?limit={limit}")
+    return result if isinstance(result, list) else []
+
+
+def _fetch_session_status(server_url: str, session_id: str) -> str:
+    """Fetch current session status (idle/busy/retry)."""
+    result = _api_get(server_url, "/session/status")
+    if isinstance(result, dict) and session_id in result:
+        status = result[session_id]
+        if isinstance(status, dict):
+            return status.get("type", "idle")
+    return "idle"
+
+
+# ── Preview rendering ────────────────────────────────────────────────
+
+def _visible_len(s: str) -> int:
+    """Return visible length of string, ignoring ANSI escape codes."""
+    import re
+    return len(re.sub(r'\x1b\[[0-9;]*m', '', s))
+
+
+def _wrap_text(text: str, width: int, indent: int = 0) -> list[str]:
+    """Word-wrap text to fit within width, preserving line breaks."""
+    import textwrap
+
+    if not text:
+        return []
+
+    wrapper = textwrap.TextWrapper(
+        width=max(width - indent, 20),
+        initial_indent=" " * indent,
+        subsequent_indent=" " * indent,
+        break_long_words=True,
+        break_on_hyphens=False,
+    )
+
+    # Split by newlines, wrap each paragraph, preserve empty lines
+    lines: list[str] = []
+    for paragraph in text.split("\n"):
+        paragraph = paragraph.strip()
+        if not paragraph:
+            lines.append(" " * indent)  # Preserve empty line with indent
+        else:
+            lines.extend(wrapper.wrap(paragraph))
+
+    return lines
+
+
+def _extract_tool_input(tool: str, state: dict) -> str:
+    """Extract the key input parameter for a tool call."""
+    inp = state.get("input", {})
+    if not isinstance(inp, dict):
+        return ""
+
+    # Shorten paths by removing home prefix
+    def shorten_path(p: str) -> str:
+        home = os.path.expanduser("~")
+        if p.startswith(home):
+            return "~" + p[len(home):]
+        # Also try /home/user pattern
+        if p.startswith("/home/"):
+            parts = p.split("/", 3)
+            if len(parts) >= 4:
+                return "~/" + parts[3]
+        return p
+
+    def truncate(s: str, max_len: int = 50) -> str:
+        s = s.replace("\n", " ").strip()
+        if len(s) > max_len:
+            return s[:max_len - 3] + "..."
+        return s
+
+    # Tool-specific input extraction
+    tool_lower = tool.lower()
+
+    if tool_lower in ("read", "edit", "write"):
+        path = inp.get("filePath", inp.get("path", ""))
+        return shorten_path(path) if path else ""
+
+    if tool_lower in ("glob", "grep"):
+        pattern = inp.get("pattern", "")
+        path = inp.get("path", "")
+        if pattern and path:
+            return f"{pattern} in {shorten_path(path)}"
+        return pattern or shorten_path(path)
+
+    if tool_lower == "bash":
+        cmd = inp.get("command", "")
+        return truncate(cmd, 50)
+
+    if tool_lower == "task":
+        desc = inp.get("description", "")
+        if desc:
+            return truncate(desc, 50)
+        prompt = inp.get("prompt", "")
+        return truncate(prompt, 50)
+
+    if tool_lower == "todowrite":
+        todos = inp.get("todos", [])
+        if isinstance(todos, list):
+            return f"{len(todos)} items"
+        return ""
+
+    if tool_lower == "question":
+        questions = inp.get("questions", [])
+        if isinstance(questions, list) and questions:
+            first = questions[0]
+            if isinstance(first, dict):
+                return truncate(first.get("question", first.get("header", "")), 50)
+        return ""
+
+    # Fallback: try common field names
+    for key in ("filePath", "path", "command", "query", "url", "description", "name"):
+        if key in inp:
+            val = inp[key]
+            if isinstance(val, str) and val:
+                return truncate(shorten_path(val) if "path" in key.lower() else val, 50)
+
+    return ""
+
+
+def _render_tool_part(part: dict, c: _Colours) -> Optional[str]:
+    """Render a tool call as a single line: icon + tool name + input.
+
+    Examples:
+      '▶ Read ~/workspace/dotfiles/stow/...'     (completed)
+      '● Task Find opencode API docs'            (running)
+      '○ Bash'                                   (pending)
+      '✗ Bash curl -s http://...'                (error)
+    """
+    if part.get("type") != "tool":
+        return None
+
+    tool = part.get("tool", "unknown")
+    state = part.get("state", {})
+    status = state.get("status", "pending")
+
+    # Icon and color based on status
+    if status == "completed":
+        icon = "▶"
+        colour = c.muted
+    elif status == "running":
+        icon = "●"
+        colour = c.foam
+    elif status == "error":
+        icon = "✗"
+        colour = c.love
+    else:  # pending
+        icon = "○"
+        colour = c.muted
+
+    # Format tool name (capitalize first letter)
+    tool_name = tool[0].upper() + tool[1:] if tool else "Tool"
+
+    # Extract input
+    tool_input = _extract_tool_input(tool, state)
+
+    # Build the line (no leading indent or trailing reset - handled by _render_message)
+    if tool_input:
+        return f"{colour}{icon} {tool_name} {tool_input}"
+    else:
+        return f"{colour}{icon} {tool_name}"
+
+
+def _render_message(msg: dict, c: _Colours, width: int) -> list[str]:
+    """Render a message matching opencode TUI styling.
+
+    User messages: iris border ┃, overlay background, 1 cell padding
+                   Box width adapts to content (like opencode)
+    Assistant messages: no border, indented to align
+    """
+    lines: list[str] = []
+    info = msg.get("info", {})
+    parts = msg.get("parts", [])
+    role = info.get("role", "unknown")
+    is_user = role == "user"
+
+    # Collect content lines first (without trailing resets for user messages)
+    content_lines: list[str] = []
+    for part in parts:
+        part_type = part.get("type", "")
+
+        if part_type == "text":
+            text = part.get("text", "")
+            if text:
+                # Width minus border/padding: "┃ " + content + " " = 3 chars overhead
+                wrapped = _wrap_text(text, width - 4, indent=0)
+                for line in wrapped[:15]:  # Limit text lines per part
+                    content_lines.append(line)
+                if len(wrapped) > 15:
+                    content_lines.append(f"{c.muted}... ({len(wrapped) - 15} more lines)")
+
+        elif part_type == "tool":
+            tool_line = _render_tool_part(part, c)
+            if tool_line:
+                content_lines.append(tool_line)
+
+        # Skip step-start, step-finish, and other meta parts
+
+    if not content_lines:
+        return []
+
+    # Format lines with appropriate styling
+    if is_user:
+        # Box fills available width (width - 1 for the border character ┃)
+        box_interior_width = width - 1
+
+        # Top padding line: ┃ + spaces filling the box
+        lines.append(f"{c.iris}┃{c.bg_overlay}{' ' * box_interior_width}{c.reset}")
+
+        # Content lines: ┃ + space + content + padding to fill remaining width
+        for content in content_lines:
+            visible = _visible_len(content)
+            # -2 for the padding spaces on left and right
+            right_pad = max(0, box_interior_width - visible - 2)
+            lines.append(f"{c.iris}┃{c.bg_overlay} {c.text}{content}{' ' * right_pad} {c.reset}")
+
+        # Bottom padding line
+        lines.append(f"{c.iris}┃{c.bg_overlay}{' ' * box_interior_width}{c.reset}")
+    else:
+        # Assistant: no border, just indented with reset after each line
+        for content in content_lines:
+            lines.append(f"  {c.text}{content}{c.reset}")
+
+    return lines
+
+
+def _render_header(
+    title: str,
+    directory: str,
+    status: str,
+    runtime_state: str,
+    c: _Colours,
+    width: int,
+) -> list[str]:
+    """Render the session header box."""
+    # Use runtime state for display (more granular than API status)
+    display_state = runtime_state if runtime_state else status
+
+    # State color
+    state_colours = {
+        "idle": c.muted,
+        "running": c.foam,
+        "busy": c.foam,
+        "question": c.gold,
+        "error": c.love,
+        "done": c.rose,
+        "retry": c.gold,
+    }
+    state_colour = state_colours.get(display_state, c.muted)
+
+    # Shorten directory (replace home with ~)
+    home = os.path.expanduser("~")
+    if directory.startswith(home):
+        directory = "~" + directory[len(home):]
+
+    # Build header lines
+    inner_width = width - 4  # Account for box borders
+
+    # Truncate title if needed
+    if len(title) > inner_width - 2:
+        title = title[:inner_width - 5] + "..."
+
+    # Top border with title
+    top_border = f"╭─ {title} " + "─" * max(0, inner_width - len(title) - 3) + "╮"
+
+    # Info line: directory • status
+    info_content = f"{directory} • {display_state}"
+    padding = inner_width - len(info_content)
+    info_line = f"│ {info_content}" + " " * max(0, padding) + " │"
+
+    # Bottom border
+    bottom_border = "╰" + "─" * inner_width + "╯"
+
+    return [
+        f"{c.muted}{top_border}{c.reset}",
+        f"{c.muted}│ {c.subtle}{directory}{c.muted} • {state_colour}{display_state}{c.muted}" + " " * max(0, padding) + f" │{c.reset}",
+        f"{c.muted}{bottom_border}{c.reset}",
+    ]
+
+
+def _render_session_preview(
+    session_info: dict,
+    messages: list[dict],
+    api_status: str,
+    runtime_state: str,
+    c: _Colours,
+    width: int,
+    height: int,
+) -> str:
+    """Render complete preview for fzf, fitting within height lines."""
+    lines: list[str] = []
+
+    # Header (3 lines)
+    title = session_info.get("title", "Untitled session")
+    directory = session_info.get("directory", "")
+    header_lines = _render_header(title, directory, api_status, runtime_state, c, width)
+    lines.extend(header_lines)
+    lines.append("")  # Blank line after header
+
+    # Available space for messages
+    available = height - len(lines) - 1  # Reserve 1 line for potential truncation notice
+
+    # Render messages (already in chronological order, oldest first)
+    message_lines: list[str] = []
+    for msg in messages:
+        msg_rendered = _render_message(msg, c, width)
+        message_lines.extend(msg_rendered)
+        message_lines.append("")  # Blank line between messages
+
+    # If messages overflow, keep the newest (at the end)
+    if len(message_lines) > available:
+        # Calculate how many messages we need to skip
+        skipped_lines = len(message_lines) - available + 1
+        truncation_notice = f"{c.muted}... earlier messages truncated ...{c.reset}"
+        message_lines = [truncation_notice, ""] + message_lines[-(available - 2):]
+
+    lines.extend(message_lines)
+
+    return "\n".join(lines)
 
 
 def _dismiss_done_session(state: OpenCodeRuntimeState) -> None:
@@ -341,12 +748,15 @@ def _dismiss_done_session(state: OpenCodeRuntimeState) -> None:
 
         # Rewrite the state file directly for immediate effect
         idle_data = json.dumps({
-            "version": 1,
+            "version": 2,
             "session_id": state.session_id,
             "directory": state.directory,
             "worktree": state.worktree,
             "state": "idle",
+            "title": state.title,
+            "time_updated": state.time_updated,
             "updated_at": state.updated_at,
+            "server_url": state.server_url,
         })
         state_path = OPENCODE_STATE_DIR / f"{state.session_id}.json"
         state_path.write_text(idle_data + "\n")
@@ -373,6 +783,39 @@ def _dismiss_done_for_tmux_session(session_name: str) -> None:
             continue
         if _canonical_path(state.directory) == lookup_dir or _canonical_path(state.worktree) == lookup_dir:
             _dismiss_done_session(state)
+
+
+def _select_opencode_session(session_id: str) -> bool:
+    """Tell the opencode TUI to switch to the given session via its HTTP API.
+
+    Looks up the server_url from the session's runtime state file and
+    POSTs a tui.session.select event.  Returns True if successful.
+    """
+    from urllib.request import Request, urlopen
+    from urllib.error import URLError
+
+    state_path = OPENCODE_STATE_DIR / f"{session_id}.json"
+    try:
+        data = json.loads(state_path.read_text())
+        server_url = data.get("server_url", "")
+    except (OSError, json.JSONDecodeError):
+        return False
+
+    if not server_url:
+        return False
+
+    url = f"{server_url.rstrip('/')}/tui/publish"
+    payload = json.dumps({
+        "type": "tui.session.select",
+        "properties": {"sessionID": session_id},
+    }).encode()
+
+    try:
+        req = Request(url, data=payload, headers={"Content-Type": "application/json"})
+        with urlopen(req, timeout=2) as resp:
+            return resp.status == 200
+    except (URLError, OSError, ValueError):
+        return False
 
 
 # ── GitHub PR lookup ─────────────────────────────────────────────────
@@ -418,6 +861,16 @@ def fetch_pr(directory: str, branch: str) -> Optional[PRInfo]:
 
 # ── Session enrichment ───────────────────────────────────────────────
 
+def _worst_state(sessions: list[OpenCodeRuntimeState]) -> Optional[str]:
+    """Return the highest-severity state from a list of sessions."""
+    if not sessions:
+        return None
+    return max(
+        (s.state for s in sessions),
+        key=lambda st: OC_PRIORITY.get(st, -1),
+    )
+
+
 def enrich_sessions(
     tmux_sessions: list[TmuxSession],
     include_pr: bool = False,
@@ -425,7 +878,6 @@ def enrich_sessions(
     """Enrich tmux sessions with git, opencode, and PR info."""
     # Step 1: Determine directories, branches, and opencode presence
     enriched: list[dict] = []
-    oc_dirs: list[str] = []
 
     for ts in tmux_sessions:
         cwd = session_cwd(ts.path, ts.windows)
@@ -442,11 +894,8 @@ def enrich_sessions(
         }
         enriched.append(info)
 
-        if has_oc:
-            oc_dirs.append(gi.root if gi else cwd)
-
-    # Step 2: Query runtime state files written by the OpenCode plugin
-    oc_states = opencode_states(oc_dirs)
+    # Step 2: Load OpenCode sessions grouped by worktree
+    oc_by_worktree = opencode_sessions_by_worktree()
 
     # Step 3: Fetch PRs in parallel (only for list mode)
     pr_results: dict[str, Optional[PRInfo]] = {}
@@ -472,7 +921,8 @@ def enrich_sessions(
     # Step 4: Build final SessionInfo objects
     result: list[SessionInfo] = []
     for info in enriched:
-        oc_key = info["git_root"] or info["directory"]
+        oc_key = _canonical_path(info["git_root"] or info["directory"])
+        oc_sessions = oc_by_worktree.get(oc_key, [])
 
         result.append(
             SessionInfo(
@@ -480,64 +930,35 @@ def enrich_sessions(
                 directory=info["directory"],
                 branch=info["branch"],
                 has_opencode=info["has_opencode"],
-                opencode_state=oc_states.get(oc_key) if info["has_opencode"] else None,
+                opencode_state=_worst_state(oc_sessions) if info["has_opencode"] else None,
                 last_activity=info["last_activity"],
                 pr=pr_results.get(info["name"]),
+                opencode_sessions=oc_sessions if info["has_opencode"] else [],
             )
         )
 
     return result
 
 
-# ── Formatting: list mode ────────────────────────────────────────────
+# ── Formatting helpers ────────────────────────────────────────────────
 
-def format_list(sessions: list[SessionInfo], c: _Colours) -> str:
-    """Format sessions as ANSI-coloured lines for fzf.
+def _format_time(epoch_ms: int) -> str:
+    """Format a millisecond timestamp for display.
 
-    Sessions are sorted by opencode severity (error > question > running >
-    idle > not running) so the ones needing attention appear first.
+    Today:      '14:40'
+    This week:  'Mon 14:29'
+    Older:      '16 Apr'
     """
-    if not sessions:
+    if epoch_ms <= 0:
         return ""
-
-    # Sort: highest opencode severity first, then most recent, then alphabetical
-    sessions = sorted(
-        sessions,
-        key=lambda s: (
-            -OC_PRIORITY.get(s.opencode_state or "", -1) if s.has_opencode else 10,
-            -s.last_activity,
-            s.name,
-        ),
-    )
-
-    # Calculate column widths
-    max_name = max(len(s.name) for s in sessions)
-    max_branch = max(len(s.branch or "—") for s in sessions)
-
-    lines: list[str] = []
-    for s in sessions:
-        oc_col = _format_oc_state(s.opencode_state, s.has_opencode, c)
-        name_col = f"{c.text}{s.name:<{max_name}}{c.reset}"
-
-        branch_str = s.branch or "—"
-        if s.branch:
-            branch_col = f"{c.iris}{branch_str:<{max_branch}}{c.reset}"
-        else:
-            branch_col = f"{c.muted}{branch_str:<{max_branch}}{c.reset}"
-
-        # PR info
-        pr_col = ""
-        if s.pr:
-            draft = f"{c.muted}draft " if s.pr.is_draft else ""
-            title = s.pr.title
-            if len(title) > 40:
-                title = title[:37] + "..."
-            pr_col = f"  {draft}{c.foam}#{s.pr.number} {c.subtle}{title}{c.reset}"
-
-        line = f" {oc_col}\t{name_col}  {branch_col}{pr_col}"
-        lines.append(line)
-
-    return "\n".join(lines)
+    dt = datetime.fromtimestamp(epoch_ms / 1000)
+    now = datetime.now()
+    if dt.date() == now.date():
+        return dt.strftime("%H:%M")
+    delta = (now.date() - dt.date()).days
+    if delta < 7:
+        return dt.strftime("%a %H:%M")
+    return dt.strftime("%-d %b")
 
 
 def _format_oc_state(
@@ -563,6 +984,118 @@ def _format_oc_state(
         return f"{c.foam}{OC_ICON} .. {c.reset}"
     # idle or unknown
     return f"{c.muted}{OC_ICON}    {c.reset}"
+
+
+def _format_session_oc_state(state: str, c: _Colours) -> str:
+    """Format an individual session's state as a coloured icon (4 cols)."""
+    if state == "error":
+        return f"{c.love}{OC_ICON} !{c.reset}"
+    if state == "question":
+        return f"{c.gold}{OC_ICON} ?{c.reset}"
+    if state == "done":
+        return f"{c.rose}{OC_ICON} ✓{c.reset}"
+    if state == "running":
+        return f"{c.foam}{OC_ICON} ·{c.reset}"
+    # idle
+    return f"{c.muted}{OC_ICON}  {c.reset}"
+
+
+# ── Formatting: list mode ────────────────────────────────────────────
+
+def format_list(sessions: list[SessionInfo], c: _Colours) -> str:
+    """Format sessions as ANSI-coloured lines for fzf.
+
+    Output is grouped: each tmux session is a header line, with OpenCode
+    sessions listed underneath.  Both header and session lines are
+    selectable in fzf; both encode the tmux session name in the same
+    tab-delimited position so _extract_session_name() works for either.
+
+    Sessions are sorted by opencode severity (error > question > running >
+    idle > not running) so the ones needing attention appear first.
+    """
+    if not sessions:
+        return ""
+
+    # Sort groups: highest opencode severity first, then most recent, then alphabetical
+    sessions = sorted(
+        sessions,
+        key=lambda s: (
+            -OC_PRIORITY.get(s.opencode_state or "", -1) if s.has_opencode else 10,
+            -s.last_activity,
+            s.name,
+        ),
+    )
+
+    # Calculate column widths across all header lines
+    max_name = max(len(s.name) for s in sessions)
+    max_branch = max(len(s.branch or "—") for s in sessions)
+
+    # Calculate title width for session detail lines
+    all_titles: list[str] = []
+    for s in sessions:
+        for oc in s.opencode_sessions:
+            title = oc.title or oc.session_id[:16]
+            if len(title) > 50:
+                title = title[:47] + "..."
+            all_titles.append(title)
+    max_title = max((len(t) for t in all_titles), default=0)
+
+    lines: list[str] = []
+    for s in sessions:
+        # ── Header line (tmux session) ──
+        oc_col = _format_oc_state(s.opencode_state, s.has_opencode, c)
+        name_col = f"{c.text}{s.name:<{max_name}}{c.reset}"
+
+        branch_str = s.branch or "—"
+        if s.branch:
+            branch_col = f"{c.iris}{branch_str:<{max_branch}}{c.reset}"
+        else:
+            branch_col = f"{c.muted}{branch_str:<{max_branch}}{c.reset}"
+
+        pr_col = ""
+        if s.pr:
+            draft = f"{c.muted}draft " if s.pr.is_draft else ""
+            title = s.pr.title
+            if len(title) > 40:
+                title = title[:37] + "..."
+            pr_col = f"  {draft}{c.foam}#{s.pr.number} {c.subtle}{title}{c.reset}"
+
+        header = f" {oc_col}\t{name_col}  {branch_col}{pr_col}"
+        lines.append(header)
+
+        # ── Session detail lines (OpenCode sessions under this tmux session) ──
+        if not s.opencode_sessions:
+            continue
+
+        for i, oc in enumerate(s.opencode_sessions):
+            # fzf renders bottom-to-top: last emitted session appears at
+            # the visual top of the group, so it gets ┌.  All others get ├.
+            tree = "┌" if i == len(s.opencode_sessions) - 1 else "├"
+
+            oc_icon = _format_session_oc_state(oc.state, c)
+
+            title = oc.title or oc.session_id[:16]
+            if len(title) > 50:
+                title = title[:47] + "..."
+
+            time_str = _format_time(oc.time_updated)
+
+            # Colour the title: non-idle gets text colour, idle gets muted
+            if oc.state != "idle":
+                title_col = f"{c.text}{title:<{max_title}}{c.reset}"
+            else:
+                title_col = f"{c.muted}{title:<{max_title}}{c.reset}"
+
+            time_col = f"{c.subtle}{time_str}{c.reset}" if time_str else ""
+
+            # Tab-delimited fields:
+            #   {1} tree/icon prefix
+            #   {2} tmux session name (for switch command)
+            #   {3} session ID (for session select, hidden via dim)
+            detail = f" {c.muted}{tree}{c.reset} {oc_icon}\t{c.dim}{s.name:<{max_name}}{c.reset}  {title_col}  {time_col}\t{c.dim}{oc.session_id}{c.reset}"
+            lines.append(detail)
+
+    return "\n".join(lines)
 
 
 # ── Formatting: indicator mode ───────────────────────────────────────
@@ -631,7 +1164,7 @@ def cmd_indicator(args: argparse.Namespace) -> None:
 
 
 def _extract_session_name(raw: str) -> str:
-    """Extract the session name from a raw fzf selection line.
+    """Extract the tmux session name from a raw fzf selection line.
 
     Lines use a tab delimiter between the opencode status column and the
     session info.  Takes the first word from the second tab-delimited field,
@@ -644,6 +1177,24 @@ def _extract_session_name(raw: str) -> str:
     field = parts[1] if len(parts) >= 2 else parts[0]
     field = field.strip()
     return field.split()[0] if field else ""
+
+
+def _extract_opencode_session_id(raw: str) -> Optional[str]:
+    """Extract the OpenCode session ID from a session detail line.
+
+    Session detail lines have a third tab-delimited field containing the
+    session ID (e.g. ses_xxx).  Header lines have no third field.
+    Returns None if the line is a header line or has no session ID.
+    """
+    import re
+
+    clean = re.sub(r"\x1b\[[0-9;]*m", "", raw)
+    parts = clean.split("\t")
+    if len(parts) >= 3:
+        sid = parts[2].strip()
+        if sid.startswith("ses_"):
+            return sid
+    return None
 
 
 def _find_opencode_window(session_name: str) -> Optional[str]:
@@ -671,10 +1222,20 @@ def _find_opencode_window(session_name: str) -> Optional[str]:
 
 
 def cmd_switch(args: argparse.Namespace) -> None:
-    """Switch to the opencode window in the given tmux session."""
+    """Switch to the opencode window in the given tmux session.
+
+    If the selected line is a session detail line (has a session ID in
+    the third tab field), also tell the opencode TUI to navigate to
+    that specific session via its HTTP API.
+    """
     session_name = _extract_session_name(args.session)
     if not session_name:
         return
+
+    # If a specific opencode session was selected, switch to it in the TUI
+    oc_session_id = _extract_opencode_session_id(args.session)
+    if oc_session_id:
+        _select_opencode_session(oc_session_id)
 
     window = _find_opencode_window(session_name)
     if window:
@@ -701,44 +1262,90 @@ def cmd_dismiss(args: argparse.Namespace) -> None:
     _dismiss_done_for_tmux_session(session_name)
 
 
-def cmd_preview(args: argparse.Namespace) -> None:
-    """Capture the bottom of the opencode pane for fzf preview.
+def cmd_select(args: argparse.Namespace) -> None:
+    """Switch the opencode TUI to a specific session (no tmux switch)."""
+    oc_session_id = _extract_opencode_session_id(args.session)
+    if oc_session_id:
+        _select_opencode_session(oc_session_id)
 
-    Uses $FZF_PREVIEW_LINES (set by fzf in the preview subprocess) to
-    grab only the bottom N lines of the pane, showing the status area,
-    input box, and any pending question.
+
+def cmd_preview(args: argparse.Namespace) -> None:
+    """Render session content via API for fzf preview.
+
+    Fetches session info and recent messages from the opencode HTTP API
+    and renders them with ANSI colors.  Does not switch the TUI view.
     """
     session_name = _extract_session_name(args.session)
-    if not session_name:
+    oc_session_id = _extract_opencode_session_id(args.session)
+
+    if not oc_session_id:
+        # Header line selected - show tmux pane snapshot
+        if not session_name:
+            return
+
+        # Try opencode window first, fall back to current window
+        window = _find_opencode_window(session_name)
+        if window:
+            target = f"{session_name}:{window}"
+        else:
+            target = session_name
+
+        # Get pane height to calculate the start line for bottom capture
+        height_result = subprocess.run(
+            ["tmux", "display-message", "-t", target, "-p", "#{pane_height}"],
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+        pane_height = int(height_result.stdout.strip()) if height_result.returncode == 0 else 80
+
+        preview_lines = int(os.environ.get("FZF_PREVIEW_LINES", "40"))
+        start_line = max(0, pane_height - preview_lines)
+
+        result = subprocess.run(
+            ["tmux", "capture-pane", "-e", "-p", "-t", target, "-S", str(start_line)],
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+        if result.returncode == 0:
+            print(result.stdout, end="")
         return
 
-    window = _find_opencode_window(session_name)
-    if not window:
-        print(f"No opencode window in session '{session_name}'")
+    # Load runtime state to get server_url
+    state = _load_session_state(oc_session_id)
+    if not state:
+        print(f"Session state not found")
         return
 
-    target = f"{session_name}:{window}"
+    server_url = state.get("server_url", "")
+    if not server_url:
+        print(f"No server URL for session")
+        return
 
-    # Get pane height to calculate the start line for bottom capture
-    height_result = subprocess.run(
-        ["tmux", "display-message", "-t", target, "-p", "#{pane_height}"],
-        capture_output=True,
-        text=True,
-        timeout=5,
+    # Fetch from API
+    session_info = _fetch_session_info(server_url, oc_session_id)
+    if not session_info:
+        print("Could not connect to opencode server")
+        return
+
+    messages = _fetch_session_messages(server_url, oc_session_id, limit=20)
+    api_status = _fetch_session_status(server_url, oc_session_id)
+
+    # API returns messages in chronological order (oldest first),
+    # which is what we want (newest at bottom when rendered top-to-bottom)
+
+    # Get dimensions from fzf environment
+    width = int(os.environ.get("FZF_PREVIEW_COLUMNS", "80"))
+    height = int(os.environ.get("FZF_PREVIEW_LINES", "40"))
+
+    c = _Colours(enabled=True)
+    runtime_state = state.get("state", "idle")
+
+    output = _render_session_preview(
+        session_info, messages, api_status, runtime_state, c, width, height
     )
-    pane_height = int(height_result.stdout.strip()) if height_result.returncode == 0 else 80
-
-    preview_lines = int(os.environ.get("FZF_PREVIEW_LINES", "40"))
-    start_line = max(0, pane_height - preview_lines)
-
-    result = subprocess.run(
-        ["tmux", "capture-pane", "-e", "-p", "-t", target, "-S", str(start_line)],
-        capture_output=True,
-        text=True,
-        timeout=5,
-    )
-    if result.returncode == 0:
-        print(result.stdout, end="")
+    print(output, end="")
 
 
 # ── Main ─────────────────────────────────────────────────────────────
@@ -775,6 +1382,9 @@ def main() -> None:
     dismiss_parser = sub.add_parser("dismiss", help="Dismiss done state from fzf picker")
     dismiss_parser.add_argument("session", help="Raw fzf line or session name")
 
+    select_parser = sub.add_parser("select", help="Switch opencode TUI to a session")
+    select_parser.add_argument("session", help="Raw fzf line containing session ID")
+
     args = parser.parse_args()
 
     if args.command == "list":
@@ -789,6 +1399,8 @@ def main() -> None:
         cmd_seen(args)
     elif args.command == "dismiss":
         cmd_dismiss(args)
+    elif args.command == "select":
+        cmd_select(args)
     else:
         parser.print_help()
         sys.exit(1)
