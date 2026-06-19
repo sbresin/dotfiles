@@ -98,9 +98,14 @@ in
     # needed by pipewire
     security.rtkit.enable = true;
 
+    services.tailscale.enable = true;
+
     environment.systemPackages = with pkgs.unstable; [
-      packet
+      packet # android QuickSync
       wiremix
+      bitwarden-cli
+      # TODO overwrite old electron_39 EOL
+      # bitwarden-desktop
       # Desktop apps (migrated from Flatpak)
       pdfarranger
       libreoffice
