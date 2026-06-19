@@ -54,7 +54,19 @@ rebasing, or squashing existing ones. Specifically:
 ### Branching & Commits
 
 When making non-trivial changes, proactively suggest creating a new branch
-before starting work. Use the naming format `<prefix>/<description-in-kebab-case>`
+before starting work.
+
+When creating a new branch, always start from an up-to-date default branch:
+
+1. Fetch the latest changes from the remote
+2. Determine the default branch (usually `main` or `master`)
+3. Pull or reset to the latest remote default branch
+4. Create the new branch from there
+
+Do **not** branch from whatever commit happens to be checked out — always
+ensure the branch starts from the current tip of the default branch.
+
+Use the naming format `<prefix>/<description-in-kebab-case>`
 where the prefix follows semantic commit conventions:
 
 - `feat/` — new feature
@@ -89,3 +101,38 @@ such as test scripts, build artifacts, diffs, or draft outputs.
 - **Never** write throwaway or intermediate files into the project working
   directory.
 - The scratch directory is ephemeral and tied to the current session.
+
+## Web Fetching
+
+The built-in `webfetch` tool does a plain HTTP GET and converts HTML to markdown.
+It does NOT execute JavaScript. Many modern sites (SPAs, JS-rendered docs,
+sites with bot walls) return empty shells or `<noscript>` fallbacks.
+
+**When `webfetch` returns suspicious-looking content** (very short, mostly empty
+`<div>` or `<body>`, "Please enable JavaScript", visible-in-browser content
+missing), retry with the Playwright MCP tools instead:
+
+1. `browser_navigate` with the URL
+2. `browser_snapshot` to get the rendered accessibility tree as markdown
+
+Keep using `webfetch` as the default for static and server-rendered pages —
+it's cheaper. Only escalate to the browser when JS rendering is required.
+Call `browser_close` when done to free resources.
+
+### Browser Tool Selection
+
+There are two browser toolsets available — use the right one:
+
+| Tool | When to use |
+|------|-------------|
+| **Playwright MCP** (`mcp_Playwright_*`) | Default for all web browsing. Has its own headless browser. |
+| **Chrome tools** (`mcp_Chrome`, `mcp_Chrome_stop`) | **Only** for Chrome DevTools debugging (inspecting network, console, DOM via CDP). |
+
+**Do NOT** call `mcp_Chrome` before using Playwright — they are independent.
+Playwright manages its own browser instance; calling `mcp_Chrome` first is
+wasteful and confusing.
+
+Use `mcp_Chrome` only when you need to:
+- Connect to an existing Chrome instance for debugging
+- Use Chrome DevTools Protocol features not available in Playwright
+- Debug a user's running browser session
