@@ -24,7 +24,8 @@
                 type = "luks";
                 name = "crypted";
                 settings.allowDiscards = true;
-                passwordFile = "/tmp/secret.key"; # interactive password entry
+		settings.bypassWorkqueues = true;
+                # passwordFile = "/tmp/secret.key"; # interactive password entry
                 content = {
                   type = "btrfs";
                   extraArgs = [ "-f" ]; # Override existing partition
