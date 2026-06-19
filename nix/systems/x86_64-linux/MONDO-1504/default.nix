@@ -150,6 +150,7 @@
       services.ollama.port = 11434;
     };
     docker.enable = true;
+    oom-protection.enable = true;
   };
 
   programs._1password = {
