@@ -591,6 +591,7 @@ def update_flake_lock(flake_dir: str, input_name: str, rev: str) -> bool:
                 "nix",
                 "flake",
                 "lock",
+                "--accept-flake-config",
                 "--override-input",
                 input_name,
                 f"github:nixos/nixpkgs/{rev}",
