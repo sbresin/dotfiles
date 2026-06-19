@@ -124,9 +124,6 @@
 
   programs.zsh.enable = true;
 
-  # enable adb
-  programs.adb.enable = true;
-
   # enable wireshark
   programs.wireshark = {
     enable = true;
@@ -206,7 +203,6 @@
       rpiboot
       # this flakes packages
       pkgs.sebe.razer-cli
-      pkgs.sebe.oclif
       pkgs.sebe.bt-dualboot
       pkgs.sebe.export-ble-infos
       # pkgs.sebe.ryujinx

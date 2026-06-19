@@ -106,7 +106,10 @@ in
         l = "less";
         grep = "grep --color";
         oc = "opencode";
-        "sf pds" = "sf project deploy start";
+        occ = "opencode --continue";
+
+        "sfr" = "sf project retrieve start";
+        "sfd" = "sf project deploy start";
       };
     };
     plugins = [
@@ -420,7 +423,7 @@ in
       alejandra
       nh
       nurl
-      pkgs.sebe.nix-update-patched
+      nix-update
       devbox
       statix
       # languageservers
@@ -459,6 +462,7 @@ in
       # wasm-pack
       # twiggy
       # CLI tools
+      android-tools
       bkt
       bitwarden-cli
       file
@@ -472,8 +476,11 @@ in
       go-grip
       httpie
       jq
+      openssl
+      xxd
       just
       jwt-cli
+      lsof
       miller
       ngrok
       pinact
@@ -491,16 +498,20 @@ in
       pkgs.sebe.opencode
       # claude-code
       # inputs.forgecode.packages.${pkgs.system}.forge
+      rtk
       github-mcp-server
       terraform-mcp-server
-      mcp-nixos
-      pkgs.sebe.docs-mcp-server
+      mermaid-cli
+
+      # pkgs.sebe.docs-mcp-server
       pkgs.sebe.chrome-devtools-mcp
-      pkgs.sebe.workspace-mcp
+      pkgs.unstable.playwright-mcp
+      # pkgs.sebe.workspace-mcp
       # platform tools
       act
       caddy
       fastly
+      awscli2
       google-cloud-sdk
       heroku
       terraform
@@ -508,7 +519,7 @@ in
       xcaddy
       # sfdc development
       pkgs.sebe.sf-cli
-      pkgs.sebe.sfp-cli
+      pkgs.sebe.oclif
       # xonsh with xontribs
       pkgs.sebe.xonsh
     ]

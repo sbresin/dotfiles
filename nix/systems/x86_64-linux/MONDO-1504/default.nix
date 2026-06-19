@@ -123,9 +123,6 @@
 
   programs.zsh.enable = true;
 
-  # enable adb
-  programs.adb.enable = true;
-
   # my own modules
   sebe = {
     desktop.enable = true;
@@ -200,7 +197,6 @@
     vial
     vdu_controls
     # this flakes packages
-    pkgs.sebe.oclif
     # ROCm tools for GPU monitoring
     pkgs.rocmPackages.rocm-smi
     pkgs.rocmPackages.rocminfo
