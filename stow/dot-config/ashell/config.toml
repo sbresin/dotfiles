@@ -6,6 +6,10 @@ log_level = "warn"
 # list of outputs: the status bar will be displayed on the outputs listed here, example: outputs = { targets = ["DP-1", "eDP-1"] }
 # if the outputs is not available the bar will be displayed in the active output
 outputs = "All"
+
+language = "en-US" # UI language
+region = "de-DE"   # date format + unit system
+
 # Bar position, possible values Top | Bottom.
 position = "Top"
 # App launcher command, it will be used to open the launcher,
@@ -16,10 +20,10 @@ app_launcher_cmd = "~/.config/rofi/launcher.sh"
 # without a value the related button will not appear
 # optional, default None
 clipboard_cmd = "cliphist-rofi-img | wl-copy"
-# Maximum number of chars that can be present in the window title
-# after that the title will be truncated
-# optional, default 150
-truncate_title_after_length = 80
+
+[window_title]
+mode = "Title"
+truncate_title_after_length = 75
 
 # Declare which modules should be used and in which position in the status bar.
 # This is the list of all possible modules
@@ -39,14 +43,14 @@ truncate_title_after_length = 80
 # optional, the following is the default configuration
 [modules]
 # The modules that will be displayed on the left side of the status bar
-left = ["Workspaces"]
+left = ["Workspaces", "WindowTitle"]
 # The modules that will be displayed in the center of the status bar
-center = ["WindowTitle"]
+center = []
 # The modules that will be displayed on the right side of the status bar
 # The nested modules array will form a group sharing the same element in the status bar
 right = [
+	"RageLimit",
 	"Tray",
-	"ClaudeUsage",
 	"SystemInfo",
 	"GpuUsage",
 	[
@@ -54,8 +58,21 @@ right = [
 		"Privacy",
 		"Settings",
 	],
+	"Tempo",
 	"CustomNotifications",
 ]
+
+[osd]
+enabled = true                    # Disabled by default; set to true to enable the OSD overlay
+timeout = 1500                    # Auto-hide delay in milliseconds
+show_volume_percentage = true     # Show percentage text next to volume/mic bar
+show_brightness_percentage = true # Show percentage text next to brightness bar
+
+[animations]
+enabled = true
+
+[tray]
+right_click = "menu"
 
 # Update module configuration.
 # Without a value the related button will not appear.
@@ -94,11 +111,10 @@ enable_workspace_filling = false
 # If using Hyprland the names can be found in `hyprctl devices | grep "active keymap"`
 [keyboard_layout.labels]
 "English (US)" = "🇺🇸"
-"Russian" = "🇷🇺"
 
 # The system module configuration
 # optional
-[system]
+[system_info]
 # System information shown in the status bar
 # The possible values are:
 #  - Cpu
@@ -117,7 +133,7 @@ indicators = ["Cpu", "Memory", "Temperature", "DownloadSpeed"]
 
 # CPU indicator thresholds
 # optional
-[system.cpu]
+[system_info.cpu]
 # cpu indicator warning level (default 60)
 warn_threshold = 60
 # cpu indicator alert level (default 80)
@@ -125,7 +141,7 @@ alert_threshold = 80
 
 # Memory indicator thresholds
 # optional
-[system.memory]
+[system_info.memory]
 # mem indicator warning level (default 70)
 warn_threshold = 70
 # mem indicator alert level (default 85)
@@ -133,7 +149,7 @@ alert_threshold = 85
 
 # Memory swap indicator thresholds
 # optional
-[system.temperature]
+[system_info.temperature]
 # temperature indicator warning level (default 60)
 warn_threshold = 60
 # temperature indicator alert level (default 80)
@@ -141,7 +157,8 @@ alert_threshold = 80
 
 # Disk indicator thresholds
 # optional
-[system.disk]
+[system_info.disk]
+mounts = ["/home", "/boot"]
 # disk indicator warning level (default 80)
 warn_threshold = 80
 # disk indicator alert level (default 90)
@@ -176,10 +193,10 @@ icons.'dnd.*' = ""
 alert = ".*notification"
 
 [[CustomModule]]
-name = "ClaudeUsage"
+name = "RageLimit"
 icon = "✦"
-listen_cmd = "~/.local/bin/claude-usage --listen"
-command = "pkill -USR1 -f 'claude-usage --listen'"
+listen_cmd = "~/.local/bin/rage-limit --listen"
+command = "pkill -USR1 -f 'rage-limit --listen'"
 alert = "alert|error"
 
 [[CustomModule]]
@@ -192,6 +209,7 @@ alert = "^.*(warn|hot)$"
 
 # Settings module configuration
 [settings]
+enable_tooltips = false
 # command used for lock the system
 # without a value the related button will not appear
 # optional, default None
