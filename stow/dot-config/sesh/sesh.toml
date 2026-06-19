@@ -3,11 +3,11 @@
 [[wildcard]]
 pattern = "~/workspace/**"
 startup_command = "nvim"
-windows = ["opencode", "shell"]
-
-[[window]]
-name = "opencode"
-startup_script = "opencode"
-
-[[window]]
-name = "shell"
+# windows = ["opencode", "shell"]
+#
+# [[window]]
+# name = "󱜙 opencode"
+# startup_script = "opencode"
+#
+# [[window]]
+# name = " shell"
