@@ -262,7 +262,8 @@ in
       pkgs.sebe.gnome-control-center-patched
       inputs.simplemoji.packages.${stdenv.hostPlatform.system}.default
       termusic
-      bottles
+      # Proton launcher for running Windows games outside Steam
+      umu-launcher
       rsgain
       inputs.peek-a-meet.packages.${pkgs.stdenv.hostPlatform.system}.default
 
