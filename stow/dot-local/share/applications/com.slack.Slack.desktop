@@ -1,0 +1,14 @@
+[Desktop Entry]
+Name=Slack
+StartupWMClass=Slack
+Comment=Slack Desktop
+GenericName=Slack Client for Linux
+Exec=flatpak run --env=ELECTRON_OZONE_PLATFORM_HINT=auto com.slack.Slack --disable-features=WaylandWpColorManagerV1 %U
+Icon=com.slack.Slack
+Type=Application
+Categories=GNOME;GTK;Network;InstantMessaging;
+MimeType=x-scheme-handler/slack;
+X-Desktop-File-Install-Version=0.28
+X-GNOME-UsesNotifications=true
+X-Flatpak-RenamedFrom=slack.desktop
+X-Flatpak=com.slack.Slack

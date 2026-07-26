@@ -1,0 +1,16 @@
+[Desktop Entry]
+Categories=Audio;Music;Player;Network;AudioVideo
+Comment=Web version of Tidal running in Electron with Hi-Fi support thanks to Widevine
+# Fix washed-out colors on Hyprland 0.55+ with color management
+# See: https://issues.chromium.org/issues/477318785
+Exec=tidal-hifi --disable-features=WaylandWpColorManagerV1
+GenericName=Music Player
+Icon=tidal-hifi
+MimeType=x-scheme-handler/tidal
+Name=TIDAL Hi-Fi
+StartupNotify=true
+StartupWMClass=tidal-hifi
+Terminal=false
+Type=Application
+Version=1.5
+X-PulseAudio-Properties=media.role=music
