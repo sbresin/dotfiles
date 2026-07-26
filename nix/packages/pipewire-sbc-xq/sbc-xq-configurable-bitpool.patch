@@ -1,0 +1,67 @@
+--- a/spa/plugins/bluez5/a2dp-codec-sbc.c	2026-06-26 13:10:34.353572874 +0200
++++ b/spa/plugins/bluez5/a2dp-codec-sbc.c	2026-06-26 13:22:28.259019533 +0200
+@@ -9,6 +9,8 @@
+ 
+ #include <spa/param/audio/format.h>
+ #include <spa/utils/string.h>
++#include <spa/utils/dict.h>
++#include <stdio.h>
+ 
+ #include <sbc/sbc.h>
+ 
+@@ -102,6 +104,46 @@
+ 	return xq ? 86 : 64;
+ }
+ 
++static uint8_t get_bitpool(const struct spa_dict *settings, uint8_t freq, uint8_t mode, bool xq)
++{
++	const char *str = NULL;
++	const char *key = NULL;
++	uint8_t result;
++	uint32_t i;
++
++	fprintf(stderr, "SBC get_bitpool: xq=%d settings=%p\n", xq, (void*)settings);
++	if (settings) {
++		fprintf(stderr, "SBC get_bitpool: settings has %u items\n", settings->n_items);
++		for (i = 0; i < settings->n_items; i++) {
++			fprintf(stderr, "  [%u] %s = %s\n", i,
++				settings->items[i].key, settings->items[i].value);
++		}
++	}
++
++	if (xq && settings) {
++		switch (mode) {
++		case SBC_CHANNEL_MODE_MONO:
++		case SBC_CHANNEL_MODE_DUAL_CHANNEL:
++			key = "bluez5.a2dp.sbc-xq.bitpool.dual-channel";
++			break;
++		case SBC_CHANNEL_MODE_STEREO:
++		case SBC_CHANNEL_MODE_JOINT_STEREO:
++			key = "bluez5.a2dp.sbc-xq.bitpool.stereo";
++			break;
++		}
++		if (key)
++			str = spa_dict_lookup(settings, key);
++		fprintf(stderr, "SBC get_bitpool: key=%s value=%s\n", key, str ? str : "(null)");
++		if (str && atoi(str) >= SBC_MIN_BITPOOL && atoi(str) <= SBC_MAX_BITPOOL) {
++			result = (uint8_t)atoi(str);
++			fprintf(stderr, "SBC get_bitpool: using configured %u\n", result);
++			return result;
++		}
++	}
++	result = default_bitpool(freq, mode, xq);
++	fprintf(stderr, "SBC get_bitpool: using default %u\n", result);
++	return result;
++}
+ 
+ static const struct media_codec_config
+ sbc_frequencies[] = {
+@@ -203,7 +245,7 @@
+ 	else
+ 		return -ENOTSUP;
+ 
+-	bitpool = default_bitpool(conf.frequency, conf.channel_mode, xq);
++	bitpool = get_bitpool(settings, conf.frequency, conf.channel_mode, xq);
+ 
+ 	conf.min_bitpool = SPA_MAX(SBC_MIN_BITPOOL, conf.min_bitpool);
+ 	conf.max_bitpool = SPA_MIN(bitpool, conf.max_bitpool);

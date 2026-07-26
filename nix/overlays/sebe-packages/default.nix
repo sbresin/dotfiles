@@ -31,6 +31,7 @@ in
     hyprpaper-random = pkg ../../packages/hyprpaper-random;
     joycond = pkg ../../packages/joycond;
     neovim-patched = pkgFull ../../packages/neovim-patched;
+    pipewire-sbc-xq = pkgFull ../../packages/pipewire-sbc-xq;
     oclif = pkg ../../packages/oclif;
     opencode = pkgFull ../../packages/opencode;
     razer-cli = pkg ../../packages/razer-cli;

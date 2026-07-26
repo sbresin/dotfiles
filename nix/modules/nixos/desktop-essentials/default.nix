@@ -61,6 +61,9 @@ in
     services.pulseaudio.enable = false;
     services.pipewire = {
       enable = true;
+      # Use patched pipewire with SBC-XQ bitpool config support (only for the service,
+      # not globally, to avoid rebuilding all pipewire-dependent packages like sushi)
+      package = pkgs.sebe.pipewire-sbc-xq;
       pulse.enable = true;
       alsa.enable = true;
       wireplumber = {
@@ -69,6 +72,8 @@ in
           (pkgs.writeTextDir "share/wireplumber/wireplumber.conf.d/10-bluez.conf" ''
             monitor.bluez.properties = {
               bluez5.enable-sbc-xq = true
+              bluez5.default.rate = 44100
+              bluez5.a2dp.sbc-xq.bitpool.dual-channel = 52
             }
           '')
         ];

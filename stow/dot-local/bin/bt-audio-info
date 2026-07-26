@@ -1,0 +1,324 @@
+#!/usr/bin/env python3
+"""
+bt-audio-info - Display Bluetooth audio device information
+
+Shows codec, sample rate, bitpool, and other SBC/A2DP parameters
+for connected Bluetooth audio devices.
+"""
+
+import json
+import subprocess
+import sys
+from dataclasses import dataclass
+
+
+# SBC configuration constants (from A2DP spec / BlueZ a2dp-codecs.h)
+# Note: In the negotiated configuration, these are single-bit selections
+# Byte 0: frequency (bits 7-4) | channel_mode (bits 3-0)
+# Byte 1: block_length (bits 7-4) | subbands (bits 3-2) | allocation_method (bits 1-0)
+SBC_FREQ = {
+    0x80: (16000, "16 kHz"),
+    0x40: (32000, "32 kHz"),
+    0x20: (44100, "44.1 kHz"),
+    0x10: (48000, "48 kHz"),
+}
+
+SBC_CHANNEL_MODE = {
+    0x08: "Mono",
+    0x04: "Dual Channel",
+    0x02: "Stereo",
+    0x01: "Joint Stereo",
+}
+
+SBC_BLOCK_LENGTH = {
+    0x80: 4,
+    0x40: 8,
+    0x20: 12,
+    0x10: 16,
+}
+
+SBC_SUBBANDS = {
+    0x08: 4,
+    0x04: 8,
+}
+
+SBC_ALLOCATION = {
+    0x02: "SNR",
+    0x01: "Loudness",
+}
+
+
+@dataclass
+class SBCConfig:
+    """Decoded SBC configuration"""
+    frequency: int
+    frequency_str: str
+    channel_mode: str
+    block_length: int
+    subbands: int
+    allocation: str
+    min_bitpool: int
+    max_bitpool: int
+
+    def __str__(self) -> str:
+        return (
+            f"  Sample Rate:    {self.frequency_str}\n"
+            f"  Channel Mode:   {self.channel_mode}\n"
+            f"  Block Length:   {self.block_length}\n"
+            f"  Subbands:       {self.subbands}\n"
+            f"  Allocation:     {self.allocation}\n"
+            f"  Min Bitpool:    {self.min_bitpool}\n"
+            f"  Max Bitpool:    {self.max_bitpool}"
+        )
+
+
+def decode_sbc_config(config_bytes: list[int]) -> SBCConfig | None:
+    """Decode SBC A2DP configuration bytes
+
+    The bytes from BlueZ DBus are already integers (decoded from the wire format).
+    Byte 0: frequency (bits 7-4) | channel_mode (bits 3-0)
+    Byte 1: block_length (bits 7-4) | subbands (bits 3-2) | allocation_method (bits 1-0)
+    Byte 2: min_bitpool
+    Byte 3: max_bitpool
+    """
+    if len(config_bytes) != 4:
+        return None
+
+    byte0, byte1, min_bp, max_bp = config_bytes
+
+    # Byte 0: Frequency (bits 7-4) + Channel Mode (bits 3-0)
+    freq_bits = byte0 & 0xF0
+    chan_bits = byte0 & 0x0F
+
+    freq, freq_str = SBC_FREQ.get(freq_bits, (0, f"Unknown (0x{freq_bits:02x})"))
+    channel_mode = SBC_CHANNEL_MODE.get(chan_bits, f"Unknown (0x{chan_bits:02x})")
+
+    # Byte 1: Block Length (bits 7-4) + Subbands (bits 3-2) + Allocation (bits 1-0)
+    block_bits = byte1 & 0xF0
+    sub_bits = byte1 & 0x0C
+    alloc_bits = byte1 & 0x03
+
+    block_length = SBC_BLOCK_LENGTH.get(block_bits, 0)
+    subbands = SBC_SUBBANDS.get(sub_bits, 0)
+    allocation = SBC_ALLOCATION.get(alloc_bits, "Unknown")
+
+    return SBCConfig(
+        frequency=freq,
+        frequency_str=freq_str,
+        channel_mode=channel_mode,
+        block_length=block_length,
+        subbands=subbands,
+        allocation=allocation,
+        min_bitpool=min_bp,
+        max_bitpool=max_bp,
+    )
+
+
+def estimate_bitrate(config: SBCConfig) -> int:
+    """Estimate SBC bitrate in kbps from configuration"""
+    # Approximate formula: bitrate ≈ 8 * bitpool * sample_rate / (subbands * blocks)
+    if config.subbands == 0 or config.block_length == 0:
+        return 0
+    frame_samples = config.subbands * config.block_length
+    return (8 * config.max_bitpool * config.frequency) // (frame_samples * 1000)
+
+
+def run_cmd(cmd: list[str]) -> str | None:
+    """Run command and return stdout, or None on error"""
+    try:
+        result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+        return result.stdout
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        return None
+
+
+def get_pw_dump() -> list[dict] | None:
+    """Get PipeWire object dump"""
+    output = run_cmd(["pw-dump"])
+    if output is None:
+        return None
+    try:
+        return json.loads(output)
+    except json.JSONDecodeError:
+        return None
+
+
+def get_bluez_transport_config(device_path: str) -> list[int] | None:
+    """Get BlueZ MediaTransport1 Configuration via DBus"""
+    # Find the transport fd path under the device
+    tree_output = run_cmd(["busctl", "--system", "tree", "org.bluez"])
+    if tree_output is None:
+        return None
+
+    # Convert device path to address format used in tree
+    # /org/bluez/hci0/dev_60_AB_D2_3F_30_86 -> look for fd under this
+    # Look for fd paths that contain the device path
+    fd_path = None
+    for line in tree_output.splitlines():
+        # Clean up tree formatting characters
+        clean_line = line.strip()
+        for char in "├─└─│ ":
+            clean_line = clean_line.replace(char, "")
+        clean_line = clean_line.strip()
+
+        # Check if this is an fd path under our device
+        if device_path in clean_line and "/fd" in clean_line:
+            fd_path = clean_line
+            break
+
+    if fd_path is None:
+        return None
+
+    # Query the transport properties
+    props_output = run_cmd([
+        "busctl", "--system", "call", "org.bluez", fd_path,
+        "org.freedesktop.DBus.Properties", "GetAll", "s",
+        "org.bluez.MediaTransport1"
+    ])
+    if props_output is None:
+        return None
+
+    # Parse the Configuration bytes from the output
+    # Format: ... "Configuration" ay N byte0 byte1 ... byteN ...
+    try:
+        parts = props_output.split('"Configuration"')
+        if len(parts) < 2:
+            return None
+        config_part = parts[1].split('"')[0]  # Get until next string
+        # Extract "ay N val1 val2 ..."
+        tokens = config_part.split()
+        if len(tokens) < 2 or tokens[0] != "ay":
+            return None
+        count = int(tokens[1])
+        if len(tokens) < 2 + count:
+            return None
+        return [int(tokens[2 + i]) for i in range(count)]
+    except (ValueError, IndexError):
+        return None
+
+
+def find_bt_audio_devices(pw_objects: list[dict]) -> list[dict]:
+    """Find Bluetooth audio devices/nodes in PipeWire dump"""
+    devices = []
+    nodes = []
+
+    for obj in pw_objects:
+        obj_type = obj.get("type", "")
+        props = obj.get("info", {}).get("props", {})
+
+        if obj_type == "PipeWire:Interface:Device":
+            if props.get("device.api") == "bluez5":
+                devices.append(obj)
+        elif obj_type == "PipeWire:Interface:Node":
+            if props.get("device.api") == "bluez5":
+                nodes.append(obj)
+
+    return devices, nodes
+
+
+def get_device_profiles(device: dict) -> list[dict]:
+    """Extract available profiles from device params"""
+    params = device.get("info", {}).get("params", {})
+    return params.get("EnumProfile", [])
+
+
+def get_active_profile(device: dict) -> dict | None:
+    """Get the currently active profile"""
+    params = device.get("info", {}).get("params", {})
+    profiles = params.get("Profile", [])
+    return profiles[0] if profiles else None
+
+
+def format_device_info(device: dict, nodes: list[dict]) -> str:
+    """Format device information for display"""
+    props = device.get("info", {}).get("props", {})
+    params = device.get("info", {}).get("params", {})
+
+    name = props.get("device.description", props.get("device.name", "Unknown"))
+    address = props.get("api.bluez5.address", "Unknown")
+    device_path = props.get("api.bluez5.path", "")
+
+    lines = [
+        f"\n{'='*60}",
+        f"Device: {name}",
+        f"{'='*60}",
+        f"  Address:        {address}",
+    ]
+
+    # Active profile
+    active_profile = get_active_profile(device)
+    if active_profile:
+        profile_desc = active_profile.get("description", active_profile.get("name", "Unknown"))
+        lines.append(f"  Active Profile: {profile_desc}")
+
+    # Find associated node for codec info
+    device_id = device.get("id")
+    for node in nodes:
+        node_props = node.get("info", {}).get("props", {})
+        if node_props.get("device.id") == device_id:
+            codec = node_props.get("api.bluez5.codec", "Unknown")
+            profile = node_props.get("api.bluez5.profile", "Unknown")
+            node_state = node.get("info", {}).get("state", "Unknown")
+
+            lines.append(f"  Codec:          {codec}")
+            lines.append(f"  Profile:        {profile}")
+            lines.append(f"  State:          {node_state}")
+
+            # Get format info
+            node_params = node.get("info", {}).get("params", {})
+            enum_format = node_params.get("EnumFormat", [])
+            if enum_format:
+                fmt = enum_format[0]
+                rate = fmt.get("rate", "Unknown")
+                channels = fmt.get("channels", "Unknown")
+                lines.append(f"  Format:         {channels}ch @ {rate} Hz")
+
+    # Try to get SBC configuration from BlueZ
+    if device_path:
+        config_bytes = get_bluez_transport_config(device_path)
+        if config_bytes:
+            sbc_config = decode_sbc_config(config_bytes)
+            if sbc_config:
+                bitrate = estimate_bitrate(sbc_config)
+                lines.append(f"\nSBC Configuration (negotiated):")
+                lines.append(str(sbc_config))
+                lines.append(f"  Est. Bitrate:   ~{bitrate} kbps")
+
+    # Available profiles
+    profiles = get_device_profiles(device)
+    if profiles:
+        lines.append(f"\nAvailable Profiles:")
+        for p in profiles:
+            name = p.get("name", "")
+            desc = p.get("description", name)
+            avail = p.get("available", "unknown")
+            marker = "*" if active_profile and p.get("index") == active_profile.get("index") else " "
+            lines.append(f"  {marker} {desc} [{avail}]")
+
+    return "\n".join(lines)
+
+
+def main():
+    # Check for PipeWire
+    pw_objects = get_pw_dump()
+    if pw_objects is None:
+        print("Error: Could not get PipeWire information. Is PipeWire running?", file=sys.stderr)
+        sys.exit(1)
+
+    devices, nodes = find_bt_audio_devices(pw_objects)
+
+    if not devices:
+        print("No Bluetooth audio devices found.")
+        print("\nTip: Connect a Bluetooth audio device and try again.")
+        sys.exit(0)
+
+    print(f"Found {len(devices)} Bluetooth audio device(s)")
+
+    for device in devices:
+        print(format_device_info(device, nodes))
+
+    print()
+
+
+if __name__ == "__main__":
+    main()
