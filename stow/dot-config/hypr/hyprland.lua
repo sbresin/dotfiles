@@ -470,9 +470,9 @@ hl.bind("code:165", hl.dsp.exec_cmd("playerctl previous"), {locked = true})
 
 -- ---- Screenshots ----
 
-hl.bind(mainMod .. " + P", hl.dsp.exec_cmd("hyprshot -m window"))
-hl.bind("Print", hl.dsp.exec_cmd("hyprshot -m output"))
-hl.bind(mainMod .. " + SHIFT + P", hl.dsp.exec_cmd("hyprshot -m region"))
+hl.bind(mainMod .. " + P", hl.dsp.exec_cmd("hyprcap shot window -c -n -z"))
+hl.bind("Print", hl.dsp.exec_cmd("hyprcap shot monitor:active -c -n -z"))
+hl.bind(mainMod .. " + SHIFT + P", hl.dsp.exec_cmd("hyprcap shot region -c -n -z"))
 
 -- ---- Debug ----
 

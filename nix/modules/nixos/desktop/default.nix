@@ -223,7 +223,7 @@ in
 
       elephant
       app2unit
-      hyprshot
+      inputs.hyprcap.packages.${stdenv.hostPlatform.system}.default
       walker
       swaynotificationcenter
       socat # needed to listen to hyprland event socket from bash
@@ -234,6 +234,8 @@ in
       overskride # bluetooth control
       grim # grab images from wayland compositor
       slurp # select regions in wayland compositor
+      jq # needed by hyprcap
+      libnotify # needed by hyprcap for notifications
       nwg-look # gsettings editor
       adwaita-icon-theme
 
