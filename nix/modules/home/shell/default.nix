@@ -62,6 +62,9 @@ in
   programs.fish = {
     enable = true;
     package = pkgs.unstable.fish;
+    # Disabled until home-manager backports the fix for Fish 4.8.0 removing
+    # share/fish/tools/create_manpage_completions.py (see home-manager#9555)
+    generateCompletions = false;
   };
 
   programs.zsh = {
@@ -435,6 +438,7 @@ in
       typescript-go
       # stacks
       gcc
+      gnumake
       nodejs
       pnpm
       temurin-bin

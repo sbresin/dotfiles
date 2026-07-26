@@ -28,7 +28,7 @@
   # lanzaboote uses this, 5 is big enough for the framework
   boot.loader.systemd-boot.consoleMode = "5";
 
-  boot.plymouth.enable = true;
+  # boot.plymouth.enable = true;
 
   boot.tmp = {
     useTmpfs = true;

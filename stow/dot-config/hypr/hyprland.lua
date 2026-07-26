@@ -63,7 +63,7 @@ local menu = "socat /dev/null UNIX-CONNECT:$XDG_RUNTIME_DIR/walker/walker.sock"
 local notificationToggle = "swaync-client -t"
 local lock = "pkill -x hyprlock; sleep 0.3; hyprlock"
 local emojiPicker =
-    "simplemoji --no-close --close-on-copy --copy-command wl-copy --font 'Apple Color Emoji' --show-preview --fuzzing-search --show-search --recent-type mixed --background-color '##26233a' --primary-color '##e0def4' --corner-radius 5"
+    "simplemoji --no-close --close-on-copy --copy-command wl-copy --font 'Apple Color Emoji' --show-preview --fuzzing-search --show-search --recent-type mixed --background-color '#26233a' --primary-color '#e0def4' --corner-radius 5"
 
 -- ====================
 -- ====  AUTOSTART ====

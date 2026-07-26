@@ -23,7 +23,7 @@ clipboard_cmd = "cliphist-rofi-img | wl-copy"
 
 [window_title]
 mode = "Title"
-truncate_title_after_length = 75
+truncate_title_after_length = 70
 
 # Declare which modules should be used and in which position in the status bar.
 # This is the list of all possible modules
@@ -129,7 +129,7 @@ enable_workspace_filling = false
 # If for example you want to dispay the usage of the root and home partition
 # you can use the following configuration
 # systemInfo = [ { disk = "/" }, { disk = "/home" } ]
-indicators = ["Cpu", "Memory", "Temperature", "DownloadSpeed"]
+indicators = ["Cpu", "Memory", "Temperature"]
 
 # CPU indicator thresholds
 # optional
