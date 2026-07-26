@@ -475,6 +475,7 @@ in
       glow
       go-grip
       httpie
+      pkgs.sebe.hunk-patched
       jq
       openssl
       xxd

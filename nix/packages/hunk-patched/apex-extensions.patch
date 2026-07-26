@@ -1,0 +1,12 @@
+diff --git a/src/core/fileLanguage.ts b/src/core/fileLanguage.ts
+--- a/src/core/fileLanguage.ts
++++ b/src/core/fileLanguage.ts
+@@ -7,6 +7,8 @@ import {
+ const HUNK_CUSTOM_EXTENSIONS: Record<string, SupportedLanguages> = {
+   mts: "typescript",
+   cts: "typescript",
++  cls: "apex",
++  trigger: "apex",
+ };
+ 
+ for (const [extension, language] of Object.entries(HUNK_CUSTOM_EXTENSIONS)) {

@@ -28,6 +28,7 @@ in
     forge-zsh-plugin = final.callPackage ../../packages/forgecode { pkgs = final; inherit inputs; };
     friidump = pkg ../../packages/friidump;
     gnome-control-center-patched = pkg ../../packages/gnome-control-center-patched;
+    hunk-patched = pkgFull ../../packages/hunk-patched;
     hyprpaper-random = pkg ../../packages/hyprpaper-random;
     joycond = pkg ../../packages/joycond;
     neovim-patched = pkgFull ../../packages/neovim-patched;
