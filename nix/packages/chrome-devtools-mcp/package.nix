@@ -7,11 +7,11 @@
 }:
 stdenvNoCC.mkDerivation rec {
   pname = "chrome-devtools-mcp";
-  version = "1.2.0";
+  version = "1.6.0";
 
   src = fetchurl {
     url = "https://registry.npmjs.org/${pname}/-/${pname}-${version}.tgz";
-    hash = "sha256-r2qGlCRLSzDbSAM8sOClDBO7cIZkSEcJn571zHYgigU=";
+    hash = "sha256-HmMsLZcUtPgrTPq077nOV1CFx1/+XpdyODEprwEsnIQ=";
   };
 
   sourceRoot = "package";

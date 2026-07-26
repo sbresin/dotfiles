@@ -66,6 +66,9 @@
       url = "git+https://github.com/sbresin/peek-a-meet.git";
       inputs.nixpkgs.follows = "nixpkgs-unstable";
     };
+
+    # screenshot utility for Hyprland (replaces hyprshot)
+    hyprcap.url = "github:alonso-herreros/hyprcap";
   };
 
   outputs =

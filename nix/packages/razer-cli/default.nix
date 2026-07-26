@@ -5,12 +5,12 @@
 }:
 pkgs.python3Packages.buildPythonApplication rec {
   pname = "razer-cli";
-  version = "2.3.0";
+  version = "2.3.1";
 
   src = pkgs.fetchPypi {
     pname = "razer_cli";
     inherit version;
-    hash = "sha256-BvNumOvyNYqEnbhBZ/zdcQwF4+8kMGYE6X1QZwHil9g=";
+    hash = "sha256-A4FYdgpaieZkHBVC/EMy0G7ryynMqcTNSvwRKHuP54U=";
   };
 
   pyproject = true;

@@ -1,8 +1,8 @@
 { pkgs, ... }:
 let
-  version = "1.17.7";
-  srcHash = "sha256-rTeJuwqc11r6Xiksfg5IoTezK2ZtG3GlenQCxTW04P4=";
-  nodeModulesHash = "sha256-UVRkdH3Csera41el/UKuh+HwqX0J26TQd8K20mzzEkg=";
+  version = "1.18.1";
+  srcHash = "sha256-ESKM2u46KQI5wq736D2RTd8IZH2SdOKtGUCDnMJQGVc=";
+  nodeModulesHash = "sha256-mTkKvJk5u8dKXh0a1OcM6HUo0whYEAPoj5J/YCmny+Q=";
 in
 pkgs.unstable.opencode.overrideAttrs (
   final: old: {
@@ -18,13 +18,12 @@ pkgs.unstable.opencode.overrideAttrs (
 
         export BUN_INSTALL_CACHE_DIR=$(mktemp -d)
 
-        bun install \
-          --cpu="*" \
-          --force \
-          --frozen-lockfile \
-          --ignore-scripts \
-          --no-progress \
-          --os="*"
+      bun install \
+        --cpu="*" \
+        --force \
+        --ignore-scripts \
+        --no-progress \
+        --os="*"
 
         bun run ./nix/scripts/canonicalize-node-modules.ts
         bun run ./nix/scripts/normalize-bun-binaries.ts
@@ -32,6 +31,15 @@ pkgs.unstable.opencode.overrideAttrs (
         runHook postBuild
       '';
     });
+
+    # Relax Bun version check to be a warning instead of an error
+    # Workaround for bun 1.3.14 lockfile incompatibility with nixpkgs bun 1.3.13
+    # See: https://github.com/anomalyco/opencode/pull/33166
+    postPatch = ''
+      substituteInPlace packages/script/src/index.ts \
+        --replace-fail 'throw new Error(`This script requires bun@''${expectedBunVersionRange}' \
+                       'console.warn(`Warning: This script requires bun@''${expectedBunVersionRange}'
+    '';
 
     # Use upstream build script instead of nixpkgs bundle.ts (which doesn't exist in newer versions)
     buildPhase = ''
