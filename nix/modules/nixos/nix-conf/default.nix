@@ -1,12 +1,18 @@
 {
   pkgs,
   options,
+  inputs,
   ...
 }:
 {
   # use Lix fork (faster and community driven)
-  # nix dependend packages set through overlay
-  nix.package = pkgs.lixPackageSets.latest.lix;
+  # use unstable to match Hydra's cached build (stable nixpkgs has different stdenv)
+  nix.package = pkgs.unstable.lixPackageSets.latest.lix;
+
+  # expose the pinned nixpkgs-unstable input as a registry alias so
+  # `nix run/shell nixpkgs-unstable#pkg` resolves to the locked rev in
+  # flake.lock (cache-aligned with the system build, reproducible)
+  nix.registry.nixpkgs-unstable.flake = inputs.nixpkgs-unstable;
 
   nix.settings = {
     max-jobs = 4; # max derivations built in parallel

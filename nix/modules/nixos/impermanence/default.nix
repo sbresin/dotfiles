@@ -37,6 +37,7 @@ in
         "/var/lib/sbctl"
         "/var/lib/systemd/backlight"
         "/var/lib/systemd/coredump"
+        "/var/lib/tailscale"
         "/etc/NetworkManager/system-connections"
         {
           directory = "/var/lib/colord";
