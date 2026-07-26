@@ -180,29 +180,36 @@ async function fetchCodexUsage(): Promise<ProviderUsage> {
 		}
 		const data = await resp.json()
 
-		const windows: UsageWindow[] = []
-		const rateLimit = data.rate_limit || {}
-
-		const windowMap: [string, string][] = [
-			["primary_window", "5-hour"],
-			["secondary_window", "7-day"],
-		]
-
-		for (const [key, label] of windowMap) {
-			const w = rateLimit[key]
-			if (w) {
-				windows.push({
-					label,
-					utilization: w.used_percent ?? 0,
-					resetsInSeconds: w.reset_after_seconds ?? 0,
-				})
-			}
-		}
-
-		return { name: "Codex", windows }
+		return { name: "Codex", windows: parseCodexWindows(data) }
 	} catch (e) {
 		return { name: "Codex", windows: [], error: String(e) }
 	}
+}
+
+function codexWindowLabel(key: string, windowCount: number, resetsInSeconds: number): string {
+	if (key === "secondary_window") return "7-day"
+	if (key === "primary_window" && windowCount === 1 && resetsInSeconds > 5 * 3600) return "7-day"
+	return "5-hour"
+}
+
+function parseCodexWindows(data: any): UsageWindow[] {
+	const windows: UsageWindow[] = []
+	const rateLimit = data.rate_limit || {}
+	const windowKeys = ["primary_window", "secondary_window"].filter(
+		(key) => typeof rateLimit[key] === "object" && rateLimit[key] !== null,
+	)
+
+	for (const key of windowKeys) {
+		const w = rateLimit[key]
+		const resetsInSeconds = w.reset_after_seconds ?? 0
+		windows.push({
+			label: codexWindowLabel(key, windowKeys.length, resetsInSeconds),
+			utilization: w.used_percent ?? 0,
+			resetsInSeconds,
+		})
+	}
+
+	return windows
 }
 
 async function fetchAllUsage(): Promise<ProviderUsage[]> {

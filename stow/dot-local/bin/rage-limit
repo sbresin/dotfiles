@@ -160,6 +160,97 @@ def get_codex_token() -> str | None:
 # ── Usage Fetch ──────────────────────────────────────────────────────
 
 
+def _seconds_until(resets_at: str | None, now: datetime | None = None) -> int:
+    """Return seconds until an ISO timestamp, clamped to zero."""
+    if not resets_at:
+        return 0
+    reset_dt = datetime.fromisoformat(resets_at)
+    current = now or datetime.now(timezone.utc)
+    delta = reset_dt - current
+    return max(int(delta.total_seconds()), 0)
+
+
+def parse_claude_windows(data: dict[str, Any], now: datetime | None = None) -> list[UsageWindow]:
+    """Normalize Claude's usage response into display windows."""
+    windows = []
+
+    limits = data.get("limits")
+    if isinstance(limits, list):
+        for limit in limits:
+            if not isinstance(limit, dict):
+                continue
+
+            kind = limit.get("kind")
+            if kind == "session":
+                label = "5-hour"
+            elif kind == "weekly_all":
+                label = "7-day"
+            elif kind == "weekly_scoped":
+                scope = limit.get("scope") or {}
+                model = scope.get("model") or {}
+                label = model.get("display_name") or "Scoped"
+            else:
+                continue
+
+            windows.append(UsageWindow(
+                label=label,
+                utilization=limit.get("percent", 0),
+                resets_in_seconds=_seconds_until(limit.get("resets_at"), now),
+            ))
+
+        if windows:
+            return windows
+
+    window_map = [
+        ("five_hour", "5-hour"),
+        ("seven_day", "7-day"),
+        ("seven_day_sonnet", "Sonnet"),
+        ("seven_day_opus", "Opus"),
+    ]
+    for key, label in window_map:
+        w = data.get(key)
+        if w:
+            windows.append(UsageWindow(
+                label=label,
+                utilization=w.get("utilization", 0),
+                resets_in_seconds=_seconds_until(w.get("resets_at"), now),
+            ))
+
+    return windows
+
+
+def _codex_window_label(key: str, window_count: int, resets_in_seconds: int) -> str:
+    """Return a stable label for Codex windows across temporary API shapes."""
+    if key == "secondary_window":
+        return "7-day"
+    if key == "primary_window" and window_count == 1 and resets_in_seconds > 5 * 3600:
+        return "7-day"
+    return "5-hour"
+
+
+def parse_codex_windows(data: dict[str, Any]) -> list[UsageWindow]:
+    """Normalize Codex's usage response into display windows."""
+    windows = []
+    rate_limit = data.get("rate_limit", {})
+    if not isinstance(rate_limit, dict):
+        return windows
+
+    window_keys = [
+        key for key in ("primary_window", "secondary_window")
+        if isinstance(rate_limit.get(key), dict)
+    ]
+    for key in window_keys:
+        w = rate_limit[key]
+        resets_in_seconds = w.get("reset_after_seconds", 0)
+        windows.append(UsageWindow(
+            label=_codex_window_label(key, len(window_keys), resets_in_seconds),
+            utilization=w.get("used_percent", 0),
+            resets_in_seconds=resets_in_seconds,
+        ))
+
+    return windows
+
+
 def fetch_claude_usage() -> ProviderUsage:
     """Fetch Claude usage data."""
     token = get_claude_token()
@@ -177,30 +268,7 @@ def fetch_claude_usage() -> ProviderUsage:
         with urllib.request.urlopen(req, timeout=15) as resp:
             data = json.loads(resp.read())
 
-        windows = []
-        window_map = [
-            ("five_hour", "5-hour"),
-            ("seven_day", "7-day"),
-            ("seven_day_sonnet", "Sonnet"),
-            ("seven_day_opus", "Opus"),
-        ]
-        for key, label in window_map:
-            w = data.get(key)
-            if w:
-                resets_at = w.get("resets_at")
-                if resets_at:
-                    reset_dt = datetime.fromisoformat(resets_at)
-                    delta = reset_dt - datetime.now(timezone.utc)
-                    resets_in = max(int(delta.total_seconds()), 0)
-                else:
-                    resets_in = 0
-                windows.append(UsageWindow(
-                    label=label,
-                    utilization=w.get("utilization", 0),
-                    resets_in_seconds=resets_in,
-                ))
-
-        return ProviderUsage(name="Claude", windows=windows)
+        return ProviderUsage(name="Claude", windows=parse_claude_windows(data))
     except Exception as e:
         return ProviderUsage(name="Claude", windows=[], error=str(e))
 
@@ -219,23 +287,7 @@ def fetch_codex_usage() -> ProviderUsage:
         with urllib.request.urlopen(req, timeout=15) as resp:
             data = json.loads(resp.read())
 
-        windows = []
-        rate_limit = data.get("rate_limit", {})
-
-        window_map = [
-            ("primary_window", "5-hour"),
-            ("secondary_window", "7-day"),
-        ]
-        for key, label in window_map:
-            w = rate_limit.get(key)
-            if w:
-                windows.append(UsageWindow(
-                    label=label,
-                    utilization=w.get("used_percent", 0),
-                    resets_in_seconds=w.get("reset_after_seconds", 0),
-                ))
-
-        return ProviderUsage(name="Codex", windows=windows)
+        return ProviderUsage(name="Codex", windows=parse_codex_windows(data))
     except Exception as e:
         return ProviderUsage(name="Codex", windows=[], error=str(e))
 
@@ -293,30 +345,34 @@ def colorize(text: str, pct: float) -> str:
     return f"\033[{code}m{text}\033[0m"
 
 
+# Priority order for window selection: 5-hour > 7-day > everything else
+_WINDOW_PRIORITY = {"5-hour": 0, "7-day": 1}
+
+
 def format_json(providers: list[ProviderUsage]) -> str:
-    """Build a single waybar-compatible JSON line from primary window data."""
+    """Build a single waybar-compatible JSON line from shortest-term window data."""
     parts = []
     worst_state = "ok"
-
-    # 5-hour window is 18000 seconds
-    FULL_WINDOW_SECONDS = 18000
 
     for provider in providers:
         if provider.error or not provider.windows:
             continue
-        # Get primary (5-hour) window
-        primary = provider.windows[0] if provider.windows else None
-        if not primary:
-            continue
 
-        pct = primary.utilization
-        # Skip providers with 0% or full window remaining (fully reset)
-        if pct <= 0 or primary.resets_in_seconds >= FULL_WINDOW_SECONDS:
-            continue
+        # Select window by priority (5-hour > 7-day > others), then by reset time
+        shortest = min(
+            provider.windows,
+            key=lambda w: (_WINDOW_PRIORITY.get(w.label, 999), w.resets_in_seconds),
+        )
 
-        remaining = format_remaining(primary.resets_in_seconds)
+        pct = shortest.utilization
         prefix = "C" if provider.name == "Claude" else "X"
-        parts.append(f"{prefix}:{pct:.0f}%({remaining})")
+
+        if pct <= 0:
+            # Show provider at 0% without remaining time
+            parts.append(f"{prefix}:0%")
+        else:
+            remaining = format_remaining(shortest.resets_in_seconds)
+            parts.append(f"{prefix}:{pct:.0f}%({remaining})")
 
         state = state_for_pct(pct)
         if state == "alert":
@@ -325,7 +381,6 @@ def format_json(providers: list[ProviderUsage]) -> str:
             worst_state = "warn"
 
     if not parts:
-        # All providers fully reset - show nothing or minimal indicator
         return json.dumps({"text": "", "alt": "ok"})
 
     return json.dumps({"text": " ".join(parts), "alt": worst_state})
