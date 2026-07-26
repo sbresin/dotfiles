@@ -42,8 +42,15 @@ echo ""
 
 # Show the logged state from that event
 echo "=== Logged State ==="
-# Use grep -A to get lines after the timestamp match, stop at ---
-grep -A 10 "timestamp: $TIMESTAMP" "$LOG_FILE" | sed '/^---$/q'
+# Blocks are variable-length (connector/backlight/monitor counts vary), so
+# extract from the "--- FREEZE EVENT ---" header of the matching block through
+# its closing "---" marker, rather than a fixed line count.
+awk -v ts="timestamp: $TIMESTAMP" '
+    /^--- FREEZE EVENT ---$/ { block = $0 "\n"; found = 0; next }
+    { block = block $0 "\n" }
+    $0 == ts { found = 1 }
+    /^---$/ && found { printf "%s", block; exit }
+' "$LOG_FILE"
 echo ""
 
 # Calculate time window (30 seconds before, 2 minutes after)

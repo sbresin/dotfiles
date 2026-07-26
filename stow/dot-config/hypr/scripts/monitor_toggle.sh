@@ -42,7 +42,7 @@ fi
 
 if [ "$TARGET" = "enable" ]; then
 	# Only apply if not already enabled (optional optimization, but hyprctl is fast)
-	hyprctl eval "hl.monitor({ output = '$INTERNAL_MONITOR', mode = 'preferred', position = 'auto', scale = 'auto' })"
+	hyprctl eval "hl.monitor({ output = '$INTERNAL_MONITOR', mode = 'preferred', position = 'auto', scale = 'auto', disabled = false })"
 	echo "Enabling Internal Monitor" # Debug
 else
 	hyprctl eval "hl.monitor({ output = '$INTERNAL_MONITOR', disabled = true })"

@@ -402,24 +402,64 @@ hl.bind("switch:off:Lid Switch",
         hl.dsp.exec_cmd("~/.config/hypr/scripts/monitor_toggle.sh"),
         {locked = true})
 
+-- Toggle internal display (only enable if lid is open)
+hl.bind(mainMod .. " + D", function()
+    local handle = io.popen("hyprctl monitors all -j")
+    local result = handle:read("*a")
+    handle:close()
+
+    -- Check if eDP-1 is currently disabled
+    local disabled = result:match('"name":%s*"eDP%-1".-"disabled":%s*true')
+
+    if disabled then
+        -- Only enable if lid is open
+        local lid = io.open("/proc/acpi/button/lid/LID0/state", "r")
+        local state = lid:read("*a")
+        lid:close()
+
+        if state:match("open") then
+            hl.monitor({
+                output = "eDP-1",
+                mode = "preferred",
+                position = "auto",
+                scale = "auto",
+                disabled = false
+            })
+            hl.dispatch(hl.dsp.dpms("on"))
+            hl.exec_cmd("notify-send -t 2000 'Display' 'Internal screen enabled'")
+        else
+            hl.exec_cmd("notify-send -t 2000 'Display' 'Cannot enable: lid is closed'")
+        end
+    else
+        hl.monitor({ output = "eDP-1", disabled = true })
+        hl.exec_cmd("notify-send -t 2000 'Display' 'Internal screen disabled'")
+    end
+end, {locked = true})
+
 -- ---- Emergency Display Binds ----
 
 -- Emergency: force internal display on + DPMS on (for when screen doesn't wake after suspend)
 hl.bind(mainMod .. " + SHIFT + D", function()
+    -- Log a diagnostic snapshot first, so we have something to work with if
+    -- this doesn't fully recover (see freeze_analyze.sh).
+    hl.exec_cmd("~/.config/hypr/scripts/freeze_debug.sh D-emergency")
     hl.monitor({
         output = "eDP-1",
         mode = "preferred",
         position = "auto",
-        scale = "auto"
+        scale = "auto",
+        disabled = false
     })
     hl.dispatch(hl.dsp.dpms("on"))
     hl.exec_cmd("~/.config/hypr/scripts/monitor_toggle.sh")
 end, {locked = true})
 
 -- Emergency: rebind UCSI driver + reprobe DRM connectors (for stuck USB-C DP Alt Mode after suspend)
-hl.bind(mainMod .. " + SHIFT + M",
-        hl.dsp.exec_cmd("systemctl start drm-reprobe-rescue.service"),
-        {locked = true})
+hl.bind(mainMod .. " + SHIFT + M", function()
+    -- Log a diagnostic snapshot before attempting the fix (see freeze_analyze.sh).
+    hl.exec_cmd("~/.config/hypr/scripts/freeze_debug.sh M-emergency")
+    hl.exec_cmd("systemctl start drm-reprobe-rescue.service")
+end, {locked = true})
 
 
 

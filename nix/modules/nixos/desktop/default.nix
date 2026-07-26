@@ -43,6 +43,51 @@ let
 
     log "=== Post-resume recovery finished ==="
   '';
+
+  # Force DRM connector reprobe. USB-C DP alt mode disconnects are not always
+  # detected by the kernel, leaving a stale "connected" state in sysfs and
+  # Hyprland rendering to a ghost monitor. The reprobe updates sysfs, and the
+  # udevadm trigger fires a uevent so Hyprland's DRM backend picks up the
+  # change. Shared between the automatic post-suspend hook below and the
+  # on-demand rescue service (SUPER+SHIFT+M).
+  drm-connector-reprobe = pkgs.writeShellScript "drm-connector-reprobe" ''
+    for connector in /sys/class/drm/card*-DP-*/status /sys/class/drm/card*-HDMI-*/status; do
+      echo "detect" > "$connector" 2>/dev/null || true
+    done
+    ${pkgs.systemd}/bin/udevadm trigger --action=change --subsystem-match=drm
+  '';
+
+  # On-demand rescue for a wedged USB-C DP Alt Mode / UCSI PD controller
+  # (e.g. after a live dock disconnect, not just resume-from-suspend, which
+  # `powerManagement.resumeCommands` already covers). Rebinds the ucsi_acpi
+  # platform driver and reprobes DRM connectors. Started via
+  # `systemctl start drm-reprobe-rescue.service`, bound to SUPER+SHIFT+M.
+  drm-reprobe-rescue-script = pkgs.writeShellScript "drm-reprobe-rescue" ''
+    log() { ${pkgs.util-linux}/bin/logger -t "drm-reprobe-rescue" "$*"; }
+
+    log "=== DRM/UCSI rescue starting ==="
+
+    ucsi_dev=""
+    for dev in /sys/bus/platform/drivers/ucsi_acpi/USBC*; do
+      [ -e "$dev" ] || continue
+      ucsi_dev=$(basename "$dev")
+      break
+    done
+
+    if [ -n "$ucsi_dev" ]; then
+      log "Rebinding UCSI ACPI device: $ucsi_dev"
+      echo "$ucsi_dev" > /sys/bus/platform/drivers/ucsi_acpi/unbind 2>/dev/null || log "unbind failed (continuing)"
+      sleep 1
+      echo "$ucsi_dev" > /sys/bus/platform/drivers/ucsi_acpi/bind 2>/dev/null || log "bind failed (continuing)"
+    else
+      log "No bound UCSI ACPI device found under ucsi_acpi driver, skipping rebind"
+    fi
+
+    log "Reprobing DRM connectors"
+    ${drm-connector-reprobe}
+
+    log "=== DRM/UCSI rescue finished ==="
+  '';
 in
 {
   options.sebe.desktop = {
@@ -171,8 +216,11 @@ in
             listener = [
               {
                 timeout = 150; # 2.5min
-                on-timeout = "brightnessctl -s set 10";
-                on-resume = "brightnessctl -r";
+                # Absolute path: hypridle's listener commands run with a
+                # minimal PATH that doesn't include brightnessctl otherwise
+                # (observed as "brightnessctl: command not found" in the journal).
+                on-timeout = "${pkgs.brightnessctl}/bin/brightnessctl -s set 10";
+                on-resume = "${pkgs.brightnessctl}/bin/brightnessctl -r";
               }
               {
                 timeout = 300; # 5min
@@ -181,7 +229,7 @@ in
               {
                 timeout = 330; # 5.5min
                 on-timeout = "hyprctl eval 'hl.dispatch(hl.dsp.dpms(\"off\"))'";
-                on-resume = "brightnessctl -r";
+                on-resume = "${pkgs.brightnessctl}/bin/brightnessctl -r";
               }
               {
                 timeout = 450; # 7.5min
@@ -279,16 +327,23 @@ in
 
     services.speechd.enable = true;
 
-    # Force DRM connector reprobe on resume from suspend.
-    # USB-C DP alt mode disconnects during sleep are not detected by the kernel,
-    # leaving stale "connected" state in sysfs and Hyprland rendering to a ghost
-    # monitor. The reprobe updates sysfs, and the udevadm trigger fires a uevent
-    # so Hyprland's DRM backend picks up the change.
+    # Force DRM connector reprobe on resume from suspend (see
+    # drm-connector-reprobe above for why).
     powerManagement.resumeCommands = ''
-      for connector in /sys/class/drm/card*-DP-*/status /sys/class/drm/card*-HDMI-*/status; do
-        echo "detect" > "$connector" 2>/dev/null || true
-      done
-      ${pkgs.systemd}/bin/udevadm trigger --action=change --subsystem-match=drm
+      ${drm-connector-reprobe}
     '';
+
+    # On-demand rescue for a wedged USB-C DP Alt Mode / UCSI PD controller,
+    # e.g. after a live dock disconnect while awake (see
+    # drm-reprobe-rescue-script above). Manual-only: started via
+    # `systemctl start drm-reprobe-rescue.service` (SUPER+SHIFT+M), not
+    # wanted by any target.
+    systemd.services.drm-reprobe-rescue = {
+      description = "Rebind UCSI driver and reprobe DRM connectors (stuck USB-C DP Alt Mode rescue)";
+      serviceConfig = {
+        Type = "oneshot";
+        ExecStart = "${drm-reprobe-rescue-script}";
+      };
+    };
   };
 }

@@ -23,6 +23,9 @@
   boot.initrd.kernelModules = [ ];
   boot.kernelParams = [
     "pcie_aspm=force" # force PCIe ASPM on all devices — prerequisite for S0ix deep sleep
+    "amdgpu.dcdebugmask=0x10" # disable Panel Self Refresh (PSR) — works around amdgpu
+    # hard freezes triggered by screen/desktop capture (PSR + flip races on
+    # Strix Point/Radeon 890M). See freeze_analyze.sh notes.
   ];
   boot.kernelModules = [ "kvm-amd" ];
   boot.extraModulePackages = [ ];
