@@ -1,7 +1,10 @@
 {
 	"$schema": "https://opencode.ai/config.json",
 	"default_agent": "plan",
-	"plugin": ["@ex-machina/opencode-anthropic-auth@1.8.1"],
+	"plugin": [
+		"@ex-machina/opencode-anthropic-auth@1.8.1",
+		"superpowers@git+https://github.com/obra/superpowers.git",
+	],
 	"provider": {
 		"flm": {
 			"models": {
@@ -70,6 +73,15 @@
 		},
 	},
 	"mcp": {
+		"slack": {
+			"type": "remote",
+			"url": "https://mcp.slack.com/mcp",
+			"enabled": true,
+			"oauth": {
+				"clientId": "1601185624273.8899143856786",
+				"redirectUri": "http://localhost:3118/callback",
+			},
+		},
 		// "github": {
 		// 	"type": "local",
 		// 	"command": ["github-mcp-server", "stdio", "--dynamic-toolsets"],

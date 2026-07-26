@@ -2,3 +2,4 @@
 .postgres-data
 .docker-compose.postgres.yml
 .playwright-mcp
+.worktrees
