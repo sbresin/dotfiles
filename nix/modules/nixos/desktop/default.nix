@@ -312,6 +312,9 @@ in
       pkgs.sebe.gnome-control-center-patched
       inputs.simplemoji.packages.${stdenv.hostPlatform.system}.default
       termusic
+      # Wine with full support (32+64 bit, GStreamer for audio/video decoding)
+      pkgs.wineWow64Packages.stagingFull
+      winetricks
       # Proton launcher for running Windows games outside Steam
       umu-launcher
       rsgain
