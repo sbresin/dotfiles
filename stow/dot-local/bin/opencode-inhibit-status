@@ -1,0 +1,290 @@
+#!/usr/bin/env python3
+"""OpenCode agent status for hyprlock display.
+
+Discovers all running opencode servers via process inspection, queries their
+session status APIs, and outputs a summary suitable for hyprlock labels.
+
+Usage:
+    opencode-inhibit-status              # Plain count (e.g., "2" or "0")
+    opencode-inhibit-status --hyprlock   # Pango markup for hyprlock label
+    opencode-inhibit-status --json       # JSON output for scripting
+
+Exit codes:
+    0 - At least one agent is running (busy/retry state)
+    1 - No agents running (all idle or no servers found)
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import re
+import subprocess
+import sys
+from dataclasses import dataclass
+from typing import Optional
+from urllib.error import URLError
+from urllib.request import Request, urlopen
+
+
+# ── Constants ────────────────────────────────────────────────────────
+
+# Nerd font icon for opencode
+ICON = "󱜙"
+
+# Rose Pine colours (hex for pango markup)
+COLOUR_BRIGHT = "#ebbcba"  # rose/primary - agents running
+COLOUR_DIM = "#6e6a86"     # muted - no agents
+
+
+# ── Data types ───────────────────────────────────────────────────────
+
+@dataclass
+class ServerInfo:
+    """Information about a running opencode server."""
+    pid: int
+    port: int
+    directory: str
+
+
+@dataclass
+class SessionStatus:
+    """Aggregated status across all sessions on a server."""
+    busy_count: int
+    retry_count: int
+    idle_count: int
+
+    @property
+    def running_count(self) -> int:
+        return self.busy_count + self.retry_count
+
+    @property
+    def total_count(self) -> int:
+        return self.busy_count + self.retry_count + self.idle_count
+
+
+# ── Process discovery ────────────────────────────────────────────────
+
+def discover_servers() -> list[ServerInfo]:
+    """Find all running opencode servers by inspecting process cmdlines.
+
+    Looks for processes with 'opencode' in the command that have a --port flag.
+    """
+    servers: list[ServerInfo] = []
+
+    try:
+        # Use pgrep to find opencode processes, then read their cmdlines
+        result = subprocess.run(
+            ["pgrep", "-a", "opencode"],
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+
+        if result.returncode != 0:
+            return []
+
+        for line in result.stdout.strip().splitlines():
+            if not line:
+                continue
+
+            # Parse: "PID command args..."
+            parts = line.split(None, 1)
+            if len(parts) < 2:
+                continue
+
+            try:
+                pid = int(parts[0])
+            except ValueError:
+                continue
+
+            cmdline = parts[1]
+
+            # Extract --port value
+            port_match = re.search(r'--port[=\s]+(\d+)', cmdline)
+            if not port_match:
+                continue
+
+            port = int(port_match.group(1))
+
+            # Extract directory (usually the last argument or from --dir)
+            dir_match = re.search(r'--dir[=\s]+(\S+)', cmdline)
+            if dir_match:
+                directory = dir_match.group(1)
+            else:
+                # Try to get from /proc/PID/cwd
+                try:
+                    directory = os.readlink(f"/proc/{pid}/cwd")
+                except OSError:
+                    directory = ""
+
+            servers.append(ServerInfo(pid=pid, port=port, directory=directory))
+
+    except (subprocess.TimeoutExpired, OSError):
+        pass
+
+    return servers
+
+
+# ── API queries ──────────────────────────────────────────────────────
+
+def query_session_status(port: int, timeout: float = 2.0) -> Optional[SessionStatus]:
+    """Query session status from an opencode server.
+
+    Returns aggregated counts of busy, retry, and idle sessions.
+    """
+    url = f"http://localhost:{port}/session/status"
+
+    try:
+        req = Request(url, headers={"Accept": "application/json"})
+        with urlopen(req, timeout=timeout) as resp:
+            if resp.status != 200:
+                return None
+
+            data = json.loads(resp.read().decode())
+
+            if not isinstance(data, dict):
+                return None
+
+            busy = 0
+            retry = 0
+            idle = 0
+
+            for session_id, status in data.items():
+                if not isinstance(status, dict):
+                    continue
+
+                status_type = status.get("type", "idle")
+                if status_type == "busy":
+                    busy += 1
+                elif status_type == "retry":
+                    retry += 1
+                else:
+                    idle += 1
+
+            return SessionStatus(busy_count=busy, retry_count=retry, idle_count=idle)
+
+    except (URLError, OSError, json.JSONDecodeError, ValueError):
+        return None
+
+
+# ── Aggregation ──────────────────────────────────────────────────────
+
+@dataclass
+class AggregatedStatus:
+    """Status aggregated across all opencode servers."""
+    servers_found: int
+    servers_reachable: int
+    total_busy: int
+    total_retry: int
+    total_idle: int
+
+    @property
+    def total_running(self) -> int:
+        return self.total_busy + self.total_retry
+
+    @property
+    def is_running(self) -> bool:
+        return self.total_running > 0
+
+
+def get_aggregated_status() -> AggregatedStatus:
+    """Discover all servers and aggregate their session statuses."""
+    servers = discover_servers()
+
+    total_busy = 0
+    total_retry = 0
+    total_idle = 0
+    reachable = 0
+
+    for server in servers:
+        status = query_session_status(server.port)
+        if status:
+            reachable += 1
+            total_busy += status.busy_count
+            total_retry += status.retry_count
+            total_idle += status.idle_count
+
+    return AggregatedStatus(
+        servers_found=len(servers),
+        servers_reachable=reachable,
+        total_busy=total_busy,
+        total_retry=total_retry,
+        total_idle=total_idle,
+    )
+
+
+# ── Output formatting ────────────────────────────────────────────────
+
+def format_plain(status: AggregatedStatus) -> str:
+    """Format as plain count."""
+    return str(status.total_running)
+
+
+def format_hyprlock(status: AggregatedStatus) -> str:
+    """Format as pango markup for hyprlock label.
+
+    Bright colour when agents running, dim when idle.
+    """
+    if status.total_running > 0:
+        colour = COLOUR_BRIGHT
+        if status.total_running == 1:
+            text = f"{ICON} 1 agent running"
+        else:
+            text = f"{ICON} {status.total_running} agents running"
+    else:
+        colour = COLOUR_DIM
+        text = f"{ICON} idle"
+
+    # Double ## for pango (single # is escape sequence)
+    return f"<span foreground='{colour}'>{text}</span>"
+
+
+def format_json(status: AggregatedStatus) -> str:
+    """Format as JSON for scripting."""
+    return json.dumps({
+        "servers_found": status.servers_found,
+        "servers_reachable": status.servers_reachable,
+        "busy": status.total_busy,
+        "retry": status.total_retry,
+        "idle": status.total_idle,
+        "running": status.total_running,
+        "is_running": status.is_running,
+    })
+
+
+# ── Main ─────────────────────────────────────────────────────────────
+
+def main() -> None:
+    parser = argparse.ArgumentParser(
+        description="OpenCode agent status for hyprlock display.",
+    )
+    parser.add_argument(
+        "--hyprlock",
+        action="store_true",
+        help="Output pango markup for hyprlock label",
+    )
+    parser.add_argument(
+        "--json",
+        action="store_true",
+        help="Output JSON for scripting",
+    )
+
+    args = parser.parse_args()
+
+    status = get_aggregated_status()
+
+    if args.json:
+        print(format_json(status))
+    elif args.hyprlock:
+        print(format_hyprlock(status))
+    else:
+        print(format_plain(status))
+
+    # Exit code: 0 if running, 1 if idle
+    sys.exit(0 if status.is_running else 1)
+
+
+if __name__ == "__main__":
+    main()

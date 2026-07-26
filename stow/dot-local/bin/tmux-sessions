@@ -341,12 +341,29 @@ def _today_cutoff_ms() -> int:
     return int(datetime.today().replace(hour=0, minute=0, second=0, microsecond=0).timestamp() * 1000)
 
 
-def opencode_sessions_by_worktree() -> dict[str, list[OpenCodeRuntimeState]]:
-    """Load all OpenCode runtime states and group by canonical worktree path.
+def _is_server_alive(server_url: str, timeout: float = 0.5) -> bool:
+    """Check if an OpenCode server is responding."""
+    from urllib.request import Request, urlopen
+    from urllib.error import URLError
 
-    Only includes sessions that are non-idle or were last active today.
-    Sessions within each group are sorted: non-idle first (by severity),
-    then by time_updated descending.
+    try:
+        req = Request(f"{server_url.rstrip('/')}/session", headers={"Accept": "application/json"})
+        with urlopen(req, timeout=timeout) as resp:
+            return resp.status == 200
+    except (URLError, OSError, ValueError):
+        return False
+
+
+def opencode_sessions_by_server() -> dict[str, list[OpenCodeRuntimeState]]:
+    """Load all OpenCode runtime states and group by server_url.
+
+    Each OpenCode instance (identified by server_url) serves one workspace,
+    so grouping by server gives us all sessions for a project regardless of
+    which git worktree they're in.
+
+    Only includes sessions from live servers, and filters to non-idle or
+    last active today. Sessions within each group are sorted: non-idle
+    first (by severity), then by time_updated descending.
     """
     all_states = _load_opencode_runtime_states()
     if not all_states:
@@ -367,10 +384,26 @@ def opencode_sessions_by_worktree() -> dict[str, list[OpenCodeRuntimeState]]:
         if s.state != "idle" or s.time_updated >= cutoff
     ]
 
-    # Group by worktree
+    # Group by server_url (each OpenCode instance serves one workspace)
     grouped: dict[str, list[OpenCodeRuntimeState]] = {}
     for s in filtered:
-        grouped.setdefault(s.worktree, []).append(s)
+        if s.server_url:
+            grouped.setdefault(s.server_url, []).append(s)
+
+    # Check which servers are alive and filter out dead ones
+    alive_servers: set[str] = set()
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        futures = {pool.submit(_is_server_alive, url): url for url in grouped.keys()}
+        for future in as_completed(futures):
+            url = futures[future]
+            try:
+                if future.result():
+                    alive_servers.add(url)
+            except Exception:
+                pass
+
+    # Keep only sessions from alive servers
+    grouped = {url: sessions for url, sessions in grouped.items() if url in alive_servers}
 
     # Sort within each group
     for sessions in grouped.values():
@@ -779,7 +812,7 @@ def _dismiss_done_for_tmux_session(session_name: str) -> None:
     lookup_dir = _canonical_path(gi.root if gi else cwd)
 
     for state in _load_opencode_runtime_states():
-        if state.state != "done":
+        if state.state not in ("done", "error"):
             continue
         if _canonical_path(state.directory) == lookup_dir or _canonical_path(state.worktree) == lookup_dir:
             _dismiss_done_session(state)
@@ -871,6 +904,24 @@ def _worst_state(sessions: list[OpenCodeRuntimeState]) -> Optional[str]:
     )
 
 
+def _find_opencode_server_for_path(
+    path: str,
+    oc_by_server: dict[str, list[OpenCodeRuntimeState]],
+) -> Optional[str]:
+    """Find the OpenCode server URL whose sessions match the given path.
+
+    Checks if any session's directory or worktree starts with the given path,
+    which handles both direct matches and git worktrees under .worktrees/.
+    """
+    canonical = _canonical_path(path)
+    for server_url, sessions in oc_by_server.items():
+        for s in sessions:
+            # Check if session dir is under the tmux session's path
+            if s.directory.startswith(canonical) or s.worktree.startswith(canonical):
+                return server_url
+    return None
+
+
 def enrich_sessions(
     tmux_sessions: list[TmuxSession],
     include_pr: bool = False,
@@ -894,8 +945,8 @@ def enrich_sessions(
         }
         enriched.append(info)
 
-    # Step 2: Load OpenCode sessions grouped by worktree
-    oc_by_worktree = opencode_sessions_by_worktree()
+    # Step 2: Load OpenCode sessions grouped by server_url
+    oc_by_server = opencode_sessions_by_server()
 
     # Step 3: Fetch PRs in parallel (only for list mode)
     pr_results: dict[str, Optional[PRInfo]] = {}
@@ -921,8 +972,10 @@ def enrich_sessions(
     # Step 4: Build final SessionInfo objects
     result: list[SessionInfo] = []
     for info in enriched:
-        oc_key = _canonical_path(info["git_root"] or info["directory"])
-        oc_sessions = oc_by_worktree.get(oc_key, [])
+        # Find the OpenCode server whose sessions match this tmux session's path
+        lookup_path = info["git_root"] or info["directory"]
+        server_url = _find_opencode_server_for_path(lookup_path, oc_by_server)
+        oc_sessions = oc_by_server.get(server_url, []) if server_url else []
 
         result.append(
             SessionInfo(
