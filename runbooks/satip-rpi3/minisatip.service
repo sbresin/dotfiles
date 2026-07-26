@@ -1,0 +1,40 @@
+[Unit]
+Description=MiniSATIP DVB-C Server
+Documentation=https://github.com/catalinii/minisatip
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+
+# minisatip options:
+#   -f          Run in foreground (required for systemd)
+#   -a 0:0:2    0 DVB-S, 0 DVB-T, 2 DVB-C adapters
+#   -y 5544     RTSP port (non-privileged, default is 554)
+#   -x 8875     HTTP/web UI port (default is 8080)
+#   -R path     Document root for web UI (html files)
+#
+# Additional options if needed:
+#   -b 752000:11550720    Increase buffer sizes (for continuity errors)
+#   -e 0-1                Enable only specific adapters
+#   -G                    Disable SSDP discovery
+#   -l general,http       Enable verbose logging
+#
+ExecStart=/usr/local/bin/minisatip -f -a 0:0:2 -y 5544 -x 8875 -R /opt/minisatip/html
+
+# Restart on failure
+Restart=always
+RestartSec=5
+
+# Increase scheduling priority for smoother streaming
+Nice=-10
+
+# Security hardening (optional - uncomment if desired)
+# Note: May need adjustment if minisatip needs more capabilities
+#ProtectSystem=strict
+#ProtectHome=true
+#NoNewPrivileges=true
+#PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
